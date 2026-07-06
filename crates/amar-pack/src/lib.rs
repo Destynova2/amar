@@ -73,6 +73,22 @@ pub struct StationPack {
     pub method: String,
     pub constituents: Vec<ConstituentPack>,
     pub source: SourceInfo,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub experimental: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_official: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_shom: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calibration_period: Option<PeriodInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_period: Option<PeriodInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disclaimer: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub datum_note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub residual_benchmark_cm: Option<f64>,
 }
 
 impl StationPack {
@@ -103,8 +119,17 @@ impl StationPack {
                 });
             }
         }
+        if let Some(value) = self.residual_benchmark_cm {
+            ensure_finite("residual_benchmark_cm", value)?;
+        }
         Ok(())
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PeriodInfo {
+    pub start: String,
+    pub end: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -124,6 +149,16 @@ pub struct SourceInfo {
     pub datums_url: String,
     pub harcon_url: String,
     pub checksum_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attribution: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub product: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observations_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observations_checksum_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidegauge_checksum_sha256: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
@@ -140,11 +175,7 @@ impl MetersValue {
     }
 
     fn ensure_finite(self, field: &'static str) -> Result<(), PackError> {
-        if self.0.is_finite() {
-            Ok(())
-        } else {
-            Err(PackError::NonFinite { field })
-        }
+        ensure_finite(field, self.0)
     }
 }
 
@@ -162,11 +193,7 @@ impl DegreesValue {
     }
 
     fn ensure_finite(self, field: &'static str) -> Result<(), PackError> {
-        if self.0.is_finite() {
-            Ok(())
-        } else {
-            Err(PackError::NonFinite { field })
-        }
+        ensure_finite(field, self.0)
     }
 }
 
@@ -184,11 +211,7 @@ impl DegreesPerHourValue {
     }
 
     fn ensure_finite(self, field: &'static str) -> Result<(), PackError> {
-        if self.0.is_finite() {
-            Ok(())
-        } else {
-            Err(PackError::NonFinite { field })
-        }
+        ensure_finite(field, self.0)
     }
 }
 
@@ -206,11 +229,7 @@ impl LatitudeDegValue {
     }
 
     fn ensure_finite(self, field: &'static str) -> Result<(), PackError> {
-        if self.0.is_finite() {
-            Ok(())
-        } else {
-            Err(PackError::NonFinite { field })
-        }
+        ensure_finite(field, self.0)
     }
 
     fn ensure_range(self, field: &'static str, min: f64, max: f64) -> Result<(), PackError> {
@@ -241,11 +260,7 @@ impl LongitudeDegValue {
     }
 
     fn ensure_finite(self, field: &'static str) -> Result<(), PackError> {
-        if self.0.is_finite() {
-            Ok(())
-        } else {
-            Err(PackError::NonFinite { field })
-        }
+        ensure_finite(field, self.0)
     }
 
     fn ensure_range(self, field: &'static str, min: f64, max: f64) -> Result<(), PackError> {
@@ -259,6 +274,14 @@ impl LongitudeDegValue {
                 max,
             })
         }
+    }
+}
+
+fn ensure_finite(field: &'static str, value: f64) -> Result<(), PackError> {
+    if value.is_finite() {
+        Ok(())
+    } else {
+        Err(PackError::NonFinite { field })
     }
 }
 
@@ -298,7 +321,20 @@ mod tests {
                 datums_url: "https://example.test/datums".to_string(),
                 harcon_url: "https://example.test/harcon".to_string(),
                 checksum_sha256: "abc".to_string(),
+                attribution: None,
+                product: None,
+                observations_url: None,
+                observations_checksum_sha256: None,
+                tidegauge_checksum_sha256: None,
             },
+            experimental: None,
+            not_official: None,
+            not_shom: None,
+            calibration_period: None,
+            validation_period: None,
+            disclaimer: None,
+            datum_note: None,
+            residual_benchmark_cm: None,
         }
     }
 

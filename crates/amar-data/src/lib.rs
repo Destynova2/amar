@@ -146,8 +146,39 @@ pub fn load_pack_from_path(path: impl AsRef<Path>) -> Result<DataSet, DataError>
     load_pack_from_str(&data)
 }
 
+pub fn load_packs_from_paths(paths: &[PathBuf]) -> Result<DataSet, DataError> {
+    let mut packs = Vec::with_capacity(paths.len());
+    for path in paths {
+        let data = fs::read_to_string(path).map_err(|source| DataError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        packs.push(serde_json::from_str::<TidePack>(&data)?);
+    }
+    merge_packs(packs)
+}
+
 pub fn load_pack_from_str(data: &str) -> Result<DataSet, DataError> {
     let pack = serde_json::from_str::<TidePack>(data)?;
+    DataSet::from_pack(pack)
+}
+
+pub fn merge_packs(packs: Vec<TidePack>) -> Result<DataSet, DataError> {
+    let mut generated_at = Vec::new();
+    let mut stations = Vec::new();
+    for pack in packs {
+        pack.validate()?;
+        generated_at.push(pack.generated_at);
+        stations.extend(pack.stations);
+    }
+    generated_at.sort();
+    generated_at.dedup();
+    stations.sort_by(|left, right| left.station_id.cmp(&right.station_id));
+    let pack = TidePack {
+        schema_version: SCHEMA_VERSION.to_string(),
+        generated_at: generated_at.join("+"),
+        stations,
+    };
     DataSet::from_pack(pack)
 }
 
@@ -288,7 +319,20 @@ fn build_noaa_station(
             datums_url,
             harcon_url,
             checksum_sha256: sha256_hex(&harcon_bytes),
+            attribution: None,
+            product: None,
+            observations_url: None,
+            observations_checksum_sha256: None,
+            tidegauge_checksum_sha256: None,
         },
+        experimental: None,
+        not_official: None,
+        not_shom: None,
+        calibration_period: None,
+        validation_period: None,
+        disclaimer: None,
+        datum_note: None,
+        residual_benchmark_cm: None,
     })
 }
 

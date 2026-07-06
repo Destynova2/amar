@@ -1,5 +1,5 @@
 use amar::server::app;
-use amar_data::load_pack_from_path;
+use amar_data::load_packs_from_paths;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
@@ -18,8 +18,16 @@ fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn pack_path() -> PathBuf {
+fn noaa_pack_path() -> PathBuf {
     workspace_root().join("data/packs/noaa_m0.json")
+}
+
+fn brest_pack_path() -> PathBuf {
+    workspace_root().join("data/packs/amar-data-brest-experimental.json")
+}
+
+fn pack_paths() -> Vec<PathBuf> {
+    vec![noaa_pack_path(), brest_pack_path()]
 }
 
 #[tokio::test]
@@ -34,12 +42,12 @@ async fn tide_nominal_response_matches_snapshot() {
 }
 
 #[tokio::test]
-async fn tide_brest_refusal_matches_snapshot() {
+async fn tide_brest_experimental_response_matches_snapshot() {
     let body = r#"{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z"}"#;
     assert_post_snapshot(
         body,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        include_str!("snapshots/tide_brest_422.json"),
+        StatusCode::OK,
+        include_str!("snapshots/tide_brest_experimental.json"),
     )
     .await;
 }
@@ -97,7 +105,7 @@ async fn tide_longitude_out_of_range_returns_400() {
 
 #[tokio::test]
 async fn tide_accepts_distance_equal_to_max_distance() {
-    let data = must(load_pack_from_path(pack_path()));
+    let data = must(load_packs_from_paths(&pack_paths()));
     let boundary_distance = match data.closest_station(37.806, -122.465) {
         Some(station_match) => station_match.distance_km,
         None => panic!("expected a closest station"),
@@ -122,7 +130,7 @@ async fn tide_accepts_distance_equal_to_max_distance() {
 
 #[tokio::test]
 async fn tide_refuses_matches_beyond_confidence_domain() {
-    let data = must(load_pack_from_path(pack_path()));
+    let data = must(load_packs_from_paths(&pack_paths()));
     let station = match data.stations().first() {
         Some(station) => station.pack(),
         None => panic!("expected at least one station in pack"),
@@ -151,7 +159,7 @@ async fn tide_refuses_matches_beyond_confidence_domain() {
 
 #[tokio::test]
 async fn health_and_coverage_expose_loaded_pack() {
-    let data = must(load_pack_from_path(pack_path()));
+    let data = must(load_packs_from_paths(&pack_paths()));
     let expected_station_count = data.stations().len();
     let service = app(data, 20.0);
 
@@ -198,7 +206,7 @@ async fn assert_post_snapshot(body: &str, expected_status: StatusCode, expected_
 }
 
 async fn post_tide(body: &str, max_distance_km: f64) -> JsonResponse {
-    let service = app(must(load_pack_from_path(pack_path())), max_distance_km);
+    let service = app(must(load_packs_from_paths(&pack_paths())), max_distance_km);
     request_json(
         service,
         must(

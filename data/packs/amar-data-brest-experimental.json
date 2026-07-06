@@ -1,0 +1,142 @@
+{
+  "schema_version": "amar-pack-v0",
+  "generated_at": "2026-07-06",
+  "stations": [
+    {
+      "station_id": "refmar:3",
+      "provider_station_id": "3",
+      "name": "Brest",
+      "latitude_deg": 48.38290024,
+      "longitude_deg": -4.49503994,
+      "datum": "zero_hydrographique_brest",
+      "z0_m": 4.287416126914455,
+      "method": "station_harmonics_v0",
+      "constituents": [
+        {
+          "name": "M2",
+          "amplitude_m": 2.043685629113129,
+          "phase_gmt_deg": 108.3867486327692,
+          "speed_deg_per_hour": 28.984104
+        },
+        {
+          "name": "S2",
+          "amplitude_m": 0.7567485137009243,
+          "phase_gmt_deg": 148.65019063219958,
+          "speed_deg_per_hour": 30.0
+        },
+        {
+          "name": "N2",
+          "amplitude_m": 0.4086719339066033,
+          "phase_gmt_deg": 90.27597664890153,
+          "speed_deg_per_hour": 28.43973
+        },
+        {
+          "name": "K2",
+          "amplitude_m": 0.21622661137190782,
+          "phase_gmt_deg": 145.84224006706373,
+          "speed_deg_per_hour": 30.082138
+        },
+        {
+          "name": "K1",
+          "amplitude_m": 0.06176209230762521,
+          "phase_gmt_deg": 76.96646703479266,
+          "speed_deg_per_hour": 15.041069
+        },
+        {
+          "name": "O1",
+          "amplitude_m": 0.06520411083850637,
+          "phase_gmt_deg": 327.9811163360767,
+          "speed_deg_per_hour": 13.943035
+        },
+        {
+          "name": "P1",
+          "amplitude_m": 0.02104257315943192,
+          "phase_gmt_deg": 70.6666151751391,
+          "speed_deg_per_hour": 14.958931
+        },
+        {
+          "name": "Q1",
+          "amplitude_m": 0.019538380914732194,
+          "phase_gmt_deg": 287.75076311363136,
+          "speed_deg_per_hour": 13.398661
+        },
+        {
+          "name": "M4",
+          "amplitude_m": 0.058629355422702346,
+          "phase_gmt_deg": 105.1232821929387,
+          "speed_deg_per_hour": 57.96821
+        },
+        {
+          "name": "MS4",
+          "amplitude_m": 0.038743352426624376,
+          "phase_gmt_deg": 181.2832845098474,
+          "speed_deg_per_hour": 58.984104
+        },
+        {
+          "name": "MN4",
+          "amplitude_m": 0.021697959217110346,
+          "phase_gmt_deg": 60.83214696088514,
+          "speed_deg_per_hour": 57.423832
+        },
+        {
+          "name": "M6",
+          "amplitude_m": 0.0304315200894201,
+          "phase_gmt_deg": 353.98902227485877,
+          "speed_deg_per_hour": 86.95232
+        },
+        {
+          "name": "MF",
+          "amplitude_m": 0.0195289242952009,
+          "phase_gmt_deg": 173.96971238045597,
+          "speed_deg_per_hour": 1.0980331
+        },
+        {
+          "name": "MM",
+          "amplitude_m": 0.03811330982368189,
+          "phase_gmt_deg": 225.03851554401965,
+          "speed_deg_per_hour": 0.5443747
+        },
+        {
+          "name": "SA",
+          "amplitude_m": 0.09834815876133361,
+          "phase_gmt_deg": 276.2437056752823,
+          "speed_deg_per_hour": 0.0410686
+        },
+        {
+          "name": "SSA",
+          "amplitude_m": 0.013118549166982584,
+          "phase_gmt_deg": 201.26216832725316,
+          "speed_deg_per_hour": 0.0821373
+        }
+      ],
+      "source": {
+        "provider": "Shom / REFMAR",
+        "license": "Licence Ouverte 2.0 Etalab",
+        "extracted_at": "2026-07-06",
+        "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/3",
+        "datums_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/3",
+        "harcon_url": "not applicable: constants calibrated from REFMAR observations",
+        "checksum_sha256": "e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d",
+        "attribution": "Shom / REFMAR",
+        "product": "Données horaires validées REFMAR, source 4",
+        "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/3?sources=4",
+        "observations_checksum_sha256": "e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d",
+        "tidegauge_checksum_sha256": "5327d51c4e210f656b1ee2b3ff0d6e1b5bbd0a8a8cddfcb1c13c556d43e994cf"
+      },
+      "experimental": true,
+      "not_official": true,
+      "not_shom": true,
+      "calibration_period": {
+        "start": "2025-01-01T00:00:00Z",
+        "end": "2026-04-01T00:00:00Z"
+      },
+      "validation_period": {
+        "start": "2026-04-01T00:00:00Z",
+        "end": "2026-07-01T00:00:00Z"
+      },
+      "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
+      "datum_note": "zero_hydrographique; ZH = -3.635 m relative to IGN69; RAM id Brest in REFMAR tide-gauge metadata",
+      "residual_benchmark_cm": 26.585545384788702
+    }
+  ]
+}

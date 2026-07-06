@@ -1,5 +1,5 @@
 use amar_core::{UtcDateTime, predict_height};
-use amar_data::{DataError, DataSet, StationMatch, load_pack_from_path};
+use amar_data::{DataError, DataSet, StationMatch, load_packs_from_paths};
 use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
@@ -7,7 +7,6 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::net::TcpListener;
@@ -63,10 +62,10 @@ pub fn app(data: DataSet, max_distance_km: f64) -> Router {
 /// Load a station pack and serve the M1 HTTP API on the requested address.
 pub async fn serve(
     addr: &str,
-    pack_path: impl AsRef<Path>,
+    pack_paths: &[std::path::PathBuf],
     max_distance_km: f64,
 ) -> Result<(), ServerError> {
-    let data = load_pack_from_path(pack_path)?;
+    let data = load_packs_from_paths(pack_paths)?;
     let listener = TcpListener::bind(addr)
         .await
         .map_err(|source| ServerError::Bind {
@@ -104,7 +103,7 @@ async fn post_tide(
     let station_match = supported_station(&state, request.lat, request.lon)?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
-    let Some(confidence) = confidence_for_distance_km(station_match.distance_km) else {
+    let Some(confidence) = confidence_for_station(&station_match) else {
         return Err(ApiError::no_supported_source(
             Some(station_match),
             state.max_distance_km,
@@ -116,7 +115,7 @@ async fn post_tide(
         datum: station.datum.clone(),
         source: SourceResponse::from(&station_match),
         confidence,
-        warnings: DEFAULT_WARNINGS,
+        warnings: warnings_for_station(station),
     }))
 }
 
@@ -180,6 +179,19 @@ fn validate_coordinate(name: &'static str, value: f64, min: f64, max: f64) -> Re
 // M1 confidence is deliberately distance-only:
 // <= 2 km -> A / 8 cm, <= 10 km -> B / 15 cm, <= 20 km -> C / 30 cm.
 // Later milestones replace this with empirical validation, not a wider radius.
+fn confidence_for_station(station_match: &StationMatch<'_>) -> Option<ConfidenceResponse> {
+    let station = station_match.station.pack();
+    if station.experimental == Some(true) {
+        let validation_period = station.validation_period.as_ref()?;
+        return Some(ConfidenceResponse::Experimental {
+            method: "calibrated_station_experimental",
+            residual_benchmark_cm: round1(station.residual_benchmark_cm?),
+            validation_period: format!("{}/{}", validation_period.start, validation_period.end),
+        });
+    }
+    confidence_for_distance_km(station_match.distance_km)
+}
+
 fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse> {
     let (grade, sigma_cm) = if distance_km <= 2.0 {
         ("A", 8)
@@ -190,15 +202,30 @@ fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse> {
     } else {
         return None;
     };
-    Some(ConfidenceResponse {
+    Some(ConfidenceResponse::Distance {
         grade,
         sigma_cm,
         method: CONFIDENCE_METHOD,
     })
 }
 
+fn warnings_for_station(station: &amar_pack::StationPack) -> Vec<&'static str> {
+    let mut warnings = DEFAULT_WARNINGS.to_vec();
+    if station.experimental == Some(true) {
+        warnings.push("experimental");
+    }
+    if station.not_shom == Some(true) {
+        warnings.push("not_shom");
+    }
+    warnings
+}
+
 fn round3(value: f64) -> f64 {
     (value * 1000.0).round() / 1000.0
+}
+
+fn round1(value: f64) -> f64 {
+    (value * 10.0).round() / 10.0
 }
 
 #[derive(Debug, Deserialize)]
@@ -214,7 +241,7 @@ struct TideResponse {
     datum: String,
     source: SourceResponse,
     confidence: ConfidenceResponse,
-    warnings: [&'static str; 3],
+    warnings: Vec<&'static str>,
 }
 
 /// Serialized station source metadata shared by CLI and HTTP responses.
@@ -241,10 +268,18 @@ impl From<&StationMatch<'_>> for SourceResponse {
 }
 
 #[derive(Debug, Serialize)]
-struct ConfidenceResponse {
-    grade: &'static str,
-    sigma_cm: u16,
-    method: &'static str,
+#[serde(untagged)]
+enum ConfidenceResponse {
+    Distance {
+        grade: &'static str,
+        sigma_cm: u16,
+        method: &'static str,
+    },
+    Experimental {
+        method: &'static str,
+        residual_benchmark_cm: f64,
+        validation_period: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -342,17 +377,33 @@ mod tests {
     fn confidence_grade_b_is_bounded_at_ten_km() {
         let confidence = confidence(10.0);
 
-        assert_eq!(confidence.grade, "B");
-        assert_eq!(confidence.sigma_cm, 15);
-        assert_eq!(confidence.method, CONFIDENCE_METHOD);
+        match confidence {
+            ConfidenceResponse::Distance {
+                grade,
+                sigma_cm,
+                method,
+            } => {
+                assert_eq!(grade, "B");
+                assert_eq!(sigma_cm, 15);
+                assert_eq!(method, CONFIDENCE_METHOD);
+            }
+            ConfidenceResponse::Experimental { .. } => panic!("expected distance confidence"),
+        }
     }
 
     #[test]
     fn confidence_grade_c_is_bounded_at_twenty_km() {
         let confidence = confidence(MAX_CONFIDENCE_DISTANCE_KM);
 
-        assert_eq!(confidence.grade, "C");
-        assert_eq!(confidence.sigma_cm, 30);
+        match confidence {
+            ConfidenceResponse::Distance {
+                grade, sigma_cm, ..
+            } => {
+                assert_eq!(grade, "C");
+                assert_eq!(sigma_cm, 30);
+            }
+            ConfidenceResponse::Experimental { .. } => panic!("expected distance confidence"),
+        }
     }
 
     #[test]

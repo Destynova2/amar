@@ -1,4 +1,5 @@
 use amar_data::load_pack_from_path;
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -76,4 +77,37 @@ fn tide_rejects_latitude_out_of_range() {
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("latitude must be between -90 and 90 degrees"));
+}
+
+#[test]
+fn tide_returns_brest_experimental_confidence() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("tide")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--at")
+            .arg("2026-08-15T12:00:00Z")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["datum"], "zero_hydrographique_brest");
+    assert_eq!(body["source"]["id"], "refmar:3");
+    assert_eq!(
+        body["confidence"]["method"],
+        "calibrated_station_experimental"
+    );
+    assert_eq!(body["confidence"]["residual_benchmark_cm"], 26.6);
+    assert!(body["confidence"]["grade"].is_null());
+    assert!(body["warnings"].to_string().contains("experimental"));
+    assert!(body["warnings"].to_string().contains("not_shom"));
 }

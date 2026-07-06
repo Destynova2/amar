@@ -5,6 +5,16 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+amar-core.workspace = true
+amar-pack.workspace = true
+chrono.workspace = true
+clap.workspace = true
+nalgebra.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

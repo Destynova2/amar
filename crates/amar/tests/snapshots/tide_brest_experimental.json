@@ -1,0 +1,23 @@
+{
+  "height_m": 1.09,
+  "datum": "zero_hydrographique_brest",
+  "source": {
+    "kind": "station",
+    "id": "refmar:3",
+    "name": "Brest",
+    "distance_km": 0.011,
+    "data_version": "2026-07-06"
+  },
+  "confidence": {
+    "method": "calibrated_station_experimental",
+    "residual_benchmark_cm": 26.6,
+    "validation_period": "2026-04-01T00:00:00Z/2026-07-01T00:00:00Z"
+  },
+  "warnings": [
+    "astronomical_tide_only",
+    "not_for_navigation",
+    "no_weather_surge",
+    "experimental",
+    "not_shom"
+  ]
+}

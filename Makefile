@@ -2,10 +2,13 @@ NOAA_API = https://api.tidesandcurrents.noaa.gov
 NOAA_MDAPI = $(NOAA_API)/mdapi/prod/webapi/stations
 NOAA_DATAGETTER = $(NOAA_API)/api/prod/datagetter
 STATIONS := $(shell awk 'NF { print $$1 }' data/stations.txt)
-STATION_COUNT := $(words $(STATIONS))
+NOAA_STATION_COUNT := $(words $(STATIONS))
+BREST_PACK = data/packs/amar-data-brest-experimental.json
+BREST_STATION_COUNT := $(shell test -f $(BREST_PACK) && printf 1 || printf 0)
+STATION_COUNT := $(shell expr $(NOAA_STATION_COUNT) + $(BREST_STATION_COUNT))
 YEARS = 2026 2031 2036
 
-.PHONY: fmt clippy test fetch-noaa pack-noaa m0-validate release m1-smoke
+.PHONY: fmt clippy test fetch-noaa pack-noaa fetch-refmar build-brest-pack m0-validate m2-benchmark release m1-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -30,14 +33,24 @@ fetch-noaa:
 pack-noaa: fetch-noaa
 	cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at 2026-07-06 $(foreach station,$(STATIONS),--station $(station))
 
+fetch-refmar:
+	cargo run -p amar-calibrate -- fetch-refmar
+
+build-brest-pack:
+	cargo run -p amar-calibrate -- build-brest-pack
+
 m0-validate:
 	cargo run -p amar -- validate --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
+
+m2-benchmark:
+	cargo run -p amar -- benchmark-brest
 
 release:
 	cargo build --release -p amar
 	mkdir -p dist/packs
 	install -m 755 target/release/amar dist/amar
 	cp data/packs/noaa_m0.json dist/packs/noaa_m0.json
+	cp data/packs/amar-data-brest-experimental.json dist/packs/amar-data-brest-experimental.json
 	printf '%s\n' \
 		'# Installation' \
 		'' \
@@ -45,13 +58,13 @@ release:
 		'' \
 		'```bash' \
 		'make release' \
-		'mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 755 dist/amar ~/.local/bin/amar && cp dist/packs/noaa_m0.json ~/.local/share/amar/packs/noaa_m0.json' \
+		'mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 755 dist/amar ~/.local/bin/amar && cp dist/packs/*.json ~/.local/share/amar/packs/' \
 		'```' \
 		'' \
 		'Puis lancer le serveur :' \
 		'' \
 		'```bash' \
-		'amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --addr 127.0.0.1:3000' \
+		'amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --addr 127.0.0.1:3000' \
 		'```' \
 		> dist/install.md
 
@@ -90,10 +103,13 @@ m1-smoke:
 	grep -q '"method":"station_harmonics_v0_distance_heuristic"' $$BODY; \
 	grep -q '"astronomical_tide_only"' $$BODY; \
 	CODE=$$(curl -sS -o $$BODY -w '%{http_code}' -H 'content-type: application/json' -d '{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z"}' $$BASE/tide); \
-	test "$$CODE" = "422"; \
-	grep -q '"error":"no_supported_source"' $$BODY; \
-	grep -q '"nearest_source"' $$BODY; \
-	grep -q '"distance_km"' $$BODY; \
+	test "$$CODE" = "200"; \
+	grep -q '"height_m"' $$BODY; \
+	grep -q '"id":"refmar:3"' $$BODY; \
+	grep -q '"method":"calibrated_station_experimental"' $$BODY; \
+	grep -q '"residual_benchmark_cm":26.6' $$BODY; \
+	grep -q '"experimental"' $$BODY; \
+	grep -q '"not_shom"' $$BODY; \
 	CODE=$$(curl -sS -o $$BODY -w '%{http_code}' -H 'content-type: application/json' -d '{"lat":91,"lon":0,"datetime":"2026-08-15T12:00:00Z"}' $$BASE/tide); \
 	test "$$CODE" = "400"; \
 	grep -q '"error":"invalid_request"' $$BODY; \

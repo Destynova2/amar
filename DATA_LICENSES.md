@@ -83,3 +83,30 @@ Extraction : 2026-07-06.
 | Fichier | Origine | SHA-256 |
 |---|---|---|
 | `data/packs/noaa_m0.json` | `cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at 2026-07-06 --station 8410140 --station 8443970 --station 9414290 --station 8729840 --station 9447130 --station 1612340 --station 8724580 --station 8771450` | `8965539b65cd8bc75ef96f24adfd056a1d5147c1fdae9e67ff40a0eb1f214594` |
+
+## REFMAR Brest expérimental
+
+Les observations de Brest proviennent du service REFMAR/data.shom.fr, avec
+attribution `Shom / REFMAR`, sous Licence Ouverte 2.0 Etalab. Le produit retenu
+est `sources=4`, données horaires validées, en mètres, fuseau UTC, référence
+verticale `zero_hydrographique`.
+
+Station : `shom_id=3`, `BREST`, réseau `RONIM`.
+
+Référence verticale issue de la fiche `completetidegauge/3` : RAM id `Brest`,
+ZH = -3.635 m par rapport à `IGN69`.
+
+| Fichier | Origine | SHA-256 |
+|---|---|---|
+| `fixtures/refmar/brest_tidegauge.json` | `https://services.data.shom.fr/maregraphie/service/completetidegauge/3` | `5327d51c4e210f656b1ee2b3ff0d6e1b5bbd0a8a8cddfcb1c13c556d43e994cf` |
+| `fixtures/refmar/brest_validated_hourly_2025-01-01_2026-07-01.csv` | `https://services.data.shom.fr/maregraphie/observation/json/3?sources=4`, fenêtres de 31 jours | `e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d` |
+| `fixtures/refmar/benchmark_brest_v1.json` | Fenêtre hors calibration `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z` | `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f` |
+| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` | `c696a14fe2090cc281a54e45d4d9bf66031a9055a38b9b781fb8d07aeccc047d` |
+
+Le checksum interne `benchmark_brest_v1.checksum_sha256` couvre le masque
+horaire et les observations de la fenêtre de validation :
+`531da284f68bb9acf77c9d21b90e0fd3d787809c0ddb0cd4d118c63eddc0ac42`.
+
+Les constantes Brest publiées par amar sont dérivées des observations REFMAR ;
+elles ne sont pas des constantes SHOM et ne doivent pas être présentées comme
+équivalentes.

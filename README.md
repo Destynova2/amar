@@ -1,24 +1,24 @@
 # amar
 
-> Calcule une marée astronomique hors ligne près d'une station NOAA connue, avec
+> Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.1 est le « curl de la vision » : on lance un serveur local, on envoie
-`lat/lon/datetime`, et la réponse donne soit une hauteur traçable, soit un refus
-utile.
+amar v0.1.x ajoute Brest expérimental au socle NOAA : on lance un serveur local,
+on envoie `lat/lon/datetime`, et la réponse donne soit une hauteur traçable,
+soit un refus utile.
 
 ## Installation
 
 Depuis un clone du dépôt :
 
 ```bash
-make release && mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 755 dist/amar ~/.local/bin/amar && cp dist/packs/noaa_m0.json ~/.local/share/amar/packs/noaa_m0.json
+make release && mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 755 dist/amar ~/.local/bin/amar && cp dist/packs/*.json ~/.local/share/amar/packs/
 ```
 
 Lancer le serveur :
 
 ```bash
-amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --addr 127.0.0.1:3000
+amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --addr 127.0.0.1:3000
 ```
 
 Le serveur charge le pack au démarrage, puis fonctionne offline.
@@ -38,7 +38,7 @@ curl -i -H 'content-type: application/json' \
 
 ```json
 {
-  "height_m": 0.76,
+  "height_m": 0.737,
   "datum": "MLLW",
   "source": {
     "kind": "station",
@@ -60,11 +60,12 @@ curl -i -H 'content-type: application/json' \
 }
 ```
 
-### 2. Brest est refusé, volontairement
+### 2. Brest répond en expérimental
 
-Brest n'est pas calculé en M1. Le serveur refuse plutôt que d'inventer une
-hauteur hors zone, et indique la station embarquée la plus proche. Le calcul
-Brest expérimental est prévu pour M2.
+Brest utilise un pack expérimental calibré depuis les observations horaires
+validées REFMAR (`source=4`, attribution `Shom / REFMAR`). Les constantes sont
+dérivées des observations REFMAR, non équivalentes aux constantes SHOM. La
+réponse ne porte pas de grade A/B/C : elle expose le p95 du benchmark figé.
 
 ```bash
 curl -i -H 'content-type: application/json' \
@@ -74,16 +75,27 @@ curl -i -H 'content-type: application/json' \
 
 ```json
 {
-  "error": "no_supported_source",
-  "message": "no supported source within 20.0 km; nearest station is noaa:8410140 Eastport at 4652.019 km",
-  "max_distance_km": 20.0,
-  "nearest_source": {
+  "height_m": 1.09,
+  "datum": "zero_hydrographique_brest",
+  "source": {
     "kind": "station",
-    "id": "noaa:8410140",
-    "name": "Eastport",
-    "distance_km": 4652.019,
+    "id": "refmar:3",
+    "name": "Brest",
+    "distance_km": 0.011,
     "data_version": "2026-07-06"
-  }
+  },
+  "confidence": {
+    "method": "calibrated_station_experimental",
+    "residual_benchmark_cm": 26.6,
+    "validation_period": "2026-04-01T00:00:00Z/2026-07-01T00:00:00Z"
+  },
+  "warnings": [
+    "astronomical_tide_only",
+    "not_for_navigation",
+    "no_weather_surge",
+    "experimental",
+    "not_shom"
+  ]
 }
 ```
 
@@ -116,7 +128,7 @@ La couverture par défaut est limitée à 20 km autour de chaque station.
 Un rayon demandé plus large est plafonné à 20 km en M1, afin de garder le
 grade C dans son domaine documenté.
 
-Barème de confiance M1 :
+Barème de confiance NOAA :
 
 | Distance | Grade | Sigma |
 |---:|---|---:|
@@ -124,9 +136,12 @@ Barème de confiance M1 :
 | <= 10 km | B | 15 cm |
 | <= 20 km | C | 30 cm |
 
-Cette confiance est une heuristique de distance, pas une calibration
-empirique. La méthode exposée est
-`station_harmonics_v0_distance_heuristic`.
+Cette confiance NOAA est une heuristique de distance, pas une calibration
+empirique. La méthode exposée est `station_harmonics_v0_distance_heuristic`.
+
+Pour Brest, `confidence.method` vaut `calibrated_station_experimental` et
+`residual_benchmark_cm` mesure le p95 du benchmark hors calibration. Le résidu
+= niveau d'eau observé − marée astronomique prédite (météo incluse).
 
 ## CLI
 
@@ -134,6 +149,7 @@ Le même binaire garde l'usage CLI M0 :
 
 ```bash
 amar tide --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json
+amar tide --lat 48.383 --lon -4.495 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
 ```
 
 Depuis le dépôt :
@@ -141,6 +157,7 @@ Depuis le dépôt :
 ```bash
 make m0-validate
 make m1-smoke
+make m2-benchmark
 ```
 
 Commandes disponibles :
@@ -149,13 +166,19 @@ Commandes disponibles :
 |---|---|
 | `amar tide --lat <deg> --lon <deg> --at <utc>` | Calcule une hauteur instantanée |
 | `amar serve --addr 127.0.0.1:3000` | Sert l'API locale |
-| `amar validate` | Gate p95 vs prédictions NOAA, exit 1 au-delà de 5 cm |
+| `amar validate` | Gate p95 vs prédictions NOAA, exit 1 au-delà de 2 cm |
+| `amar benchmark-brest` | Rejoue `benchmark_brest_v1` et les deux baselines |
 | `amar pack-noaa` | Compile les fixtures NOAA brutes en pack |
 
 ## Données
 
-Le pack M1 contient 8 stations NOAA harmoniques : Boston, San Francisco,
+Le pack NOAA contient 8 stations harmoniques : Boston, San Francisco,
 Pensacola, Seattle, Eastport, Honolulu, Key West et Galveston Pier 21.
+
+Le pack Brest expérimental contient une seule station (`refmar:3`) au zéro
+hydrographique de Brest. Les observations d'entrée couvrent
+`2025-01-01T00:00:00Z/2026-07-01T00:00:00Z`; la calibration exclut les trois
+derniers mois, réservés à `benchmark_brest_v1`.
 
 Les fixtures, URLs d'origine et checksums sont listés dans
 [`DATA_LICENSES.md`](DATA_LICENSES.md).
@@ -168,9 +191,14 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 make m0-validate
 make m1-smoke
+make fetch-refmar
+make build-brest-pack
+make m2-benchmark
 ```
 
 ## Licence
 
 Code sous licence Apache-2.0. Les données NOAA incluses sont dans le domaine
-public des États-Unis ; voir [`DATA_LICENSES.md`](DATA_LICENSES.md).
+public des États-Unis. Les observations REFMAR et le pack Brest dérivé sont
+sous Licence Ouverte 2.0 Etalab avec attribution `Shom / REFMAR`; voir
+[`DATA_LICENSES.md`](DATA_LICENSES.md).

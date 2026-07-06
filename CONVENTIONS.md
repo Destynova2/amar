@@ -64,3 +64,27 @@ de l'annee a ete rejetee : elle degradait Boston et Eastport au-dessus du gate
 
 Le bareme de confiance M1 reste separe du moteur harmonique : A <= 2 km,
 B <= 10 km, C <= 20 km. Au-dela de 20 km, la source est refusee.
+
+## Brest experimental M2
+
+Le pack `amar-data-brest-experimental.json` utilise la meme convention
+`station_harmonics_v0` que NOAA : `V0` au 1er janvier UTC, avance par vitesse
+du constituant, puis corrections nodales `f/u` au milieu de l'annee civile.
+Le calibrateur ajuste donc directement des colonnes lineaires
+`f*cos(V+u)` et `f*sin(V+u)`.
+
+La liste des constituants Brest est fixee d'avance :
+
+```text
+M2, S2, N2, K2, K1, O1, P1, Q1, M4, MS4, MN4, M6, MF, MM, SA, SSA
+```
+
+Elle couvre les principaux semi-diurnes, diurnes, shallow-water et longues
+periodes separables sur au moins un an d'observations horaires. Le calibrateur
+M2 ne fait aucune selection automatique, aucun critere de Rayleigh dynamique et
+aucune ponderation robuste : c'est volontairement un compilateur borne pour
+Brest, pas un clone UTide.
+
+Pour Brest, le vocabulaire impose est : résidu = niveau d'eau observé − marée
+astronomique prédite (météo incluse). Ce résidu n'est pas une validation
+officielle.

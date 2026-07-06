@@ -1,10 +1,14 @@
 use amar::server::{self, ServerError, SourceResponse};
-use amar_core::{CoreError, UtcDateTime, predict_height};
+use amar_core::{
+    ConstituentId, CoreError, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, Meters,
+    PredictionMethod, TideModel, UtcDateTime, predict_height,
+};
 use amar_data::{
-    DataError, build_noaa_pack, load_official_predictions, load_pack_from_path, percentile,
-    prediction_signed_error_meters,
+    DataError, StationMatch, build_noaa_pack, load_official_predictions, load_pack_from_path,
+    load_packs_from_paths, percentile, prediction_signed_error_meters,
 };
 use clap::{Args, Parser, Subcommand};
+use serde::Deserialize;
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::fs;
@@ -12,7 +16,9 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use thiserror::Error;
 
-const DEFAULT_PACK: &str = "data/packs/noaa_m0.json";
+const DEFAULT_NOAA_PACK: &str = "data/packs/noaa_m0.json";
+const DEFAULT_BREST_PACK: &str = "data/packs/amar-data-brest-experimental.json";
+const DEFAULT_BREST_BENCHMARK: &str = "fixtures/refmar/benchmark_brest_v1.json";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.02;
@@ -37,6 +43,10 @@ enum CliError {
     ValidationThreshold { limit_cm: f64, failures: String },
     #[error("validation missing samples:\n{failures}")]
     ValidationSamples { failures: String },
+    #[error("station {0} not found in loaded packs")]
+    MissingStation(String),
+    #[error("benchmark has no usable samples")]
+    EmptyBenchmark,
 }
 
 #[derive(Debug, Parser)]
@@ -52,6 +62,7 @@ enum Command {
     Tide(TideArgs),
     Serve(ServeArgs),
     Validate(ValidateArgs),
+    BenchmarkBrest(BenchmarkBrestArgs),
     PackNoaa(PackNoaaArgs),
 }
 
@@ -63,8 +74,8 @@ struct TideArgs {
     lon: f64,
     #[arg(long)]
     at: String,
-    #[arg(long, default_value = DEFAULT_PACK)]
-    pack: PathBuf,
+    #[arg(long = "pack")]
+    pack: Vec<PathBuf>,
     #[arg(long, default_value_t = DEFAULT_MAX_DISTANCE_KM)]
     max_distance_km: f64,
 }
@@ -73,15 +84,15 @@ struct TideArgs {
 struct ServeArgs {
     #[arg(long, default_value = "127.0.0.1:3000")]
     addr: String,
-    #[arg(long, default_value = DEFAULT_PACK)]
-    pack: PathBuf,
+    #[arg(long = "pack")]
+    pack: Vec<PathBuf>,
     #[arg(long, default_value_t = DEFAULT_MAX_DISTANCE_KM)]
     max_distance_km: f64,
 }
 
 #[derive(Debug, Args)]
 struct ValidateArgs {
-    #[arg(long, default_value = DEFAULT_PACK)]
+    #[arg(long, default_value = DEFAULT_NOAA_PACK)]
     pack: PathBuf,
     #[arg(long, default_value = DEFAULT_FIXTURES)]
     fixtures: PathBuf,
@@ -91,12 +102,22 @@ struct ValidateArgs {
 struct PackNoaaArgs {
     #[arg(long, default_value = DEFAULT_FIXTURES)]
     fixtures: PathBuf,
-    #[arg(long, default_value = DEFAULT_PACK)]
+    #[arg(long, default_value = DEFAULT_NOAA_PACK)]
     out: PathBuf,
     #[arg(long, default_value = "2026-07-06")]
     extracted_at: String,
     #[arg(long = "station")]
     stations: Vec<String>,
+}
+
+#[derive(Debug, Args)]
+struct BenchmarkBrestArgs {
+    #[arg(long = "pack")]
+    pack: Vec<PathBuf>,
+    #[arg(long, default_value = DEFAULT_BREST_BENCHMARK)]
+    benchmark: PathBuf,
+    #[arg(long, default_value = "refmar:3")]
+    station_id: String,
 }
 
 #[tokio::main]
@@ -116,17 +137,23 @@ async fn run() -> Result<(), CliError> {
         Command::Tide(args) => tide(args),
         Command::Serve(args) => serve(args).await,
         Command::Validate(args) => validate(args),
+        Command::BenchmarkBrest(args) => benchmark_brest(args),
         Command::PackNoaa(args) => pack_noaa(args),
     }
 }
 
 async fn serve(args: ServeArgs) -> Result<(), CliError> {
-    server::serve(&args.addr, &args.pack, args.max_distance_km).await?;
+    server::serve(
+        &args.addr,
+        &effective_pack_paths(&args.pack),
+        args.max_distance_km,
+    )
+    .await?;
     Ok(())
 }
 
 fn tide(args: TideArgs) -> Result<(), CliError> {
-    let data = load_pack_from_path(&args.pack)?;
+    let data = load_packs_from_paths(&effective_pack_paths(&args.pack))?;
     let at = UtcDateTime::parse_rfc3339(&args.at)?;
     let station_match = data.nearest_station(
         args.lat,
@@ -139,7 +166,8 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
         "height_m": round3(prediction.height().as_meters()),
         "datum": station.datum,
         "source": SourceResponse::from(&station_match),
-        "method": prediction.method().as_str(),
+        "confidence": confidence_json(&station_match),
+        "warnings": warnings_json(station),
     });
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
@@ -241,6 +269,57 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
     Ok(())
 }
 
+fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
+    let data = load_packs_from_paths(&effective_pack_paths(&args.pack))?;
+    let station = data
+        .stations()
+        .iter()
+        .find(|station| station.pack().station_id == args.station_id)
+        .ok_or_else(|| CliError::MissingStation(args.station_id.clone()))?;
+    let benchmark = load_brest_benchmark(&args.benchmark)?;
+    let z0_m = station.pack().z0_m.get();
+    let m2_model = m2_only_model(station)?;
+
+    let mut calibrated_residuals = Vec::new();
+    let mut z0_residuals = Vec::new();
+    let mut m2_residuals = Vec::new();
+    let mut missing = 0_usize;
+
+    for sample in &benchmark.samples {
+        let Some(observed_m) = sample.observed_m else {
+            missing += 1;
+            continue;
+        };
+        let at = UtcDateTime::parse_rfc3339(&sample.timestamp)?;
+        let calibrated = predict_height(station.model(), at).height().as_meters();
+        let m2 = predict_height(&m2_model, at).height().as_meters();
+        calibrated_residuals.push(observed_m - calibrated);
+        z0_residuals.push(observed_m - z0_m);
+        m2_residuals.push(observed_m - m2);
+    }
+
+    let calibrated = benchmark_stats(&calibrated_residuals).ok_or(CliError::EmptyBenchmark)?;
+    let z0 = benchmark_stats(&z0_residuals).ok_or(CliError::EmptyBenchmark)?;
+    let m2 = benchmark_stats(&m2_residuals).ok_or(CliError::EmptyBenchmark)?;
+
+    println!(
+        "benchmark_brest_v1 station={} datum={} validation_period={}/{} samples={} missing={} checksum={}",
+        benchmark.station_id,
+        benchmark.datum,
+        benchmark.validation_period.start,
+        benchmark.validation_period.end,
+        calibrated_residuals.len(),
+        missing,
+        benchmark.checksum_sha256.as_deref().unwrap_or("NA"),
+    );
+    println!("résidu = niveau d'eau observé − marée astronomique prédite (météo incluse)");
+    println!("model,rms_cm,bias_cm,mae_cm,p95_cm,max_cm");
+    print_benchmark_stats("calibrated_station_experimental", calibrated);
+    print_benchmark_stats("z0_constant", z0);
+    print_benchmark_stats("m2_only", m2);
+    Ok(())
+}
+
 fn pack_noaa(args: PackNoaaArgs) -> Result<(), CliError> {
     let pack = if args.stations.is_empty() {
         build_noaa_pack(&args.fixtures, &args.extracted_at, default_noaa_stations())?
@@ -263,6 +342,58 @@ fn pack_noaa(args: PackNoaaArgs) -> Result<(), CliError> {
         source,
     })?;
     Ok(())
+}
+
+fn effective_pack_paths(paths: &[PathBuf]) -> Vec<PathBuf> {
+    if !paths.is_empty() {
+        return paths.to_vec();
+    }
+    let mut defaults = vec![PathBuf::from(DEFAULT_NOAA_PACK)];
+    let brest = PathBuf::from(DEFAULT_BREST_PACK);
+    if brest.exists() {
+        defaults.push(brest);
+    }
+    defaults
+}
+
+fn confidence_json(station_match: &StationMatch<'_>) -> serde_json::Value {
+    let station = station_match.station.pack();
+    if station.experimental == Some(true) {
+        let validation_period = station
+            .validation_period
+            .as_ref()
+            .map(|period| format!("{}/{}", period.start, period.end))
+            .unwrap_or_else(|| "unknown".to_string());
+        return json!({
+            "method": "calibrated_station_experimental",
+            "residual_benchmark_cm": station.residual_benchmark_cm.map(round1).unwrap_or(0.0),
+            "validation_period": validation_period,
+        });
+    }
+
+    let (grade, sigma_cm) = if station_match.distance_km <= 2.0 {
+        ("A", 8)
+    } else if station_match.distance_km <= 10.0 {
+        ("B", 15)
+    } else {
+        ("C", 30)
+    };
+    json!({
+        "grade": grade,
+        "sigma_cm": sigma_cm,
+        "method": server::CONFIDENCE_METHOD,
+    })
+}
+
+fn warnings_json(station: &amar_pack::StationPack) -> Vec<&'static str> {
+    let mut warnings = server::DEFAULT_WARNINGS.to_vec();
+    if station.experimental == Some(true) {
+        warnings.push("experimental");
+    }
+    if station.not_shom == Some(true) {
+        warnings.push("not_shom");
+    }
+    warnings
 }
 
 fn default_noaa_stations() -> impl Iterator<Item = &'static str> {
@@ -339,8 +470,113 @@ fn error_stats(errors: &[f64]) -> Option<ErrorStats> {
     })
 }
 
+#[derive(Debug, Deserialize)]
+struct BrestBenchmark {
+    station_id: String,
+    datum: String,
+    validation_period: BenchmarkPeriod,
+    #[serde(default)]
+    checksum_sha256: Option<String>,
+    samples: Vec<BrestBenchmarkSample>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BenchmarkPeriod {
+    start: String,
+    end: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BrestBenchmarkSample {
+    timestamp: String,
+    observed_m: Option<f64>,
+}
+
+#[derive(Clone, Copy)]
+struct BenchmarkStats {
+    rms_cm: f64,
+    bias_cm: f64,
+    mae_cm: f64,
+    p95_cm: f64,
+    max_cm: f64,
+}
+
+fn load_brest_benchmark(path: &Path) -> Result<BrestBenchmark, CliError> {
+    let data = fs::read_to_string(path).map_err(|source| CliError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    serde_json::from_str(&data).map_err(CliError::from)
+}
+
+fn m2_only_model(station: &amar_data::LoadedStation) -> Result<TideModel, CliError> {
+    let m2 = station
+        .pack()
+        .constituents
+        .iter()
+        .find(|constituent| constituent.name == "M2")
+        .ok_or_else(|| CliError::MissingStation("M2 constituent".to_string()))?;
+    let constituent = HarmonicConstituent::new(
+        ConstituentId::new(&m2.name)?,
+        Meters::new(m2.amplitude_m.get())?,
+        Degrees::new(m2.phase_gmt_deg.get())?,
+        DegreesPerHour::new(m2.speed_deg_per_hour.get())?,
+    );
+    TideModel::new(
+        DatumId::new(&station.pack().datum)?,
+        Meters::new(station.pack().z0_m.get())?,
+        vec![constituent],
+        PredictionMethod::StationHarmonicsV0,
+    )
+    .map_err(CliError::from)
+}
+
+fn benchmark_stats(residuals_m: &[f64]) -> Option<BenchmarkStats> {
+    if residuals_m.is_empty() {
+        return None;
+    }
+    let samples = residuals_m.len() as f64;
+    let bias_m = residuals_m.iter().sum::<f64>() / samples;
+    let rms_m = (residuals_m
+        .iter()
+        .map(|residual| residual * residual)
+        .sum::<f64>()
+        / samples)
+        .sqrt();
+    let mae_m = residuals_m
+        .iter()
+        .map(|residual| residual.abs())
+        .sum::<f64>()
+        / samples;
+    let mut absolute = residuals_m
+        .iter()
+        .map(|residual| residual.abs())
+        .collect::<Vec<_>>();
+    absolute.sort_by(|left, right| left.total_cmp(right));
+    let p95_m = percentile(&absolute, 0.95)?;
+    let max_m = absolute.last().copied().unwrap_or(0.0);
+    Some(BenchmarkStats {
+        rms_cm: rms_m * 100.0,
+        bias_cm: bias_m * 100.0,
+        mae_cm: mae_m * 100.0,
+        p95_cm: p95_m * 100.0,
+        max_cm: max_m * 100.0,
+    })
+}
+
+fn print_benchmark_stats(name: &str, stats: BenchmarkStats) {
+    println!(
+        "{name},{:.1},{:.1},{:.1},{:.1},{:.1}",
+        stats.rms_cm, stats.bias_cm, stats.mae_cm, stats.p95_cm, stats.max_cm
+    );
+}
+
 fn round3(value: f64) -> f64 {
     (value * 1000.0).round() / 1000.0
+}
+
+fn round1(value: f64) -> f64 {
+    (value * 10.0).round() / 10.0
 }
 
 fn parse_latitude(value: &str) -> Result<f64, String> {

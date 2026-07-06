@@ -23,10 +23,9 @@ pub fn predict_height(model: &TideModel, at: UtcDateTime) -> TidePrediction {
         let Some(definition) = constituent_definition(constituent.id().as_str()) else {
             unreachable!("constituents are validated by TideModel::new");
         };
-        let argument = convention.argument_degrees(definition, constituent);
-        let phase = argument + convention.nodal_phase_degrees(definition)
-            - constituent.phase_gmt().as_degrees();
-        let contribution = convention.nodal_factor(definition)
+        let basis = convention.basis(definition, constituent);
+        let phase = basis.argument_degrees - constituent.phase_gmt().as_degrees();
+        let contribution = basis.nodal_factor
             * constituent.amplitude().as_meters()
             * Degrees(phase).to_radians().as_radians().cos();
         height += contribution;
@@ -36,6 +35,29 @@ pub fn predict_height(model: &TideModel, at: UtcDateTime) -> TidePrediction {
         height: Meters(height),
         method: model.method,
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HarmonicBasis {
+    pub argument_degrees: f64,
+    pub nodal_factor: f64,
+}
+
+pub fn harmonic_basis(
+    constituent_id: &ConstituentId,
+    speed: DegreesPerHour,
+    method: PredictionMethod,
+    at: UtcDateTime,
+) -> Result<HarmonicBasis, CoreError> {
+    let definition = constituent_definition(constituent_id.as_str())
+        .ok_or_else(|| CoreError::UnknownConstituent(constituent_id.to_string()))?;
+    let constituent = HarmonicConstituent::new(
+        constituent_id.clone(),
+        Meters::new(1.0)?,
+        Degrees::new(0.0)?,
+        speed,
+    );
+    Ok(PredictionConvention::new(method, at).basis(definition, &constituent))
 }
 
 struct PredictionConvention {
@@ -91,6 +113,18 @@ impl PredictionConvention {
             PredictionConventionMode::InstantNoNodal { astro } => {
                 astronomical_argument_degrees(definition, astro)
             }
+        }
+    }
+
+    fn basis(
+        &self,
+        definition: constituents::ConstituentDefinition,
+        constituent: &HarmonicConstituent,
+    ) -> HarmonicBasis {
+        HarmonicBasis {
+            argument_degrees: self.argument_degrees(definition, constituent)
+                + self.nodal_phase_degrees(definition),
+            nodal_factor: self.nodal_factor(definition),
         }
     }
 

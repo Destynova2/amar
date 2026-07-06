@@ -1,0 +1,348 @@
+{
+  "alertCustom": false,
+  "collocalisation": "https://www.sonel.org/?page=gps&idStation=642",
+  "date_prem_obs": "1846-01-04",
+  "delai_alerte": "03:00",
+  "descriptif_capteur": "https://refmar.shom.fr/maregraphe-radar-ondes-guidees-bm100a",
+  "events": [
+    {
+      "content": "\n\tLes données validées jusqu'au 10/01/2011 sont disponibles sur le serveur FTP\n",
+      "creation_date": "2011-07-08T09:49:03.000Z",
+      "due_date": "2011-01-14T00:00:00.000Z",
+      "id": "118",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tProblème au marégraphe. Manque données du 02/12/2009 au 03/12/2009.\n",
+      "creation_date": "2011-07-08T09:48:05.000Z",
+      "due_date": "2009-12-02T00:00:00.000Z",
+      "id": "110",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tRelance du MCN. Archivage des données.\n",
+      "creation_date": "2011-07-12T12:20:00.000Z",
+      "due_date": "2011-05-30T00:00:00.000Z",
+      "id": "111",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tRelance du MCN. Archivage des données.\n",
+      "creation_date": "2011-07-08T09:49:01.000Z",
+      "due_date": "2010-02-16T00:00:00.000Z",
+      "id": "112",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tContrôle à la sonde lumineuse effectué à basse mer.\n\n\tMoyenne des écarts entre la sonde et le MCN : 0.13cm (écart type : 0.04).",
+      "creation_date": "2012-05-29T08:24:02.000Z",
+      "due_date": "2012-05-04T00:00:00.000Z",
+      "id": "113",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tLes données validées jusqu'au 30 mai 2011 sont disponibles sur le serveur FTP.\n",
+      "creation_date": "2011-07-08T09:50:02.000Z",
+      "due_date": "2011-06-16T00:00:00.000Z",
+      "id": "114",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tControle à la sonde lumineuse :\n\n\tMoyenne des écarts à BM : 0.15cm (écart type : 0.4 cm)\n\n\tMoyenne des écarts à PM : -0.43 cm (écart type : 0.06 cm)\n",
+      "creation_date": "2013-10-09T10:18:00.000Z",
+      "due_date": "2013-07-25T00:00:00.000Z",
+      "id": "115",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tLe capteur radar BM70 est remplacé par un capteur BM100 (toujours Krohne).\n",
+      "creation_date": "2011-07-08T09:47:05.000Z",
+      "due_date": "2002-11-26T00:00:00.000Z",
+      "id": "116",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tCalcul et mise en place dans la centrale de nouveaux coefficients a, b et c suite au Van de Casteele réalisé le 21/03/2011.\n",
+      "creation_date": "2011-07-12T12:18:04.000Z",
+      "due_date": "2011-03-24T00:00:00.000Z",
+      "id": "117",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tRelance du MCN. Archivage des données à 10min et HH.\n",
+      "creation_date": "2011-07-08T09:48:04.000Z",
+      "due_date": "2009-11-26T00:00:00.000Z",
+      "id": "119",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tContrôle de la sonde lumineuse. Les résultats sont très satisfaisants.\n",
+      "creation_date": "2011-08-18T14:27:02.000Z",
+      "due_date": "2011-04-07T00:00:00.000Z",
+      "id": "120",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tSuite à un test de Van de Cateele réalisé semaine 43, de nouveaux coefficients a1 et b1 de correction ont été calculés et entrés dans la centrale du MCN de Brest.\n",
+      "creation_date": "2011-07-08T09:48:02.000Z",
+      "due_date": "2009-10-22T00:00:00.000Z",
+      "id": "121",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tPlantage du MCN. Données aberrantes (supprimées dans les validées au prochain archivage d'octobre).\n",
+      "creation_date": "2013-10-09T10:19:03.000Z",
+      "due_date": "2013-07-23T00:00:00.000Z",
+      "id": "122",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tChangement de la côte suite à un nouveau nivellement.\n\n\tLa côte entrée le 25/04 était plus haute d'un centimètre. Modification des données du 25/04 au 11/07 dans les validées à 10 min (seront disponible au prochain archivage d'octobre).",
+      "creation_date": "2013-10-09T10:16:04.000Z",
+      "due_date": "2013-07-11T00:00:00.000Z",
+      "id": "123",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tMise en place d'un afficheur indiquant la hauteur d'eau enregistrée par le marégraphe au dessus de la porte du marégraphe.\n",
+      "creation_date": "2011-07-08T09:47:01.000Z",
+      "due_date": "2000-05-29T00:00:00.000Z",
+      "id": "124",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tRemplacement du prototype par une nouvelle centrale ELTA.\n",
+      "creation_date": "2011-07-08T09:48:00.000Z",
+      "due_date": "2008-06-26T00:00:00.000Z",
+      "id": "125",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tUn premier marégraphe côtier numérique (MCN) est installé à Brest le 05/02/1993: capteur ultrason IEE et centrale d'acquisition MORS HT200.\n",
+      "creation_date": "2011-07-08T09:46:05.000Z",
+      "due_date": "1993-02-05T00:00:00.000Z",
+      "id": "126",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tInstallation d'un marégraphe radar: capteur BM70 et d'une centrale d'acquisition Elta. A noter que le marégraphe ultrason continue à enregistrer.\n",
+      "creation_date": "2011-07-08T09:47:03.000Z",
+      "due_date": "2000-10-01T00:00:00.000Z",
+      "id": "127",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "\n\tControle à la sonde lumineuse effectué ce jour :\n\n\t \n\n\tMoyenne des écarts à BM : 0.45 cm (écart type : 0.12 cm)\n",
+      "creation_date": "2015-02-05T14:52:01.000Z",
+      "due_date": "2014-10-09T00:00:00.000Z",
+      "id": "128",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Nettoyage du câble guide-onde du capteur radar optiflex.",
+      "creation_date": "2024-10-07T11:51:21.000Z",
+      "due_date": "2024-09-18T02:00:00.000Z",
+      "id": "2013",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Contrôle à la sonde lumineuse : Gros écarts à BM. A surveiller possible problème avec le capteur ou mauvais étalonnage. ",
+      "creation_date": "2016-02-15T12:18:17.936Z",
+      "due_date": "2015-11-26T00:00:00.000Z",
+      "id": "973",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Contrôle à la sonde lumineuse réaliser à BM :\nMoyenne des écarts : 0.09 cm (écart type : 0.19 cm).\nPas d'explication pour le moment pour les mauvais résultats du mois de novembre.",
+      "creation_date": "2016-02-15T12:20:35.259Z",
+      "due_date": "2016-01-12T00:00:00.000Z",
+      "id": "974",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Contrôle à la sonde lumineuse effectué ce jour. \nMoyenne des écarts à BM : 0.62 cm (écart type : 0.14 cm)\nMoyenne des écarts à PM : 0.18 cm (écart type : 0 cm).",
+      "creation_date": "2016-02-23T10:17:56.130Z",
+      "due_date": "2016-02-11T00:00:00.000Z",
+      "id": "985",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Réparation de la ligne téléphonique gérée par DIRISI le matin (liaison avait été sectionnée) : trou dans les données brutes transférées à la minute",
+      "creation_date": "2016-11-21T11:20:16.668Z",
+      "due_date": "2016-11-18T00:00:00.000Z",
+      "id": "1028",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Suite à un problème de synchronisation de l'horloge de la centrale du MCN avec le Superviseur du SHOM, les données du 20 juin 2018 de 04h10 à 09h20 (TU) n'ont pas été enregistrées.",
+      "creation_date": "2018-06-20T15:00:12.000Z",
+      "due_date": "2018-06-20T02:00:00.000Z",
+      "id": "1155",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Erreur de synchronisation d'horloge : L'acquisition de données a du être relancée.",
+      "creation_date": "2018-07-23T12:40:37.000Z",
+      "due_date": "2018-07-23T02:00:00.000Z",
+      "id": "1165",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Erreur de transmission de données temps réel : données accessibles en différé entre le 26/11 et le 27/11",
+      "creation_date": "2018-11-26T18:35:58.000Z",
+      "due_date": "2018-11-26T01:00:00.000Z",
+      "id": "1227",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Erreur serveur Shom entre le 20/02/19 et le 21/02/19 : les données 1 minute n'ont pas été reçues ",
+      "creation_date": "2019-02-21T10:44:59.000Z",
+      "due_date": "2019-02-21T01:00:00.000Z",
+      "id": "1305",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Marégraphe indisponible à partir du 03/10/2019 08:00 jusqu'au 4/10/2019 15:20",
+      "creation_date": "2019-10-03T10:17:15.000Z",
+      "due_date": "2019-10-03T02:00:00.000Z",
+      "id": "1435",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Panne de la centrale d'acquisition du 24/12/2019 4h23 au 02/01/2020 9h35",
+      "creation_date": "2020-01-02T11:36:04.000Z",
+      "due_date": "2020-01-02T01:00:00.000Z",
+      "id": "1460",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "La transmission des données temps réelles est indisponible depuis le 20/05/2020. Intervention en cours",
+      "creation_date": "2020-05-25T15:27:30.000Z",
+      "due_date": "2020-05-25T02:00:00.000Z",
+      "id": "1497",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Intervention le 27/04 (retour fonctionnement normale). Du 25/03 au 27/04 : réseau coupé, données temps différé disponibles (source 2)",
+      "creation_date": "2020-03-25T10:30:05.000Z",
+      "due_date": "2020-03-25T01:00:00.000Z",
+      "id": "1487",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "intervention effectuée le 27/05/2020. Bon fonctionnement",
+      "creation_date": "2020-05-27T15:43:32.000Z",
+      "due_date": "2020-05-27T02:00:00.000Z",
+      "id": "1499",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Renouvellement des centrales d'acquisition RONIM : Remplacement d'éléments électroniques, réseau et logiciels de traitement de hauteur d'eau. Perturbations possibles sur la diffusion des données.",
+      "creation_date": "2020-10-13T12:16:28.000Z",
+      "due_date": "2020-10-13T02:00:00.000Z",
+      "id": "1522",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Données temps réelles manquantes entre 26/06/2019 et 27/06/2019 suite à une panne réseau",
+      "creation_date": "2019-06-27T09:56:29.000Z",
+      "due_date": "2019-06-27T02:00:00.000Z",
+      "id": "1385",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Transmission temps-réel utilise le nouveau superviseur RONIM. La hauteur calculée est identique par satellite et par Internet",
+      "creation_date": "2021-09-13T22:53:29.000Z",
+      "due_date": "2021-09-13T02:00:00.000Z",
+      "id": "1577",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Investigations en cours.",
+      "creation_date": "2024-06-20T11:31:17.000Z",
+      "due_date": "2024-06-20T02:00:00.000Z",
+      "id": "1985",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Alimentation interne redisposée.",
+      "creation_date": "2024-06-21T11:05:33.000Z",
+      "due_date": "2024-06-21T02:00:00.000Z",
+      "id": "1986",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Fonctionnement à nouveau nominal de la diffusion des données après le nettoyage des branchements et du changement d''un câble réseau.",
+      "creation_date": "2024-11-25T11:30:35.000Z",
+      "due_date": "2024-11-14T01:00:00.000Z",
+      "id": "2028",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Installation d''une nouvelle centrale d''acquisition",
+      "creation_date": "2024-12-19T10:17:00.000Z",
+      "due_date": "2024-12-17T01:00:00.000Z",
+      "id": "2085",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Calibration du capteur de niveau radar.\nL''intercomparaison des mesures à l''intérieur et extérieur du puits confirme que le puits n''est pas obstrué.",
+      "creation_date": "2024-10-07T11:51:51.000Z",
+      "due_date": "2024-09-19T02:00:00.000Z",
+      "id": "2014",
+      "tide_gauge_id": "3"
+    },
+    {
+      "content": "Accès impossible à la centrale d''acquisition. Suspicion d''un problème au niveau de l''antenne de transmission.",
+      "creation_date": "2024-11-05T09:19:11.000Z",
+      "due_date": "2024-11-02T01:00:00.000Z",
+      "id": "2022",
+      "tide_gauge_id": "3"
+    }
+  ],
+  "fuseau_horaire": "0",
+  "gestionnaire": "Shom",
+  "id_ram": "Brest",
+  "info_maregraphe": "https://refmar.shom.fr/donnees/3",
+  "journal_de_bord": "https://refmar.shom.fr/donnees/3",
+  "latitude": 48.38290024,
+  "longitude": -4.49503994,
+  "members": [
+    {
+      "city": "BREST",
+      "delivery_point": "13 rue du chatellier",
+      "electronic_mail_address": "refmar@shom.fr",
+      "individual_name": "SHOM",
+      "organization_name": "SHOM",
+      "postal_code": "29200",
+      "voice": "02 56 31 24 26"
+    }
+  ],
+  "name": "BREST",
+  "niveau_moyen": "4.14",
+  "npbma": "0.25",
+  "nphma": "7.93",
+  "organismes": [
+    {
+      "logo": "https://services.data.shom.fr/static/logo/DDM/logo_SHOM.png",
+      "nom": "Shom",
+      "url": "https://www.shom.fr"
+    },
+    {
+      "logo": "https://services.data.shom.fr/static/logo/DDM/logo_Marine_nationale.png",
+      "nom": "Marine nationale",
+      "url": "https://www.defense.gouv.fr/marine"
+    }
+  ],
+  "reseau": "RONIM",
+  "sect_geographique": "FH",
+  "shom_id": "3",
+  "spm": "BREST",
+  "state": "OK",
+  "verticalRef": {
+    "nom_ref": "IGN69",
+    "zero_hydro": "zero_hydrographique",
+    "zh_ref": "-3.635"
+  },
+  "ville_d_hebergement": "Brest"
+}

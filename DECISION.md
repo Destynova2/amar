@@ -1,4 +1,4 @@
-# Décisions M0-M1
+# Décisions M0-M2
 
 Date : 2026-07-06.
 
@@ -144,10 +144,10 @@ Endpoints retenus :
 - `GET /health`
 - `GET /coverage`
 
-Le refus hors rayon est volontairement utile. Brest
-`lat=48.383 lon=-4.495` retourne `422 no_supported_source` avec Eastport comme
-station la plus proche à 4652,019 km. Brest reste donc un cas dogfood visible,
-mais non calculé avant M2.
+En M1, le refus hors rayon était volontairement utile. Brest
+`lat=48.383 lon=-4.495` retournait `422 no_supported_source` avec Eastport
+comme station la plus proche à 4652,019 km. M2 remplace ce comportement par la
+réponse expérimentale `refmar:3`.
 
 La confiance M1 est une heuristique de distance :
 
@@ -170,3 +170,122 @@ Taguer M1.
 La boucle M1 est atteinte : un tiers peut construire le binaire, lancer le
 serveur, obtenir une hauteur NOAA traçable, ou recevoir un refus explicite hors
 couverture.
+
+## M2 — Brest expérimental
+
+Date : 2026-07-06.
+
+### Accès données
+
+La porte de sortie `m2a-blocked` n'est pas utilisée : l'accès programmatique
+REFMAR fonctionne via `services.data.shom.fr/maregraphie`.
+
+Produit retenu :
+
+- station unique : `shom_id=3`, `BREST`, réseau `RONIM` ;
+- produit : `sources=4`, données horaires validées ;
+- période d'entrée : `2025-01-01T00:00:00Z/2026-07-01T00:00:00Z` ;
+- licence : Licence Ouverte 2.0 Etalab, attribution `Shom / REFMAR` ;
+- référence verticale : `zero_hydrographique`, RAM id `Brest`, ZH = -3.635 m
+  par rapport à `IGN69` dans la fiche REFMAR.
+
+La collecte longue période passe par le flux 31 jours documenté par le Swagger
+REFMAR, en tranches idempotentes, sans formulaire nom/email.
+
+### Calibration
+
+Commande de reproduction :
+
+```bash
+make fetch-refmar
+make build-brest-pack
+```
+
+Fenêtres :
+
+| Fenêtre | Début | Fin | Échantillons attendus | Observés | Couverture | Trous > 1,5 h | Sauts aberrants |
+|---|---|---|---:|---:|---:|---:|---:|
+| Entrée | 2025-01-01T00:00:00Z | 2026-07-01T00:00:00Z | 13104 | 13103 | 99,99 % | 0 | 0 |
+| Calibration | 2025-01-01T00:00:00Z | 2026-04-01T00:00:00Z | 10920 | 10920 | 100,00 % | 0 | 0 |
+| Validation | 2026-04-01T00:00:00Z | 2026-07-01T00:00:00Z | 2184 | 2183 | 99,95 % | 0 | 0 |
+
+La seule lacune du benchmark est `2026-06-30T23:00:00Z`, explicitement masquée
+dans `benchmark_brest_v1`.
+
+Méthode :
+
+- constituants fixés : `M2, S2, N2, K2, K1, O1, P1, Q1, M4, MS4, MN4, M6,
+  MF, MM, SA, SSA` ;
+- solveur : moindres carrés linéaires sin/cos via `nalgebra` SVD ;
+- convention : même `station_harmonics_v0` que le moteur (`V0` 1er janvier,
+  `f/u` milieu d'année civile) ;
+- `Z0` ajusté : `4.287 m` au-dessus du zéro hydrographique de Brest.
+
+Constantes dérivées :
+
+| Constituant | Amplitude m | Phase GMT deg |
+|---|---:|---:|
+| M2 | 2.0437 | 108.39 |
+| S2 | 0.7567 | 148.65 |
+| N2 | 0.4087 | 90.28 |
+| K2 | 0.2162 | 145.84 |
+| K1 | 0.0618 | 76.97 |
+| O1 | 0.0652 | 327.98 |
+| P1 | 0.0210 | 70.67 |
+| Q1 | 0.0195 | 287.75 |
+| M4 | 0.0586 | 105.12 |
+| MS4 | 0.0387 | 181.28 |
+| MN4 | 0.0217 | 60.83 |
+| M6 | 0.0304 | 353.99 |
+| MF | 0.0195 | 173.97 |
+| MM | 0.0381 | 225.04 |
+| SA | 0.0983 | 276.24 |
+| SSA | 0.0131 | 201.26 |
+
+Disclaimer publié dans le pack : constantes dérivées des observations REFMAR,
+non équivalentes aux constantes SHOM.
+
+### Benchmark
+
+Commande :
+
+```bash
+make m2-benchmark
+```
+
+Définition : résidu = niveau d'eau observé − marée astronomique prédite
+(météo incluse).
+
+Fenêtre figée : `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z`.
+
+| Modèle | RMS cm | Biais cm | MAE cm | p95 cm | Max cm |
+|---|---:|---:|---:|---:|---:|
+| `calibrated_station_experimental` | 13,8 | -1,5 | 11,0 | 26,6 | 46,9 |
+| `z0_constant` | 153,2 | -7,7 | 131,9 | 267,4 | 361,9 |
+| `m2_only` | 60,8 | -7,9 | 50,2 | 111,3 | 178,3 |
+
+Lecture : p95 26,6 cm est dans l'ordre attendu pour un résidu observation moins
+marée astronomique prédite avec météo incluse. Le biais est faible et le modèle
+bat nettement les deux baselines.
+
+### Artefacts
+
+| Artefact | Rôle |
+|---|---|
+| `fixtures/refmar/brest_validated_hourly_2025-01-01_2026-07-01.csv` | observations d'entrée |
+| `fixtures/refmar/brest_tidegauge.json` | fiche station et datum |
+| `fixtures/refmar/benchmark_brest_v1.json` | benchmark hors calibration figé |
+| `data/packs/amar-data-brest-experimental.json` | pack Brest expérimental |
+
+Le serveur et le CLI chargent Brest en plus de NOAA. Les réponses NOAA restent
+inchangées dans les snapshots ; Brest répond sans grade A/B/C avec
+`confidence.method = calibrated_station_experimental`,
+`residual_benchmark_cm = 26.6`, les warnings existants, `experimental` et
+`not_shom`.
+
+## Décision M2
+
+Taguer M2.
+
+Le milestone reste borné : une station, un datum, une période, un pack. Pas de
+M3 dans cette livraison.
