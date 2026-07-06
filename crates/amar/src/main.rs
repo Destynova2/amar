@@ -1,4 +1,4 @@
-use amar::server::{self, ServerError};
+use amar::server::{self, ServerError, SourceResponse};
 use amar_core::{CoreError, UtcDateTime, predict_height};
 use amar_data::{
     DataError, build_noaa_pack, load_official_predictions, load_pack_from_path, percentile,
@@ -16,9 +16,7 @@ const DEFAULT_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.05;
-const DEFAULT_NOAA_STATIONS: &[&str] = &[
-    "8410140", "8443970", "9414290", "8729840", "9447130", "1612340", "8724580", "8771450",
-];
+const DEFAULT_NOAA_STATIONS: &str = include_str!("../../../data/stations.txt");
 
 #[derive(Debug, Error)]
 enum CliError {
@@ -130,19 +128,17 @@ async fn serve(args: ServeArgs) -> Result<(), CliError> {
 fn tide(args: TideArgs) -> Result<(), CliError> {
     let data = load_pack_from_path(&args.pack)?;
     let at = UtcDateTime::parse_rfc3339(&args.at)?;
-    let station_match = data.nearest_station(args.lat, args.lon, args.max_distance_km)?;
+    let station_match = data.nearest_station(
+        args.lat,
+        args.lon,
+        effective_max_distance_km(args.max_distance_km),
+    )?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
     let output = json!({
         "height_m": round3(prediction.height().as_meters()),
         "datum": station.datum,
-        "source": {
-            "kind": "station",
-            "id": station.station_id,
-            "name": station.name,
-            "distance_km": round3(station_match.distance_km),
-            "data_version": station.source.extracted_at,
-        },
+        "source": SourceResponse::from(&station_match),
         "method": prediction.method().as_str(),
     });
     println!("{}", serde_json::to_string_pretty(&output)?);
@@ -248,11 +244,7 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
 
 fn pack_noaa(args: PackNoaaArgs) -> Result<(), CliError> {
     let pack = if args.stations.is_empty() {
-        build_noaa_pack(
-            &args.fixtures,
-            &args.extracted_at,
-            DEFAULT_NOAA_STATIONS.iter().copied(),
-        )?
+        build_noaa_pack(&args.fixtures, &args.extracted_at, default_noaa_stations())?
     } else {
         build_noaa_pack(
             &args.fixtures,
@@ -272,6 +264,17 @@ fn pack_noaa(args: PackNoaaArgs) -> Result<(), CliError> {
         source,
     })?;
     Ok(())
+}
+
+fn default_noaa_stations() -> impl Iterator<Item = &'static str> {
+    DEFAULT_NOAA_STATIONS
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+}
+
+fn effective_max_distance_km(max_distance_km: f64) -> f64 {
+    max_distance_km.min(server::MAX_CONFIDENCE_DISTANCE_KM)
 }
 
 fn prediction_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {

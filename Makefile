@@ -1,7 +1,8 @@
 NOAA_API = https://api.tidesandcurrents.noaa.gov
 NOAA_MDAPI = $(NOAA_API)/mdapi/prod/webapi/stations
 NOAA_DATAGETTER = $(NOAA_API)/api/prod/datagetter
-STATIONS = 8410140 8443970 9414290 8729840 9447130 1612340 8724580 8771450
+STATIONS := $(shell awk 'NF { print $$1 }' data/stations.txt)
+STATION_COUNT := $(words $(STATIONS))
 YEARS = 2026 2031 2036
 
 .PHONY: fmt clippy test fetch-noaa pack-noaa m0-validate release m1-smoke
@@ -59,10 +60,17 @@ m1-smoke:
 	@set -eu; \
 	LOG=$$(mktemp); \
 	BODY=$$(mktemp); \
-	BASE=http://127.0.0.1:3000; \
-	target/debug/amar serve --addr 127.0.0.1:3000 >$$LOG 2>&1 & \
+	BASE=; \
+	target/debug/amar serve --addr 127.0.0.1:0 >$$LOG 2>&1 & \
 	PID=$$!; \
 	trap 'kill $$PID >/dev/null 2>&1 || true; wait $$PID >/dev/null 2>&1 || true; rm -f $$LOG $$BODY' EXIT; \
+	for attempt in 1 2 3 4 5 6 7 8 9 10; do \
+		BASE=$$(sed -n 's/^amar serve listening on //p' $$LOG); \
+		if [ -n "$$BASE" ]; then break; fi; \
+		if ! kill -0 $$PID >/dev/null 2>&1; then cat $$LOG; exit 1; fi; \
+		sleep 0.1; \
+	done; \
+	test -n "$$BASE"; \
 	READY=0; \
 	for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do \
 		if curl -fsS $$BASE/health >$$BODY 2>/dev/null; then READY=1; break; fi; \
@@ -70,7 +78,7 @@ m1-smoke:
 	done; \
 	if [ "$$READY" != "1" ]; then cat $$LOG; exit 1; fi; \
 	grep -q '"version"' $$BODY; \
-	grep -q '"station_count":8' $$BODY; \
+	grep -q '"station_count":$(STATION_COUNT)' $$BODY; \
 	CODE=$$(curl -sS -o $$BODY -w '%{http_code}' $$BASE/coverage); \
 	test "$$CODE" = "200"; \
 	grep -q '"stations"' $$BODY; \

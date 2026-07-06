@@ -56,8 +56,104 @@ async fn tide_invalid_input_matches_snapshot() {
 }
 
 #[tokio::test]
+async fn tide_malformed_json_returns_400() {
+    let actual = post_tide(r#"{"lat":37.806,"lon":"#, 20.0).await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert!(
+        actual.body["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains("JSON")
+    );
+}
+
+#[tokio::test]
+async fn tide_invalid_datetime_returns_400() {
+    let body = r#"{"lat":37.806,"lon":-122.465,"datetime":"tomorrow"}"#;
+    let actual = post_tide(body, 20.0).await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "datetime must be a readable RFC 3339 timestamp"
+    );
+}
+
+#[tokio::test]
+async fn tide_longitude_out_of_range_returns_400() {
+    let body = r#"{"lat":0,"lon":181,"datetime":"2026-08-15T12:00:00Z"}"#;
+    let actual = post_tide(body, 20.0).await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "longitude must be between -180 and 180 degrees"
+    );
+}
+
+#[tokio::test]
+async fn tide_accepts_distance_equal_to_max_distance() {
+    let data = must(load_pack_from_path(pack_path()));
+    let boundary_distance = match data.closest_station(37.806, -122.465) {
+        Some(station_match) => station_match.distance_km,
+        None => panic!("expected a closest station"),
+    };
+    let service = app(data, boundary_distance);
+    let actual = request_json(
+        service,
+        must(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/tide")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"lat":37.806,"lon":-122.465,"datetime":"2026-08-15T12:00:00Z"}"#,
+                )),
+        ),
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn tide_refuses_matches_beyond_confidence_domain() {
+    let data = must(load_pack_from_path(pack_path()));
+    let station = match data.stations().first() {
+        Some(station) => station.pack(),
+        None => panic!("expected at least one station in pack"),
+    };
+    let body = format!(
+        r#"{{"lat":{},"lon":{},"datetime":"2026-08-15T12:00:00Z"}}"#,
+        station.latitude_deg.get() + 0.5,
+        station.longitude_deg.get()
+    );
+    let service = app(data, 100.0);
+    let actual = request_json(
+        service,
+        must(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/tide")
+                .header("content-type", "application/json")
+                .body(Body::from(body)),
+        ),
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(actual.body["max_distance_km"], 20.0);
+}
+
+#[tokio::test]
 async fn health_and_coverage_expose_loaded_pack() {
-    let service = app(must(load_pack_from_path(pack_path())), 20.0);
+    let data = must(load_pack_from_path(pack_path()));
+    let expected_station_count = data.stations().len();
+    let service = app(data, 20.0);
 
     let health = request_json(
         service.clone(),
@@ -70,7 +166,10 @@ async fn health_and_coverage_expose_loaded_pack() {
     )
     .await;
     assert_eq!(health.status, StatusCode::OK);
-    assert_eq!(health.body["station_count"], 8);
+    assert_eq!(
+        health.body["station_count"].as_u64(),
+        Some(expected_station_count as u64)
+    );
     assert_eq!(health.body["data_version"], "2026-07-06");
 
     let coverage = request_json(
@@ -84,13 +183,23 @@ async fn health_and_coverage_expose_loaded_pack() {
     )
     .await;
     assert_eq!(coverage.status, StatusCode::OK);
-    assert_eq!(coverage.body["stations"].as_array().map(Vec::len), Some(8));
+    assert_eq!(
+        coverage.body["stations"].as_array().map(Vec::len),
+        Some(expected_station_count)
+    );
     assert!(coverage.body.to_string().contains("noaa:9414290"));
 }
 
 async fn assert_post_snapshot(body: &str, expected_status: StatusCode, expected_snapshot: &str) {
-    let service = app(must(load_pack_from_path(pack_path())), 20.0);
-    let actual = request_json(
+    let actual = post_tide(body, 20.0).await;
+    assert_eq!(actual.status, expected_status);
+    let expected = must(serde_json::from_str::<Value>(expected_snapshot));
+    assert_eq!(actual.body, expected);
+}
+
+async fn post_tide(body: &str, max_distance_km: f64) -> JsonResponse {
+    let service = app(must(load_pack_from_path(pack_path())), max_distance_km);
+    request_json(
         service,
         must(
             Request::builder()
@@ -100,10 +209,7 @@ async fn assert_post_snapshot(body: &str, expected_status: StatusCode, expected_
                 .body(Body::from(body.to_string())),
         ),
     )
-    .await;
-    assert_eq!(actual.status, expected_status);
-    let expected = must(serde_json::from_str::<Value>(expected_snapshot));
-    assert_eq!(actual.body, expected);
+    .await
 }
 
 struct JsonResponse {

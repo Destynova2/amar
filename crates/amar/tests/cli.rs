@@ -1,3 +1,4 @@
+use amar_data::load_pack_from_path;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -26,10 +27,16 @@ fn unique_temp_dir(name: &str) -> PathBuf {
 fn validate_rejects_stations_without_prediction_samples() {
     let root = workspace_root();
     let fixtures = unique_temp_dir("empty-predictions");
-    for station_id in [
-        "8410140", "8443970", "9414290", "8729840", "9447130", "1612340", "8724580", "8771450",
-    ] {
-        must(fs::create_dir_all(fixtures.join(station_id)));
+    let data = must(load_pack_from_path(root.join("data/packs/noaa_m0.json")));
+    let mut expected_missing_sample = None;
+    for station in data.stations() {
+        let station = station.pack();
+        if expected_missing_sample.is_none() {
+            expected_missing_sample = Some(format!("{} samples=0", station.station_id));
+        }
+        must(fs::create_dir_all(
+            fixtures.join(&station.provider_station_id),
+        ));
     }
 
     let output = must(
@@ -46,7 +53,10 @@ fn validate_rejects_stations_without_prediction_samples() {
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("validation missing samples"));
-    assert!(stderr.contains("noaa:8443970 samples=0"));
+    let Some(expected_missing_sample) = expected_missing_sample else {
+        panic!("expected at least one station in pack");
+    };
+    assert!(stderr.contains(&expected_missing_sample));
 }
 
 #[test]

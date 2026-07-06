@@ -1,4 +1,4 @@
-use amar_core::{CoreError, UtcDateTime, predict_height};
+use amar_core::{UtcDateTime, predict_height};
 use amar_data::{DataError, DataSet, StationMatch, load_pack_from_path};
 use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
@@ -12,13 +12,20 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::net::TcpListener;
 
+/// Confidence heuristic identifier returned by M1 tide responses.
 pub const CONFIDENCE_METHOD: &str = "station_harmonics_v0_distance_heuristic";
+
+/// Maximum distance covered by the documented M1 confidence scale.
+pub const MAX_CONFIDENCE_DISTANCE_KM: f64 = 20.0;
+
+/// Safety warnings attached to every successful M1 tide response.
 pub const DEFAULT_WARNINGS: [&str; 3] = [
     "astronomical_tide_only",
     "not_for_navigation",
     "no_weather_surge",
 ];
 
+/// Errors returned while loading data or running the HTTP server.
 #[derive(Debug, Error)]
 pub enum ServerError {
     #[error("{0}")]
@@ -40,7 +47,9 @@ struct AppState {
     max_distance_km: f64,
 }
 
+/// Build the M1 API router from an already loaded station pack.
 pub fn app(data: DataSet, max_distance_km: f64) -> Router {
+    let max_distance_km = max_distance_km.min(MAX_CONFIDENCE_DISTANCE_KM);
     Router::new()
         .route("/tide", post(post_tide))
         .route("/health", get(get_health))
@@ -51,6 +60,7 @@ pub fn app(data: DataSet, max_distance_km: f64) -> Router {
         })
 }
 
+/// Load a station pack and serve the M1 HTTP API on the requested address.
 pub async fn serve(
     addr: &str,
     pack_path: impl AsRef<Path>,
@@ -66,8 +76,15 @@ pub async fn serve(
     let local_addr = listener.local_addr().map_err(ServerError::LocalAddr)?;
     eprintln!("amar serve listening on http://{local_addr}");
     axum::serve(listener, app(data, max_distance_km))
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .map_err(ServerError::Serve)
+}
+
+async fn shutdown_signal() {
+    if let Err(error) = tokio::signal::ctrl_c().await {
+        eprintln!("failed to listen for shutdown signal: {error}");
+    }
 }
 
 async fn post_tide(
@@ -87,18 +104,17 @@ async fn post_tide(
     let station_match = supported_station(&state, request.lat, request.lon)?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
-    let confidence = confidence_for_distance_km(station_match.distance_km);
+    let Some(confidence) = confidence_for_distance_km(station_match.distance_km) else {
+        return Err(ApiError::no_supported_source(
+            Some(station_match),
+            state.max_distance_km,
+        ));
+    };
 
     Ok(Json(TideResponse {
         height_m: round3(prediction.height().as_meters()),
         datum: station.datum.clone(),
-        source: SourceResponse {
-            kind: "station",
-            id: station.station_id.clone(),
-            name: station.name.clone(),
-            distance_km: round3(station_match.distance_km),
-            data_version: station.source.extracted_at.clone(),
-        },
+        source: SourceResponse::from(&station_match),
         confidence,
         warnings: DEFAULT_WARNINGS,
     }))
@@ -161,22 +177,24 @@ fn validate_coordinate(name: &'static str, value: f64, min: f64, max: f64) -> Re
     }
 }
 
-// M1 v0.1 confidence is deliberately distance-only:
+// M1 confidence is deliberately distance-only:
 // <= 2 km -> A / 8 cm, <= 10 km -> B / 15 cm, <= 20 km -> C / 30 cm.
 // Later milestones replace this with empirical validation, not a wider radius.
-fn confidence_for_distance_km(distance_km: f64) -> ConfidenceResponse {
+fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse> {
     let (grade, sigma_cm) = if distance_km <= 2.0 {
         ("A", 8)
     } else if distance_km <= 10.0 {
         ("B", 15)
-    } else {
+    } else if distance_km <= MAX_CONFIDENCE_DISTANCE_KM {
         ("C", 30)
+    } else {
+        return None;
     };
-    ConfidenceResponse {
+    Some(ConfidenceResponse {
         grade,
         sigma_cm,
         method: CONFIDENCE_METHOD,
-    }
+    })
 }
 
 fn round3(value: f64) -> f64 {
@@ -199,13 +217,27 @@ struct TideResponse {
     warnings: [&'static str; 3],
 }
 
+/// Serialized station source metadata shared by CLI and HTTP responses.
 #[derive(Debug, Serialize)]
-struct SourceResponse {
+pub struct SourceResponse {
     kind: &'static str,
     id: String,
     name: String,
     distance_km: f64,
     data_version: String,
+}
+
+impl From<&StationMatch<'_>> for SourceResponse {
+    fn from(station_match: &StationMatch<'_>) -> Self {
+        let station = station_match.station.pack();
+        Self {
+            kind: "station",
+            id: station.station_id.clone(),
+            name: station.name.clone(),
+            distance_km: round3(station_match.distance_km),
+            data_version: station.source.extracted_at.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -258,16 +290,8 @@ impl ApiError {
     }
 
     fn no_supported_source(nearest_source: Option<StationMatch<'_>>, max_distance_km: f64) -> Self {
-        let nearest_source = nearest_source.map(|station_match| {
-            let station = station_match.station.pack();
-            SourceResponse {
-                kind: "station",
-                id: station.station_id.clone(),
-                name: station.name.clone(),
-                distance_km: round3(station_match.distance_km),
-                data_version: station.source.extracted_at.clone(),
-            }
-        });
+        let nearest_source =
+            nearest_source.map(|station_match| SourceResponse::from(&station_match));
         let message = match &nearest_source {
             Some(source) => format!(
                 "no supported source within {max_distance_km:.1} km; nearest station is {} {} at {:.3} km",
@@ -303,8 +327,36 @@ struct ErrorResponse {
     nearest_source: Option<SourceResponse>,
 }
 
-impl From<CoreError> for ApiError {
-    fn from(error: CoreError) -> Self {
-        Self::invalid_request(error.to_string())
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn confidence(distance_km: f64) -> ConfidenceResponse {
+        match confidence_for_distance_km(distance_km) {
+            Some(confidence) => confidence,
+            None => panic!("expected confidence for {distance_km} km"),
+        }
+    }
+
+    #[test]
+    fn confidence_grade_b_is_bounded_at_ten_km() {
+        let confidence = confidence(10.0);
+
+        assert_eq!(confidence.grade, "B");
+        assert_eq!(confidence.sigma_cm, 15);
+        assert_eq!(confidence.method, CONFIDENCE_METHOD);
+    }
+
+    #[test]
+    fn confidence_grade_c_is_bounded_at_twenty_km() {
+        let confidence = confidence(MAX_CONFIDENCE_DISTANCE_KM);
+
+        assert_eq!(confidence.grade, "C");
+        assert_eq!(confidence.sigma_cm, 30);
+    }
+
+    #[test]
+    fn confidence_is_undefined_beyond_documented_domain() {
+        assert!(confidence_for_distance_km(MAX_CONFIDENCE_DISTANCE_KM + 0.001).is_none());
     }
 }
