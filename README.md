@@ -25,6 +25,34 @@ amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/a
 
 Le serveur charge le pack au démarrage, puis fonctionne offline.
 
+## Docker
+
+L'image GHCR embarque le binaire et les trois packs versionnés :
+
+```bash
+docker run --rm -p 3000:3000 ghcr.io/destynova2/amar
+```
+
+Vérifier le serveur :
+
+```bash
+curl -fsS http://127.0.0.1:3000/health
+```
+
+Exemple San Francisco :
+
+```bash
+curl -i -H 'content-type: application/json' \
+  -d '{"lat":37.806,"lon":-122.465,"datetime":"2026-08-15T12:00:00Z"}' \
+  http://127.0.0.1:3000/tide
+```
+
+Le même lancement fonctionne avec Podman rootless :
+
+```bash
+podman run --rm -p 3000:3000 ghcr.io/destynova2/amar
+```
+
 ## Trois curls
 
 ### 1. San Francisco répond une hauteur

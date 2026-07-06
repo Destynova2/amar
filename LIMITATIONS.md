@@ -28,7 +28,9 @@
   `coefficient_experimental`.
 - Pas de pression, pas de surcote météo.
 - Pas de grille.
-- Pas d'OpenAPI, pas de page démo, pas de Docker.
+- Pas d'OpenAPI, pas de page démo.
+- L'image Docker/Podman sert la marée astronomique offline depuis les packs
+  embarqués et n'émet aucune donnée sortante.
 - Couverture limitée aux 8 stations NOAA harmoniques, à Brest expérimental et
   aux 11 ports du pack France v0.4.
 - Résolution spatiale volontairement conservatrice : station la plus proche à

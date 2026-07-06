@@ -8,12 +8,15 @@ BREST_STATION_COUNT := $(shell test -f $(BREST_PACK) && printf 1 || printf 0)
 FRANCE_PACK = data/packs/amar-data-france-experimental.json
 FRANCE_STATION_COUNT := $(shell test -f $(FRANCE_PACK) && grep -c '"station_id"' $(FRANCE_PACK) || printf 0)
 STATION_COUNT := $(shell expr $(NOAA_STATION_COUNT) + $(BREST_STATION_COUNT) + $(FRANCE_STATION_COUNT))
+CONTAINER_ENGINE ?= $(shell if command -v docker >/dev/null 2>&1; then printf docker; elif command -v podman >/dev/null 2>&1; then printf podman; fi)
+CONTAINER_IMAGE ?= amar:local
+CONTAINER_PORT ?= 3000
 YEARS = 2026 2031 2036
 HILO_YEARS = 2026
 HILO_DRIFT_YEARS = 2031
 HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france m0-validate m2-benchmark m3-check release m1-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france m0-validate m2-benchmark m3-check release m1-smoke container container-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -164,3 +167,26 @@ m1-smoke:
 	test "$$CODE" = "400"; \
 	grep -q '"error":"invalid_request"' $$BODY; \
 	grep -q 'latitude must be between -90 and 90 degrees' $$BODY
+
+container:
+	@test -n "$(CONTAINER_ENGINE)" || { echo "docker or podman is required"; exit 1; }
+	$(CONTAINER_ENGINE) build -f Containerfile -t $(CONTAINER_IMAGE) .
+
+container-smoke: container
+	@test -n "$(CONTAINER_ENGINE)" || { echo "docker or podman is required"; exit 1; }
+	@set -eu; \
+	BODY=$$(mktemp); \
+	CID=; \
+	trap 'if [ -n "$$CID" ]; then $(CONTAINER_ENGINE) stop $$CID >/dev/null 2>&1 || true; fi; rm -f $$BODY' EXIT; \
+	CID=$$($(CONTAINER_ENGINE) run --rm -d -p 127.0.0.1:$(CONTAINER_PORT):3000 $(CONTAINER_IMAGE)); \
+	READY=0; \
+	for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do \
+		if curl -fsS http://127.0.0.1:$(CONTAINER_PORT)/health >$$BODY 2>/dev/null; then READY=1; break; fi; \
+		sleep 0.25; \
+	done; \
+	if [ "$$READY" != "1" ]; then $(CONTAINER_ENGINE) logs $$CID || true; exit 1; fi; \
+	grep -q '"station_count":$(STATION_COUNT)' $$BODY; \
+	CODE=$$(curl -sS -o $$BODY -w '%{http_code}' -H 'content-type: application/json' -d '{"lat":37.806,"lon":-122.465,"datetime":"2026-08-15T12:00:00Z"}' http://127.0.0.1:$(CONTAINER_PORT)/tide); \
+	test "$$CODE" = "200"; \
+	grep -q '"height_m"' $$BODY; \
+	grep -q '"id":"noaa:9414290"' $$BODY
