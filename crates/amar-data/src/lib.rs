@@ -262,7 +262,7 @@ fn build_noaa_station(
         longitude_deg: LongitudeDegValue::new(station.lng),
         datum: "MLLW".to_string(),
         z0_m: MetersValue::new(mtl - mllw),
-        method: PredictionMethod::HarmonicBasicNoNodal.as_str().to_string(),
+        method: PredictionMethod::StationHarmonicsV0.as_str().to_string(),
         constituents,
         source: SourceInfo {
             provider: "NOAA CO-OPS".to_string(),

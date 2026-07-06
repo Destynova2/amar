@@ -14,6 +14,7 @@ use thiserror::Error;
 const DEFAULT_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
+const M0_P95_LIMIT_M: f64 = 0.05;
 
 #[derive(Debug, Error)]
 enum CliError {
@@ -28,6 +29,8 @@ enum CliError {
     },
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("validation p95 exceeded {limit_cm:.1} cm:\n{failures}")]
+    ValidationThreshold { limit_cm: f64, failures: String },
 }
 
 #[derive(Debug, Parser)]
@@ -120,21 +123,30 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
 
 fn validate(args: ValidateArgs) -> Result<(), CliError> {
     let data = load_pack_from_path(&args.pack)?;
-    let mut exit_summary = BTreeMap::new();
+    let mut failures = Vec::new();
 
     for station in data.stations() {
         let station_id = &station.pack().provider_station_id;
         let station_dir = args.fixtures.join(station_id);
         let mut errors = Vec::new();
+        let mut window_summaries = BTreeMap::new();
         for prediction_path in prediction_files(&station_dir)? {
             let predictions = load_official_predictions(&prediction_path)?;
+            let mut window_errors = Vec::new();
             for official in predictions {
-                errors.push(prediction_error_meters(station.model(), official));
+                let error = prediction_error_meters(station.model(), official);
+                errors.push(error);
+                window_errors.push(error);
             }
+            window_errors.sort_by(|left, right| left.total_cmp(right));
+            let window_p95 = percentile(&window_errors, 0.95).unwrap_or(0.0);
+            window_summaries.insert(
+                prediction_window_label(&prediction_path),
+                (window_errors.len(), window_p95),
+            );
         }
         errors.sort_by(|left, right| left.total_cmp(right));
         let p95 = percentile(&errors, 0.95).unwrap_or(0.0);
-        exit_summary.insert(station.pack().station_id.clone(), p95);
         println!(
             "{} {} method={} samples={} p95_m={:.3} p95_cm={:.1}",
             station.pack().station_id,
@@ -144,10 +156,42 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
             p95,
             p95 * 100.0
         );
+        if p95 > M0_P95_LIMIT_M {
+            failures.push(format!(
+                "{} all p95_cm={:.1}",
+                station.pack().station_id,
+                p95 * 100.0
+            ));
+        }
+        for (window, (samples, window_p95)) in window_summaries {
+            println!(
+                "{} {} window={} samples={} p95_m={:.3} p95_cm={:.1}",
+                station.pack().station_id,
+                station.pack().name,
+                window,
+                samples,
+                window_p95,
+                window_p95 * 100.0
+            );
+            if window_p95 > M0_P95_LIMIT_M {
+                failures.push(format!(
+                    "{} {} p95_cm={:.1}",
+                    station.pack().station_id,
+                    window,
+                    window_p95 * 100.0
+                ));
+            }
+        }
     }
 
-    if exit_summary.is_empty() {
+    if data.stations().is_empty() {
         println!("no stations validated");
+    }
+    if !failures.is_empty() {
+        return Err(CliError::ValidationThreshold {
+            limit_cm: M0_P95_LIMIT_M * 100.0,
+            failures: failures.join("\n"),
+        });
     }
     Ok(())
 }
@@ -188,6 +232,14 @@ fn prediction_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
     }
     files.sort();
     Ok(files)
+}
+
+fn prediction_window_label(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_prefix("predictions_"))
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 fn percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {

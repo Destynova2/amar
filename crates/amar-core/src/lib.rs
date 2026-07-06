@@ -292,9 +292,14 @@ impl TidePrediction {
 
 pub fn predict_height(model: &TideModel, at: UtcDateTime) -> TidePrediction {
     let mut height = model.z0.as_meters();
+    let astro = astronomical_terms(at);
+    let nodal = nodal_terms(&astro);
     for constituent in &model.constituents {
-        let correction = nodal_correction(constituent.id.as_str(), at, model.method);
-        let argument = astronomical_argument_degrees(constituent, at);
+        let Some(definition) = constituent_definition(constituent.id.as_str()) else {
+            continue;
+        };
+        let correction = nodal_correction(definition, &nodal, model.method);
+        let argument = astronomical_argument_degrees(definition, &astro);
         let phase = argument + correction.phase_degrees - constituent.phase_gmt.as_degrees();
         let contribution = correction.factor
             * constituent.amplitude.as_meters()
@@ -315,14 +320,14 @@ struct NodalCorrection {
 }
 
 fn nodal_correction(
-    _constituent: &str,
-    _at: UtcDateTime,
+    definition: ConstituentDefinition,
+    nodal: &NodalTerms,
     method: PredictionMethod,
 ) -> NodalCorrection {
     match method {
         PredictionMethod::StationHarmonicsV0 => NodalCorrection {
-            factor: 1.0,
-            phase_degrees: 0.0,
+            factor: definition.nodal_factor(nodal),
+            phase_degrees: definition.nodal_phase_degrees(nodal),
         },
         PredictionMethod::HarmonicBasicNoNodal => NodalCorrection {
             factor: 1.0,
@@ -331,110 +336,582 @@ fn nodal_correction(
     }
 }
 
-fn astronomical_argument_degrees(constituent: &HarmonicConstituent, at: UtcDateTime) -> f64 {
-    if let Some(definition) = constituent_definition(constituent.id.as_str()) {
-        let astro = astronomical_cycles(at);
-        let mut cycles = definition.semi_cycles;
-        for (coefficient, value) in definition.coefficients.iter().zip(astro) {
-            cycles += f64::from(*coefficient) * value;
-        }
-        return cycles.rem_euclid(1.0) * 360.0;
+fn astronomical_argument_degrees(
+    definition: ConstituentDefinition,
+    astro: &AstronomicalTerms,
+) -> f64 {
+    let values = [astro.tau, astro.s, astro.h, astro.p, astro.p1];
+    let mut cycles = definition.semi_cycles;
+    for (coefficient, value) in definition.coefficients.iter().zip(values) {
+        cycles += f64::from(*coefficient) * value;
     }
-
-    let hours_since_j2000 = (at.ordinal_days() - 730_120.0) * 24.0;
-    constituent.speed.as_degrees_per_hour() * hours_since_j2000
+    cycles.rem_euclid(1.0) * 360.0
 }
 
 #[derive(Clone, Copy)]
 struct ConstituentDefinition {
-    coefficients: [i8; 6],
+    coefficients: [i8; 5],
     semi_cycles: f64,
+    u_coefficients: [i8; 7],
+    factor_terms: [FactorTerm; 2],
+}
+
+impl ConstituentDefinition {
+    fn new(
+        coefficients: [i8; 5],
+        semi_cycles: f64,
+        u_coefficients: [i8; 7],
+        factor_terms: [FactorTerm; 2],
+    ) -> Self {
+        Self {
+            coefficients,
+            semi_cycles,
+            u_coefficients,
+            factor_terms,
+        }
+    }
+
+    fn nodal_phase_degrees(self, nodal: &NodalTerms) -> f64 {
+        let values = [
+            nodal.xi,
+            nodal.nu,
+            nodal.nu_prime,
+            nodal.two_nu_double_prime,
+            nodal.q,
+            nodal.r,
+            nodal.q_u,
+        ];
+        self.u_coefficients
+            .iter()
+            .zip(values)
+            .map(|(coefficient, value)| f64::from(*coefficient) * value)
+            .sum()
+    }
+
+    fn nodal_factor(self, nodal: &NodalTerms) -> f64 {
+        self.factor_terms
+            .iter()
+            .filter(|term| term.power != 0)
+            .map(|term| term.formula.value(nodal).powi(i32::from(term.power)))
+            .product()
+    }
+}
+
+#[derive(Clone, Copy)]
+struct FactorTerm {
+    formula: NodalFactorFormula,
+    power: u8,
+}
+
+impl FactorTerm {
+    const fn none() -> Self {
+        Self {
+            formula: NodalFactorFormula::Unity,
+            power: 0,
+        }
+    }
+
+    const fn new(formula: NodalFactorFormula, power: u8) -> Self {
+        Self { formula, power }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum NodalFactorFormula {
+    Unity,
+    Mm,
+    Mf,
+    O1,
+    J1,
+    Oo1,
+    M2,
+    M3,
+    M1,
+    L2,
+    K1,
+    K2,
+}
+
+impl NodalFactorFormula {
+    fn value(self, nodal: &NodalTerms) -> f64 {
+        match self {
+            Self::Unity => 1.0,
+            Self::Mm => f_mm(nodal.inclination),
+            Self::Mf => f_mf(nodal.inclination),
+            Self::O1 => f_o1(nodal.inclination),
+            Self::J1 => f_j1(nodal.inclination),
+            Self::Oo1 => f_oo1(nodal.inclination),
+            Self::M2 => f_m2(nodal.inclination),
+            Self::M3 => f_m3(nodal.inclination),
+            Self::M1 => f_m1(nodal.inclination, nodal.p),
+            Self::L2 => f_l2(nodal.inclination, nodal.p),
+            Self::K1 => f_k1(nodal.inclination, nodal.nu),
+            Self::K2 => f_k2(nodal.inclination, nodal.nu),
+        }
+    }
 }
 
 fn constituent_definition(name: &str) -> Option<ConstituentDefinition> {
-    let coefficients = match name {
-        "M2" => [2, 0, 0, 0, 0, 0],
-        "S2" => [2, 2, -2, 0, 0, 0],
-        "N2" => [2, -1, 0, 1, 0, 0],
-        "K1" => [1, 1, 0, 0, 0, 0],
-        "M4" => [4, 0, 0, 0, 0, 0],
-        "O1" => [1, -1, 0, 0, 0, 0],
-        "M6" => [6, 0, 0, 0, 0, 0],
-        "MK3" => [3, 1, 0, 0, 0, 0],
-        "S4" => [4, 4, -4, 0, 0, 0],
-        "MN4" => [4, -1, 0, 1, 0, 0],
-        "NU2" => [2, -1, 2, -1, 0, 0],
-        "S6" => [6, 6, -6, 0, 0, 0],
-        "MU2" => [2, -2, 2, 0, 0, 0],
-        "2N2" => [2, -2, 0, 2, 0, 0],
-        "OO1" => [1, 3, 0, 0, 0, 0],
-        "LAM2" => [2, 1, -2, 1, 0, 0],
-        "S1" => [1, 1, -1, 0, 0, 0],
-        "M1" => [1, 0, 0, 1, 0, 0],
-        "J1" => [1, 2, 0, -1, 0, 0],
-        "MM" => [0, 1, 0, -1, 0, 0],
-        "SSA" => [0, 0, 2, 0, 0, 0],
-        "SA" => [0, 0, 1, 0, 0, 0],
-        "MSF" => [0, 2, -2, 0, 0, 0],
-        "MF" => [0, 2, 0, 0, 0, 0],
-        "RHO" => [1, -2, 2, -1, 0, 0],
-        "Q1" => [1, -2, 0, 1, 0, 0],
-        "T2" => [2, 2, -3, 0, 0, 1],
-        "R2" => [2, 2, -1, 0, 0, -1],
-        "2Q1" => [1, -3, 0, 2, 0, 0],
-        "P1" => [1, 1, -2, 0, 0, 0],
-        "2SM2" => [2, 4, -4, 0, 0, 0],
-        "M3" => [3, 0, 0, 0, 0, 0],
-        "L2" => [2, 1, 0, -1, 0, 0],
-        "2MK3" => [3, -1, 0, 0, 0, 0],
-        "K2" => [2, 2, 0, 0, 0, 0],
-        "M8" => [8, 0, 0, 0, 0, 0],
-        "MS4" => [4, 2, -2, 0, 0, 0],
+    let n = FactorTerm::none();
+    let f = FactorTerm::new;
+    let definition = match name {
+        "2MK3" => ConstituentDefinition::new(
+            [3, -1, 0, 0, 0],
+            0.25,
+            [4, -4, 1, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 2), f(NodalFactorFormula::K1, 1)],
+        ),
+        "2N2" => ConstituentDefinition::new(
+            [2, -2, 0, 2, 0],
+            0.0,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "2Q1" => ConstituentDefinition::new(
+            [1, -3, 0, 2, 0],
+            0.25,
+            [2, -1, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::O1, 1), n],
+        ),
+        "2SM2" => ConstituentDefinition::new(
+            [2, 4, -4, 0, 0],
+            0.0,
+            [-2, 2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "J1" => ConstituentDefinition::new(
+            [1, 2, 0, -1, 0],
+            -0.25,
+            [0, -1, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::J1, 1), n],
+        ),
+        "K1" => ConstituentDefinition::new(
+            [1, 1, 0, 0, 0],
+            -0.25,
+            [0, 0, -1, 0, 0, 0, 0],
+            [f(NodalFactorFormula::K1, 1), n],
+        ),
+        "K2" => ConstituentDefinition::new(
+            [2, 2, 0, 0, 0],
+            0.0,
+            [0, 0, 0, -1, 0, 0, 0],
+            [f(NodalFactorFormula::K2, 1), n],
+        ),
+        "L2" => ConstituentDefinition::new(
+            [2, 1, 0, -1, 0],
+            0.5,
+            [2, -2, 0, 0, 0, -1, 0],
+            [f(NodalFactorFormula::L2, 1), n],
+        ),
+        "LAM2" | "LDA2" => ConstituentDefinition::new(
+            [2, 1, -2, 1, 0],
+            0.5,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "M1" => ConstituentDefinition::new(
+            [1, 0, 0, 0, 0],
+            -0.25,
+            [1, -1, 0, 0, 1, 0, 0],
+            [f(NodalFactorFormula::M1, 1), n],
+        ),
+        "M2" => ConstituentDefinition::new(
+            [2, 0, 0, 0, 0],
+            0.0,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "M3" => ConstituentDefinition::new(
+            [3, 0, 0, 0, 0],
+            0.0,
+            [3, -3, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M3, 1), n],
+        ),
+        "M4" => ConstituentDefinition::new(
+            [4, 0, 0, 0, 0],
+            0.0,
+            [4, -4, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 2), n],
+        ),
+        "M6" => ConstituentDefinition::new(
+            [6, 0, 0, 0, 0],
+            0.0,
+            [6, -6, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 3), n],
+        ),
+        "M8" => ConstituentDefinition::new(
+            [8, 0, 0, 0, 0],
+            0.0,
+            [8, -8, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 4), n],
+        ),
+        "MF" => ConstituentDefinition::new(
+            [0, 2, 0, 0, 0],
+            0.0,
+            [-2, 0, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::Mf, 1), n],
+        ),
+        "MK3" => ConstituentDefinition::new(
+            [3, 1, 0, 0, 0],
+            -0.25,
+            [2, -2, -1, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), f(NodalFactorFormula::K1, 1)],
+        ),
+        "MM" => ConstituentDefinition::new(
+            [0, 1, 0, -1, 0],
+            0.0,
+            [0, 0, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::Mm, 1), n],
+        ),
+        "MN4" => ConstituentDefinition::new(
+            [4, -1, 0, 1, 0],
+            0.0,
+            [4, -4, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 2), n],
+        ),
+        "MS4" => ConstituentDefinition::new(
+            [4, 2, -2, 0, 0],
+            0.0,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "MSF" => ConstituentDefinition::new(
+            [0, 2, -2, 0, 0],
+            0.0,
+            [-2, 2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "MU2" => ConstituentDefinition::new(
+            [2, -2, 2, 0, 0],
+            0.0,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "N2" => ConstituentDefinition::new(
+            [2, -1, 0, 1, 0],
+            0.0,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "NU2" => ConstituentDefinition::new(
+            [2, -1, 2, -1, 0],
+            0.0,
+            [2, -2, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::M2, 1), n],
+        ),
+        "O1" => ConstituentDefinition::new(
+            [1, -1, 0, 0, 0],
+            0.25,
+            [2, -1, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::O1, 1), n],
+        ),
+        "OO1" => ConstituentDefinition::new(
+            [1, 3, 0, 0, 0],
+            -0.25,
+            [-2, -1, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::Oo1, 1), n],
+        ),
+        "P1" => ConstituentDefinition::new([1, 1, -2, 0, 0], 0.25, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "Q1" => ConstituentDefinition::new(
+            [1, -2, 0, 1, 0],
+            0.25,
+            [2, -1, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::O1, 1), n],
+        ),
+        "R2" => ConstituentDefinition::new([2, 2, -1, 0, -1], 0.5, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "RHO" | "RHO1" => ConstituentDefinition::new(
+            [1, -2, 2, -1, 0],
+            0.25,
+            [2, -1, 0, 0, 0, 0, 0],
+            [f(NodalFactorFormula::O1, 1), n],
+        ),
+        "S1" => ConstituentDefinition::new([1, 1, -1, 0, 0], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "S2" => ConstituentDefinition::new([2, 2, -2, 0, 0], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "S4" => ConstituentDefinition::new([4, 4, -4, 0, 0], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "S6" => ConstituentDefinition::new([6, 6, -6, 0, 0], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "SA" => ConstituentDefinition::new([0, 0, 1, 0, 0], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "SSA" => ConstituentDefinition::new([0, 0, 2, 0, 0], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
+        "T2" => ConstituentDefinition::new([2, 2, -3, 0, 1], 0.0, [0, 0, 0, 0, 0, 0, 0], [n, n]),
         _ => return None,
     };
-    let semi_cycles = match name {
-        "2Q1" | "J1" | "K1" | "M1" | "O1" | "OO1" | "P1" | "Q1" | "RHO" | "S1" => 0.25,
-        _ => 0.0,
-    };
-    Some(ConstituentDefinition {
-        coefficients,
-        semi_cycles,
-    })
+    Some(definition)
 }
 
-fn astronomical_cycles(at: UtcDateTime) -> [f64; 6] {
-    let jd = at.ordinal_days();
-    let d = jd - 693_595.5;
-    let big_d = d / 10_000.0;
-    let powers = [1.0, d, big_d * big_d, big_d * big_d * big_d];
+#[derive(Clone, Copy)]
+struct AstronomicalTerms {
+    tau: f64,
+    s: f64,
+    h: f64,
+    p: f64,
+    p1: f64,
+    node_degrees: f64,
+}
+
+fn astronomical_terms(at: UtcDateTime) -> AstronomicalTerms {
+    let d = at.ordinal_days() - 693_595.5;
+    let julian_centuries = d / 36_525.0;
+    let powers = [
+        1.0,
+        julian_centuries,
+        julian_centuries * julian_centuries,
+        julian_centuries * julian_centuries * julian_centuries,
+    ];
     let s = polynomial_cycles(
-        [270.434_164, 13.176_396_526_8, -0.000_085_0, 0.000_000_039],
+        [
+            270.0 + 26.0 / 60.0 + 14.72 / 3600.0,
+            1336.0 * 360.0 + 1_108_411.2 / 3600.0,
+            9.09 / 3600.0,
+            0.0068 / 3600.0,
+        ],
         powers,
     );
-    let h = polynomial_cycles([279.696_678, 0.985_647_335_4, 0.000_022_67, 0.0], powers);
+    let h = polynomial_cycles(
+        [
+            279.0 + 41.0 / 60.0 + 48.04 / 3600.0,
+            129_602_768.13 / 3600.0,
+            1.089 / 3600.0,
+            0.0,
+        ],
+        powers,
+    );
     let p = polynomial_cycles(
-        [334.329_556, 0.111_404_080_3, -0.000_773_9, -0.000_000_26],
+        [
+            334.0 + 19.0 / 60.0 + 40.87 / 3600.0,
+            11.0 * 360.0 + 392_515.94 / 3600.0,
+            -37.24 / 3600.0,
+            -0.045 / 3600.0,
+        ],
         powers,
     );
-    let negative_node = polynomial_cycles(
-        [-259.183_275, 0.052_953_922_2, -0.000_155_7, -0.000_000_050],
+    let p1 = polynomial_cycles(
+        [
+            281.0 + 13.0 / 60.0 + 15.0 / 3600.0,
+            6189.03 / 3600.0,
+            1.63 / 3600.0,
+            0.012 / 3600.0,
+        ],
         powers,
     );
-    let pp = polynomial_cycles(
-        [281.220_844, 0.000_047_068_4, 0.000_033_9, 0.000_000_070],
+    let node_degrees = polynomial_degrees(
+        [
+            259.0 + 10.0 / 60.0 + 57.12 / 3600.0,
+            -(5.0 * 360.0 + 482_912.63 / 3600.0),
+            7.58 / 3600.0,
+            0.008 / 3600.0,
+        ],
         powers,
     );
-    let tau = (jd.rem_euclid(1.0) + h - s).rem_euclid(1.0);
-    [tau, s, h, p, negative_node, pp]
+    let mean_sun_hour_angle = d.rem_euclid(1.0);
+    let tau = (mean_sun_hour_angle + h - s).rem_euclid(1.0);
+
+    AstronomicalTerms {
+        tau,
+        s,
+        h,
+        p,
+        p1,
+        node_degrees,
+    }
 }
 
 fn polynomial_cycles(coefficients: [f64; 4], powers: [f64; 4]) -> f64 {
+    (polynomial_degrees(coefficients, powers) / 360.0).rem_euclid(1.0)
+}
+
+fn polynomial_degrees(coefficients: [f64; 4], powers: [f64; 4]) -> f64 {
     let degrees = coefficients
         .iter()
         .zip(powers)
         .map(|(coefficient, power)| coefficient * power)
         .sum::<f64>();
-    (degrees / 360.0).rem_euclid(1.0)
+    degrees.rem_euclid(360.0)
+}
+
+#[derive(Clone, Copy)]
+struct NodalTerms {
+    inclination: f64,
+    xi: f64,
+    nu: f64,
+    nu_prime: f64,
+    two_nu_double_prime: f64,
+    q: f64,
+    r: f64,
+    q_u: f64,
+    p: f64,
+}
+
+fn nodal_terms(astro: &AstronomicalTerms) -> NodalTerms {
+    let node = astro.node_degrees;
+    let inclination = inclination(node);
+    let xi = xi(node);
+    let nu = nu(node);
+    let nu_prime = nu_prime(node);
+    let two_nu_double_prime = two_nu_double_prime(node);
+    let p = astro.p * 360.0 - xi;
+    let q = q(p);
+    let r = r(p, inclination);
+    let q_u = p - q;
+
+    NodalTerms {
+        inclination,
+        xi,
+        nu,
+        nu_prime,
+        two_nu_double_prime,
+        q,
+        r,
+        q_u,
+        p,
+    }
+}
+
+fn sind(degrees: f64) -> f64 {
+    degrees.to_radians().sin()
+}
+
+fn cosd(degrees: f64) -> f64 {
+    degrees.to_radians().cos()
+}
+
+fn tand(degrees: f64) -> f64 {
+    degrees.to_radians().tan()
+}
+
+fn atan2d(y: f64, x: f64) -> f64 {
+    y.atan2(x).to_degrees()
+}
+
+fn asind(value: f64) -> f64 {
+    value.clamp(-1.0, 1.0).asin().to_degrees()
+}
+
+fn acosd(value: f64) -> f64 {
+    value.clamp(-1.0, 1.0).acos().to_degrees()
+}
+
+fn cos_inclination(node: f64) -> f64 {
+    const OBLIQUITY: f64 = 23.0 + 27.0 / 60.0 + 8.26 / 3600.0;
+    const LUNAR_INCLINATION: f64 = 5.0 + 8.0 / 60.0 + 43.3546 / 3600.0;
+    cosd(OBLIQUITY) * cosd(LUNAR_INCLINATION)
+        - sind(OBLIQUITY) * sind(LUNAR_INCLINATION) * cosd(node)
+}
+
+fn sin_inclination(node: f64) -> f64 {
+    let value = cos_inclination(node);
+    (1.0 - value * value).sqrt()
+}
+
+fn inclination(node: f64) -> f64 {
+    acosd(cos_inclination(node))
+}
+
+fn sin_nu(node: f64) -> f64 {
+    const LUNAR_INCLINATION: f64 = 5.0 + 8.0 / 60.0 + 43.3546 / 3600.0;
+    sind(LUNAR_INCLINATION) * sind(node) / sin_inclination(node)
+}
+
+fn cos_nu(node: f64) -> f64 {
+    let value = sin_nu(node);
+    (1.0 - value * value).sqrt()
+}
+
+fn sin_omega_arc(node: f64) -> f64 {
+    const OBLIQUITY: f64 = 23.0 + 27.0 / 60.0 + 8.26 / 3600.0;
+    sind(OBLIQUITY) * sind(node) / sin_inclination(node)
+}
+
+fn cos_omega_arc(node: f64) -> f64 {
+    const OBLIQUITY: f64 = 23.0 + 27.0 / 60.0 + 8.26 / 3600.0;
+    cosd(node) * cos_nu(node) + sind(node) * sin_nu(node) * cosd(OBLIQUITY)
+}
+
+fn xi(node: f64) -> f64 {
+    node - atan2d(sin_omega_arc(node), cos_omega_arc(node))
+}
+
+fn nu(node: f64) -> f64 {
+    asind(sin_nu(node))
+}
+
+fn nu_prime(node: f64) -> f64 {
+    let inclination = inclination(node);
+    let multiplier = sind(2.0 * inclination);
+    atan2d(
+        multiplier * sin_nu(node),
+        multiplier * cos_nu(node) + 0.3347,
+    )
+}
+
+fn two_nu_double_prime(node: f64) -> f64 {
+    let sin_i = sin_inclination(node);
+    let term = sin_i * sin_i;
+    let double_nu = 2.0 * nu(node);
+    atan2d(term * sind(double_nu), term * cosd(double_nu) + 0.0727)
+}
+
+fn q(p: f64) -> f64 {
+    atan2d(0.483 * sind(p), cosd(p))
+}
+
+fn q_amplitude(p: f64) -> f64 {
+    1.0 / (2.31 + 1.435 * cosd(2.0 * p)).sqrt()
+}
+
+fn r(p: f64, inclination: f64) -> f64 {
+    let cot_i2 = 1.0 / tand(inclination / 2.0);
+    atan2d(sind(2.0 * p), cot_i2 * cot_i2 / 6.0 - cosd(2.0 * p))
+}
+
+fn r_amplitude(p: f64, inclination: f64) -> f64 {
+    let term = tand(inclination / 2.0).powi(2);
+    1.0 / (1.0 - 12.0 * term * cosd(2.0 * p) + 36.0 * term * term).sqrt()
+}
+
+fn f_mm(inclination: f64) -> f64 {
+    let sin_i = sind(inclination);
+    (2.0 / 3.0 - sin_i * sin_i) / 0.5021
+}
+
+fn f_mf(inclination: f64) -> f64 {
+    sind(inclination).powi(2) / 0.1578
+}
+
+fn f_o1(inclination: f64) -> f64 {
+    sind(inclination) * cosd(inclination / 2.0).powi(2) / 0.38
+}
+
+fn f_j1(inclination: f64) -> f64 {
+    sind(2.0 * inclination) / 0.7214
+}
+
+fn f_oo1(inclination: f64) -> f64 {
+    sind(inclination) * sind(inclination / 2.0).powi(2) / 0.0164
+}
+
+fn f_m2(inclination: f64) -> f64 {
+    cosd(inclination / 2.0).powi(4) / 0.9154
+}
+
+fn f_m3(inclination: f64) -> f64 {
+    cosd(inclination / 2.0).powi(6) / 0.8758
+}
+
+fn f_m1(inclination: f64, p: f64) -> f64 {
+    f_o1(inclination) / q_amplitude(p)
+}
+
+fn f_l2(inclination: f64, p: f64) -> f64 {
+    f_m2(inclination) / r_amplitude(p, inclination)
+}
+
+fn f_k1(inclination: f64, nu: f64) -> f64 {
+    let term = sind(2.0 * inclination);
+    (0.8965 * term * term + 0.6001 * term * cosd(nu) + 0.1006).sqrt()
+}
+
+fn f_k2(inclination: f64, nu: f64) -> f64 {
+    let term = sind(inclination).powi(2);
+    (19.0444 * term * term + 2.7702 * term * cosd(2.0 * nu) + 0.0981).sqrt()
 }
 
 fn ensure_finite(type_name: &'static str, value: f64) -> Result<(), CoreError> {
@@ -494,6 +971,40 @@ mod tests {
             )],
             PredictionMethod::HarmonicBasicNoNodal,
         ))
+    }
+
+    #[test]
+    fn congen_2026_start_arguments_match_nos_table() {
+        let start = must(UtcDateTime::parse_rfc3339("2026-01-01T00:00:00Z"));
+        let mid_year = must(UtcDateTime::parse_rfc3339("2026-07-02T12:00:00Z"));
+        let start_astro = astronomical_terms(start);
+        let mid_year_nodal = nodal_terms(&astronomical_terms(mid_year));
+        let cases = [
+            ("M2", 66.36, 0.9674),
+            ("K1", 14.26, 1.1031),
+            ("O1", 50.65, 1.1668),
+            ("L2", 250.96, 1.3288),
+            ("M1", 25.28, 1.0994),
+            ("K2", 208.93, 1.2815),
+            ("MF", 145.06, 1.4069),
+            ("MM", 6.69, 0.8856),
+        ];
+
+        for (name, expected_argument, expected_factor) in cases {
+            let definition = must_some(constituent_definition(name));
+            let argument = (astronomical_argument_degrees(definition, &start_astro)
+                + definition.nodal_phase_degrees(&mid_year_nodal))
+            .rem_euclid(360.0);
+            let factor = definition.nodal_factor(&mid_year_nodal);
+            assert!(
+                (argument - expected_argument).abs() < 0.02,
+                "{name} argument={argument}"
+            );
+            assert!(
+                (factor - expected_factor).abs() < 0.0002,
+                "{name} factor={factor}"
+            );
+        }
     }
 
     proptest! {

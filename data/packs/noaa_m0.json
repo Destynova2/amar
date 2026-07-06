@@ -10,7 +10,7 @@
       "longitude_deg": -71.05028,
       "datum": "MLLW",
       "z0_m": 1.55,
-      "method": "harmonic_basic_no_nodal",
+      "method": "station_harmonics_v0",
       "constituents": [
         {
           "name": "2MK3",
@@ -253,7 +253,7 @@
       "longitude_deg": -87.2112,
       "datum": "MLLW",
       "z0_m": 0.19099999999999984,
-      "method": "harmonic_basic_no_nodal",
+      "method": "station_harmonics_v0",
       "constituents": [
         {
           "name": "2MK3",
@@ -496,7 +496,7 @@
       "longitude_deg": -122.46589,
       "datum": "MLLW",
       "z0_m": 0.9699999999999998,
-      "method": "harmonic_basic_no_nodal",
+      "method": "station_harmonics_v0",
       "constituents": [
         {
           "name": "2MK3",
@@ -739,7 +739,7 @@
       "longitude_deg": -122.3393,
       "datum": "MLLW",
       "z0_m": 2.0319999999999996,
-      "method": "harmonic_basic_no_nodal",
+      "method": "station_harmonics_v0",
       "constituents": [
         {
           "name": "2MK3",

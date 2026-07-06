@@ -1,14 +1,17 @@
-# Décision M0
+# Décision M0.1
 
 Date : 2026-07-06.
 
 ## État
 
-M0 est livré avec le moteur dégradé prévu par la règle des 14 jours :
-`method = harmonic_basic_no_nodal`.
+M0.1 remplace le moteur dégradé M0 par `method = station_harmonics_v0`.
 
-Le CLI répond hors ligne sur le pack NOAA M0, avec station la plus proche dans
-un rayon de 20 km, datum MLLW, source et méthode affichés.
+Le calcul utilise les définitions historiques NOS de Congen/XTide pour les 37
+constituants du pack NOAA M0 : origine de `tau` à 1899-12-31 12:00 UTC,
+constantes V0 par constituant, et corrections nodales Schureman `f/u`.
+
+Les constituants inconnus ne sont plus prédits avec une époque de secours
+J2000 : ils sont ignorés par le cœur.
 
 ## Validation
 
@@ -22,16 +25,26 @@ Résultat mesuré :
 
 | Station | Régime | Échantillons | Méthode | p95 |
 |---|---|---:|---|---:|
-| `noaa:8443970` Boston | semi-diurne | 504 | `harmonic_basic_no_nodal` | 41,4 cm |
-| `noaa:9414290` San Francisco | mixte | 504 | `harmonic_basic_no_nodal` | 61,2 cm |
-| `noaa:8729840` Pensacola | diurne | 504 | `harmonic_basic_no_nodal` | 29,0 cm |
-| `noaa:9447130` Seattle | témoin hors réglage | 504 | `harmonic_basic_no_nodal` | 132,8 cm |
+| `noaa:8443970` Boston | semi-diurne | 504 | `station_harmonics_v0` | 4,3 cm |
+| `noaa:9414290` San Francisco | mixte | 504 | `station_harmonics_v0` | 2,5 cm |
+| `noaa:8729840` Pensacola | diurne | 504 | `station_harmonics_v0` | 0,6 cm |
+| `noaa:9447130` Seattle | témoin hors réglage | 504 | `station_harmonics_v0` | 2,1 cm |
+
+Fenêtres de dérive nodale :
+
+| Station | 2026 | 2031 | 2036 |
+|---|---:|---:|---:|
+| `noaa:8443970` Boston | 4,3 cm | 3,9 cm | 4,4 cm |
+| `noaa:9414290` San Francisco | 2,3 cm | 2,4 cm | 2,6 cm |
+| `noaa:8729840` Pensacola | 0,5 cm | 0,5 cm | 0,7 cm |
+| `noaa:9447130` Seattle | 2,1 cm | 1,8 cm | 2,5 cm |
+
+`make m0-validate` échoue désormais si une p95 station ou fenêtre dépasse
+5 cm.
 
 ## Décision
 
-Continuer seulement après avoir remplacé le mode M0 par
-`station_harmonics_v0` avec corrections nodales Schureman complètes et une
-convention d'argument astronomique validée contre NOAA.
+Continuer M1 depuis M0.1.
 
-Ne pas commencer M1 depuis cet état sans corriger ce point : le CLI est
-utilisable et traçable, mais la précision M0 est explicitement insuffisante.
+La cible M0 est atteinte : les quatre stations, dont Seattle hors réglage,
+restent sous 5 cm de p95 sur 2026, 2031 et 2036.
