@@ -1,0 +1,30 @@
+# No-op tant que le repo n'a pas de remote.
+name: ingestion-drift
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"
+  workflow_dispatch:
+
+jobs:
+  noaa:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Re-fetch NOAA fixtures and diff committed data
+        run: |
+          set -eu
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/data" "$tmp/fixtures"
+          cp Makefile "$tmp/Makefile"
+          cp data/stations.txt "$tmp/data/stations.txt"
+          (
+            cd "$tmp"
+            make fetch-noaa
+            make fetch-noaa-hilo
+          )
+          if ! diff -ru fixtures/noaa "$tmp/fixtures/noaa" > noaa-drift.diff; then
+            cat noaa-drift.diff
+            exit 1
+          fi
