@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 amar-core.workspace = true
+amar-data.workspace = true
 amar-pack.workspace = true
 chrono.workspace = true
 clap.workspace = true

@@ -65,7 +65,7 @@ de l'annee a ete rejetee : elle degradait Boston et Eastport au-dessus du gate
 Le bareme de confiance M1 reste separe du moteur harmonique : A <= 2 km,
 B <= 10 km, C <= 20 km. Au-dela de 20 km, la source est refusee.
 
-## Brest experimental M2
+## Brest experimental M2/M2.2
 
 Le pack `amar-data-brest-experimental.json` utilise la meme convention
 `station_harmonics_v0` que NOAA : `V0` au 1er janvier UTC, avance par vitesse
@@ -73,17 +73,31 @@ du constituant, puis corrections nodales `f/u` au milieu de l'annee civile.
 Le calibrateur ajuste donc directement des colonnes lineaires
 `f*cos(V+u)` et `f*sin(V+u)`.
 
-La liste des constituants Brest est fixee d'avance :
+La liste M2 historique, conservee comme reference de comparaison
+`m2-base16`, etait :
 
 ```text
 M2, S2, N2, K2, K1, O1, P1, Q1, M4, MS4, MN4, M6, MF, MM, SA, SSA
 ```
 
-Elle couvre les principaux semi-diurnes, diurnes, shallow-water et longues
-periodes separables sur au moins un an d'observations horaires. Le calibrateur
-M2 ne fait aucune selection automatique, aucun critere de Rayleigh dynamique et
-aucune ponderation robuste : c'est volontairement un compilateur borne pour
-Brest, pas un clone UTide.
+La liste M2.2 publiee, `m22-rayleigh37`, est egalement fixee d'avance :
+
+```text
+M2, S2, N2, K2, K1, O1, P1, Q1, M4, MS4, MN4, M6, MF, MM, SA, SSA,
+L2, NU2, MU2, 2N2, LAM2, T2, R2, J1, OO1, RHO, 2Q1, M1, S1,
+MK3, 2MK3, M3, S4, S6, M8, MSF, 2SM2
+```
+
+Elle est l'intersection entre les 37 constituants NOAA supportes par
+`amar-core` et le critere de Rayleigh sur la fenetre de calibration Brest.
+Le plus petit ecart de frequence entre deux constituants retenus vaut
+0,002738 cycle/jour. Il est superieur a la resolution Rayleigh de la fenetre
+M2 historique de 455 jours, soit 1/455 = 0,002198 cycle/jour, et a celle de
+la fenetre M2.2 de 1916 jours, soit 1/1916 = 0,000522 cycle/jour.
+
+Le calibrateur ne fait aucune selection automatique, aucun critere de Rayleigh
+dynamique et aucune ponderation robuste : c'est volontairement un compilateur
+borne pour Brest, pas un clone UTide.
 
 Pour Brest, le vocabulaire impose est : résidu = niveau d'eau observé − marée
 astronomique prédite (météo incluse). Ce résidu n'est pas une validation

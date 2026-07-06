@@ -106,7 +106,7 @@ fn tide_returns_brest_experimental_confidence() {
         body["confidence"]["method"],
         "calibrated_station_experimental"
     );
-    assert_eq!(body["confidence"]["residual_benchmark_cm"], 26.6);
+    assert_eq!(body["confidence"]["residual_benchmark_cm"], 15.8);
     assert!(body["confidence"]["grade"].is_null());
     assert!(body["warnings"].to_string().contains("experimental"));
     assert!(body["warnings"].to_string().contains("not_shom"));

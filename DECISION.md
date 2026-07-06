@@ -295,6 +295,140 @@ M3 dans cette livraison.
 - Durcissement post-audit : confidence/warnings partagés CLI-serveur, packs expérimentaux incomplets refusés, benchmark Brest gaté à `p95 <= 30 cm`.
 - Calibrateur scindé en `fetch`/`qc`/`solve`/`pack_out` avec QC trous/sauts, garde SA/SSA, tests locaux, artefacts Brest byte-identiques.
 
+## Décision M2.2 — précision Brest
+
+Date : 2026-07-06.
+
+Règle graduée : `fixtures/refmar/benchmark_brest_v1.json` est resté
+byte-identique. SHA-256 fichier :
+`d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f`.
+Le checksum interne du masque horaire et des observations reste
+`531da284f68bb9acf77c9d21b90e0fd3d787809c0ddb0cd4d118c63eddc0ac42`.
+
+### Diagnostic spectral
+
+Commande :
+
+```bash
+cargo run -p amar-calibrate -- diagnose --observations fixtures/refmar/brest_validated_hourly_2025-01-01_2026-07-01.csv --pack /private/tmp/amar-brest-m2-base16-15m.json
+```
+
+Lecture des bandes : basse fréquence par lissage 48 h, bandes tidales par
+sondage harmonique des 37 fréquences supportées.
+
+| Résidu `16 × 15 mois` | Début | Fin | N | RMS cm | Biais cm | <0,5 cpd cm | ~1 cpd cm | ~2 cpd cm | composés cm | tidal cohérent cm |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Calibration | 2025-01-01T00:00:00Z | 2026-04-01T00:00:00Z | 10920 | 17,8 | 0,0 | 12,4 | 0,9 | 10,2 | 1,4 | 10,3 |
+| Benchmark | 2026-04-01T00:00:00Z | 2026-07-01T00:00:00Z | 2183 | 13,8 | -1,5 | 5,8 | 1,2 | 11,2 | 1,6 | 11,4 |
+
+Porte de décision : le résidu tidal cohérent est supérieur à 3 cm RMS
+équivalent sur la référence, donc M2.2 continue vers l'élargissement des
+constituants et la calibration longue.
+
+Diagnostic après pack retenu :
+
+```bash
+cargo run -p amar-calibrate -- diagnose
+```
+
+| Résidu `37 × multi-année` | Début | Fin | N | RMS cm | Biais cm | <0,5 cpd cm | ~1 cpd cm | ~2 cpd cm | composés cm | tidal cohérent cm |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Calibration | 2021-01-01T00:00:00Z | 2026-04-01T00:00:00Z | 45367 | 15,0 | -0,0 | 13,1 | 0,1 | 0,3 | 0,0 | 0,3 |
+| Benchmark | 2026-04-01T00:00:00Z | 2026-07-01T00:00:00Z | 2183 | 7,9 | -1,1 | 5,5 | 0,9 | 2,0 | 1,0 | 2,4 |
+
+Après M2.2, le résidu tidal cohérent repasse sous le plancher de décision ;
+le résidu restant est dominé par la basse fréquence météo/seiches.
+
+### Constituants et calibration
+
+La liste publiée passe de 16 à 37 constituants fixes :
+
+```text
+M2, S2, N2, K2, K1, O1, P1, Q1, M4, MS4, MN4, M6, MF, MM, SA, SSA,
+L2, NU2, MU2, 2N2, LAM2, T2, R2, J1, OO1, RHO, 2Q1, M1, S1,
+MK3, 2MK3, M3, S4, S6, M8, MSF, 2SM2
+```
+
+Le calcul de séparabilité Rayleigh est documenté dans `CONVENTIONS.md`. La
+fenêtre de calibration retenue est `2021-01-01T00:00:00Z` à
+`2026-04-01T00:00:00Z`; la validation `2026-04-01T00:00:00Z` à
+`2026-07-01T00:00:00Z` reste exclue de la calibration.
+
+QC annuel des observations REFMAR `source=4`, même station, même référence
+verticale `zero_hydrographique`, RAM id `Brest`, ZH = -3,635 m par rapport à
+`IGN69` :
+
+| Année | Attendus | Observés | Couverture | Trous > 1,5 h | Sauts aberrants |
+|---:|---:|---:|---:|---:|---:|
+| 2021 | 8760 | 8669 | 98,96 % | 4 | 0 |
+| 2022 | 8760 | 8756 | 99,95 % | 1 | 0 |
+| 2023 | 8760 | 8760 | 100,00 % | 0 | 0 |
+| 2024 | 8784 | 8262 | 94,06 % | 2 | 0 |
+| 2025 | 8760 | 8760 | 100,00 % | 0 | 0 |
+| 2026 | 4344 | 4343 | 99,98 % | 0 | 0 |
+
+La lacune 2024-11-27T08:00:00Z → 2024-12-17T17:00:00Z est acceptée car la
+couverture annuelle reste au-dessus du gate QC 90 % et aucun saut aberrant
+n'est détecté.
+
+### Comparaison benchmark figé
+
+Commande :
+
+```bash
+cargo run -p amar -- benchmark-brest
+```
+
+| Configuration | RMS cm | Biais cm | MAE cm | p95 cm | Max cm |
+|---|---:|---:|---:|---:|---:|
+| `16 × 15 mois` | 13,8 | -1,5 | 11,0 | 26,6 | 46,9 |
+| `37 × 15 mois` | 8,4 | -1,5 | 6,4 | 17,3 | 31,8 |
+| `37 × multi-année` | 7,9 | -1,1 | 6,2 | 15,8 | 32,5 |
+
+Le gain p95 est supérieur à 2 cm ; la configuration `37 × multi-année` devient
+le pack Brest publié. `data_version = 2026-07-06-m2.2`,
+`calibration_period = 2021-01-01T00:00:00Z/2026-04-01T00:00:00Z`,
+`residual_benchmark_cm = 15.8`.
+
+Le gate `m2-benchmark` est resserré à `p95 <= 19 cm`, soit p95 arrondi 16 cm +
+3 cm de marge.
+
+### Baromètre inverse
+
+Source diagnostic : Open-Meteo Historical Weather API, variable horaire
+`surface_pressure` en hPa, `timezone=GMT`, `cell_selection=nearest`, fenêtre
+`2026-04-01/2026-06-30`. Cette donnée n'entre ni dans `/tide`, ni dans le
+pack, ni dans `benchmark_brest_v1`.
+
+Commande :
+
+```bash
+cargo run -p amar-calibrate -- diagnose-ib
+```
+
+Formule : `IB = -0,9933 cm/hPa × (P - 1013,25)`.
+
+| N | Corr(residu, IB) | r² | Variance retirée par IB fixe | RMS avant cm | RMS après IB cm | Biais avant cm | Biais après cm |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2183 | 0,662 | 43,8 % | 43,8 % | 7,9 | 7,0 | -1,1 | 3,9 |
+
+Le plancher astronomique estimé après retrait IB fixe est donc environ
+7,0 cm RMS sur le benchmark M2.2. Le reste n'est pas injecté dans la
+prédiction : c'est un diagnostic de plancher, pas une correction météo.
+
+### Artefacts M2.2
+
+| Artefact | Rôle |
+|---|---|
+| `fixtures/refmar/brest_validated_hourly_2021-01-01_2026-07-01.csv` | observations longues REFMAR |
+| `fixtures/open_meteo/brest_surface_pressure_2026-04-01_2026-06-30.json` | pression diagnostic IB |
+| `fixtures/refmar/benchmark_brest_v1.json` | benchmark figé byte-identique |
+| `data/packs/amar-data-brest-experimental.json` | pack Brest M2.2 publié |
+
+Idempotence : un re-run de `cargo run -p amar-calibrate -- build-brest-pack`
+réécrit le même pack, SHA-256
+`e377e25754e9cbc6a05e732d0dcff2db2c1305b57037432312015ae45d749919`.
+
 ## M3 — Extrema, séries, fenêtres
 
 Date : 2026-07-06.

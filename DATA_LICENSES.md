@@ -119,8 +119,9 @@ ZH = -3.635 m par rapport à `IGN69`.
 |---|---|---|
 | `fixtures/refmar/brest_tidegauge.json` | `https://services.data.shom.fr/maregraphie/service/completetidegauge/3` | `5327d51c4e210f656b1ee2b3ff0d6e1b5bbd0a8a8cddfcb1c13c556d43e994cf` |
 | `fixtures/refmar/brest_validated_hourly_2025-01-01_2026-07-01.csv` | `https://services.data.shom.fr/maregraphie/observation/json/3?sources=4`, fenêtres de 31 jours | `e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d` |
+| `fixtures/refmar/brest_validated_hourly_2021-01-01_2026-07-01.csv` | `https://services.data.shom.fr/maregraphie/observation/json/3?sources=4`, fenêtres de 31 jours | `17951bab11dc99220b8462da118df6ba4412a2492eb36a8c01b5935b6cd5a8e2` |
 | `fixtures/refmar/benchmark_brest_v1.json` | Fenêtre hors calibration `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z` | `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f` |
-| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` | `c696a14fe2090cc281a54e45d4d9bf66031a9055a38b9b781fb8d07aeccc047d` |
+| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` | `e377e25754e9cbc6a05e732d0dcff2db2c1305b57037432312015ae45d749919` |
 
 Le checksum interne `benchmark_brest_v1.checksum_sha256` couvre le masque
 horaire et les observations de la fenêtre de validation :
@@ -129,3 +130,20 @@ horaire et les observations de la fenêtre de validation :
 Les constantes Brest publiées par amar sont dérivées des observations REFMAR ;
 elles ne sont pas des constantes SHOM et ne doivent pas être présentées comme
 équivalentes.
+
+## Open-Meteo diagnostic Brest M2.2
+
+La pression horaire de surface utilisée pour le diagnostic baromètre inverse
+provient de l'API historique Open-Meteo, variable `surface_pressure`, timezone
+`GMT`, `cell_selection=nearest`, coordonnées Brest
+`48.38290024,-4.49503994`. Elle n'entre ni dans `/tide`, ni dans le pack, ni
+dans `benchmark_brest_v1`.
+
+La page licence Open-Meteo indique que les données API sont proposées sous
+Attribution 4.0 International (CC BY 4.0), avec attribution à Open-Meteo et
+lien vers la licence. La page de l'API historique documente `surface_pressure`
+en hPa et les sources de réanalyse.
+
+| Fichier | Origine | SHA-256 |
+|---|---|---|
+| `fixtures/open_meteo/brest_surface_pressure_2026-04-01_2026-06-30.json` | `https://archive-api.open-meteo.com/v1/archive?latitude=48.38290024&longitude=-4.49503994&start_date=2026-04-01&end_date=2026-06-30&hourly=surface_pressure&timezone=GMT&cell_selection=nearest` | `24c254012f89c5510d4e63b6d00c187b97233c327b2bd146d5082de22bfcd655` |

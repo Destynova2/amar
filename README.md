@@ -84,14 +84,14 @@ curl -i -H 'content-type: application/json' \
 
 ```json
 {
-  "height_m": 1.09,
+  "height_m": 1.081,
   "next_high": {
-    "height_m": 7.336,
-    "t": "2026-08-15T17:43:06Z"
+    "height_m": 7.347,
+    "t": "2026-08-15T17:47:37Z"
   },
   "next_low": {
-    "height_m": 1.088,
-    "t": "2026-08-16T00:09:32Z"
+    "height_m": 1.079,
+    "t": "2026-08-16T00:14:58Z"
   },
   "datum": "zero_hydrographique_brest",
   "source": {
@@ -99,11 +99,11 @@ curl -i -H 'content-type: application/json' \
     "id": "refmar:3",
     "name": "Brest",
     "distance_km": 0.011,
-    "data_version": "2026-07-06"
+    "data_version": "2026-07-06-m2.2"
   },
   "confidence": {
     "method": "calibrated_station_experimental",
-    "residual_benchmark_cm": 26.6,
+    "residual_benchmark_cm": 15.8,
     "validation_period": "2026-04-01T00:00:00Z/2026-07-01T00:00:00Z"
   },
   "warnings": [
@@ -220,7 +220,7 @@ amar window --lat 48.383 --lon -4.495 --from 2026-07-07T04:00:00Z --to 2026-07-0
 ```
 
 Brest reste expérimental : l'incertitude verticale d'une fenêtre de seuil est
-de l'ordre du benchmark, soit `residual_benchmark_cm = 26.6`.
+de l'ordre du benchmark, soit `residual_benchmark_cm = 15.8`.
 
 Depuis le dépôt :
 
@@ -251,8 +251,9 @@ Pensacola, Seattle, Eastport, Honolulu, Key West et Galveston Pier 21.
 
 Le pack Brest expérimental contient une seule station (`refmar:3`) au zéro
 hydrographique de Brest. Les observations d'entrée couvrent
-`2025-01-01T00:00:00Z/2026-07-01T00:00:00Z`; la calibration exclut les trois
-derniers mois, réservés à `benchmark_brest_v1`.
+`2021-01-01T00:00:00Z/2026-07-01T00:00:00Z`; la calibration
+`2021-01-01T00:00:00Z/2026-04-01T00:00:00Z` exclut les trois derniers mois,
+réservés à `benchmark_brest_v1`.
 
 Les fixtures, URLs d'origine et checksums sont listés dans
 [`DATA_LICENSES.md`](DATA_LICENSES.md).

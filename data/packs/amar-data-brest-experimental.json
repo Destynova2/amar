@@ -1,6 +1,6 @@
 {
   "schema_version": "amar-pack-v0",
-  "generated_at": "2026-07-06",
+  "generated_at": "2026-07-06-m2.2",
   "stations": [
     {
       "station_id": "refmar:3",
@@ -9,125 +9,251 @@
       "latitude_deg": 48.38290024,
       "longitude_deg": -4.49503994,
       "datum": "zero_hydrographique_brest",
-      "z0_m": 4.287416126914455,
+      "z0_m": 4.262301561773819,
       "method": "station_harmonics_v0",
       "constituents": [
         {
           "name": "M2",
-          "amplitude_m": 2.043685629113129,
-          "phase_gmt_deg": 108.3867486327692,
+          "amplitude_m": 2.0492636881664716,
+          "phase_gmt_deg": 108.3823101967868,
           "speed_deg_per_hour": 28.984104
         },
         {
           "name": "S2",
-          "amplitude_m": 0.7567485137009243,
-          "phase_gmt_deg": 148.65019063219958,
+          "amplitude_m": 0.7526445906175655,
+          "phase_gmt_deg": 148.20992720197646,
           "speed_deg_per_hour": 30.0
         },
         {
           "name": "N2",
-          "amplitude_m": 0.4086719339066033,
-          "phase_gmt_deg": 90.27597664890153,
+          "amplitude_m": 0.41689112037728254,
+          "phase_gmt_deg": 90.14089367936374,
           "speed_deg_per_hour": 28.43973
         },
         {
           "name": "K2",
-          "amplitude_m": 0.21622661137190782,
-          "phase_gmt_deg": 145.84224006706373,
+          "amplitude_m": 0.2152995191571915,
+          "phase_gmt_deg": 145.83797224405737,
           "speed_deg_per_hour": 30.082138
         },
         {
           "name": "K1",
-          "amplitude_m": 0.06176209230762521,
-          "phase_gmt_deg": 76.96646703479266,
+          "amplitude_m": 0.06385045588317885,
+          "phase_gmt_deg": 76.03508218152052,
           "speed_deg_per_hour": 15.041069
         },
         {
           "name": "O1",
-          "amplitude_m": 0.06520411083850637,
-          "phase_gmt_deg": 327.9811163360767,
+          "amplitude_m": 0.06503566611643181,
+          "phase_gmt_deg": 328.5639901716325,
           "speed_deg_per_hour": 13.943035
         },
         {
           "name": "P1",
-          "amplitude_m": 0.02104257315943192,
-          "phase_gmt_deg": 70.6666151751391,
+          "amplitude_m": 0.02262215628788393,
+          "phase_gmt_deg": 64.88568856342067,
           "speed_deg_per_hour": 14.958931
         },
         {
           "name": "Q1",
-          "amplitude_m": 0.019538380914732194,
-          "phase_gmt_deg": 287.75076311363136,
+          "amplitude_m": 0.021788836148595232,
+          "phase_gmt_deg": 282.0548014380307,
           "speed_deg_per_hour": 13.398661
         },
         {
           "name": "M4",
-          "amplitude_m": 0.058629355422702346,
-          "phase_gmt_deg": 105.1232821929387,
+          "amplitude_m": 0.0587840149182604,
+          "phase_gmt_deg": 104.79448231953934,
           "speed_deg_per_hour": 57.96821
         },
         {
           "name": "MS4",
-          "amplitude_m": 0.038743352426624376,
-          "phase_gmt_deg": 181.2832845098474,
+          "amplitude_m": 0.03701662051096992,
+          "phase_gmt_deg": 178.62082103225316,
           "speed_deg_per_hour": 58.984104
         },
         {
           "name": "MN4",
-          "amplitude_m": 0.021697959217110346,
-          "phase_gmt_deg": 60.83214696088514,
+          "amplitude_m": 0.02181833969219143,
+          "phase_gmt_deg": 58.89529581510035,
           "speed_deg_per_hour": 57.423832
         },
         {
           "name": "M6",
-          "amplitude_m": 0.0304315200894201,
-          "phase_gmt_deg": 353.98902227485877,
+          "amplitude_m": 0.031426347148290235,
+          "phase_gmt_deg": 354.4501125783758,
           "speed_deg_per_hour": 86.95232
         },
         {
           "name": "MF",
-          "amplitude_m": 0.0195289242952009,
-          "phase_gmt_deg": 173.96971238045597,
+          "amplitude_m": 0.012121620689107986,
+          "phase_gmt_deg": 200.4433302532106,
           "speed_deg_per_hour": 1.0980331
         },
         {
           "name": "MM",
-          "amplitude_m": 0.03811330982368189,
-          "phase_gmt_deg": 225.03851554401965,
+          "amplitude_m": 0.01977348409674135,
+          "phase_gmt_deg": 244.82398486361208,
           "speed_deg_per_hour": 0.5443747
         },
         {
           "name": "SA",
-          "amplitude_m": 0.09834815876133361,
-          "phase_gmt_deg": 276.2437056752823,
+          "amplitude_m": 0.06855237794569329,
+          "phase_gmt_deg": 255.74807147962088,
           "speed_deg_per_hour": 0.0410686
         },
         {
           "name": "SSA",
-          "amplitude_m": 0.013118549166982584,
-          "phase_gmt_deg": 201.26216832725316,
+          "amplitude_m": 0.02261861968065677,
+          "phase_gmt_deg": 89.96814871833902,
           "speed_deg_per_hour": 0.0821373
+        },
+        {
+          "name": "L2",
+          "amplitude_m": 0.055737103053816364,
+          "phase_gmt_deg": 104.35693436890534,
+          "speed_deg_per_hour": 29.528479
+        },
+        {
+          "name": "NU2",
+          "amplitude_m": 0.07779633990904446,
+          "phase_gmt_deg": 85.84770989254876,
+          "speed_deg_per_hour": 28.512583
+        },
+        {
+          "name": "MU2",
+          "amplitude_m": 0.08828386434672279,
+          "phase_gmt_deg": 104.5147814543513,
+          "speed_deg_per_hour": 27.968208
+        },
+        {
+          "name": "2N2",
+          "amplitude_m": 0.05588370729822491,
+          "phase_gmt_deg": 72.26369939288854,
+          "speed_deg_per_hour": 27.895355
+        },
+        {
+          "name": "LAM2",
+          "amplitude_m": 0.029158445725913924,
+          "phase_gmt_deg": 75.71254943568829,
+          "speed_deg_per_hour": 29.455626
+        },
+        {
+          "name": "T2",
+          "amplitude_m": 0.03981887161474123,
+          "phase_gmt_deg": 138.6382035226738,
+          "speed_deg_per_hour": 29.958933
+        },
+        {
+          "name": "R2",
+          "amplitude_m": 0.009024212259255641,
+          "phase_gmt_deg": 155.73294077697759,
+          "speed_deg_per_hour": 30.041067
+        },
+        {
+          "name": "J1",
+          "amplitude_m": 0.0021910519114117033,
+          "phase_gmt_deg": 137.76237477100082,
+          "speed_deg_per_hour": 15.5854435
+        },
+        {
+          "name": "OO1",
+          "amplitude_m": 0.0012821835950229696,
+          "phase_gmt_deg": 195.06068586686123,
+          "speed_deg_per_hour": 16.139101
+        },
+        {
+          "name": "RHO",
+          "amplitude_m": 0.00342878843886041,
+          "phase_gmt_deg": 300.6559738978421,
+          "speed_deg_per_hour": 13.471515
+        },
+        {
+          "name": "2Q1",
+          "amplitude_m": 0.004285746450975133,
+          "phase_gmt_deg": 233.68337867620346,
+          "speed_deg_per_hour": 12.854286
+        },
+        {
+          "name": "M1",
+          "amplitude_m": 0.0020160879697207986,
+          "phase_gmt_deg": 93.79756969869167,
+          "speed_deg_per_hour": 14.496694
+        },
+        {
+          "name": "S1",
+          "amplitude_m": 0.007672403871523681,
+          "phase_gmt_deg": 12.276890996881622,
+          "speed_deg_per_hour": 15.0
+        },
+        {
+          "name": "MK3",
+          "amplitude_m": 0.0017569492627447236,
+          "phase_gmt_deg": 297.4208367947876,
+          "speed_deg_per_hour": 44.025173
+        },
+        {
+          "name": "2MK3",
+          "amplitude_m": 0.0028247541672679374,
+          "phase_gmt_deg": 105.73095577248165,
+          "speed_deg_per_hour": 42.92714
+        },
+        {
+          "name": "M3",
+          "amplitude_m": 0.019616757816467646,
+          "phase_gmt_deg": 14.771959848677996,
+          "speed_deg_per_hour": 43.47616
+        },
+        {
+          "name": "S4",
+          "amplitude_m": 0.0021796540237065142,
+          "phase_gmt_deg": 268.1926027523683,
+          "speed_deg_per_hour": 60.0
+        },
+        {
+          "name": "S6",
+          "amplitude_m": 0.0009609890472975963,
+          "phase_gmt_deg": 353.6998927359602,
+          "speed_deg_per_hour": 90.0
+        },
+        {
+          "name": "M8",
+          "amplitude_m": 0.00229894435470885,
+          "phase_gmt_deg": 235.42469937725832,
+          "speed_deg_per_hour": 115.93642
+        },
+        {
+          "name": "MSF",
+          "amplitude_m": 0.005395605416440878,
+          "phase_gmt_deg": 140.0007683527246,
+          "speed_deg_per_hour": 1.0158958
+        },
+        {
+          "name": "2SM2",
+          "amplitude_m": 0.01824412449720618,
+          "phase_gmt_deg": 315.09655338851644,
+          "speed_deg_per_hour": 31.015896
         }
       ],
       "source": {
         "provider": "Shom / REFMAR",
         "license": "Licence Ouverte 2.0 Etalab",
-        "extracted_at": "2026-07-06",
+        "extracted_at": "2026-07-06-m2.2",
         "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/3",
         "datums_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/3",
         "harcon_url": "not applicable: constants calibrated from REFMAR observations",
-        "checksum_sha256": "e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d",
+        "checksum_sha256": "17951bab11dc99220b8462da118df6ba4412a2492eb36a8c01b5935b6cd5a8e2",
         "attribution": "Shom / REFMAR",
         "product": "Données horaires validées REFMAR, source 4",
         "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/3?sources=4",
-        "observations_checksum_sha256": "e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d",
+        "observations_checksum_sha256": "17951bab11dc99220b8462da118df6ba4412a2492eb36a8c01b5935b6cd5a8e2",
         "tidegauge_checksum_sha256": "5327d51c4e210f656b1ee2b3ff0d6e1b5bbd0a8a8cddfcb1c13c556d43e994cf"
       },
       "experimental": true,
       "not_official": true,
       "not_shom": true,
       "calibration_period": {
-        "start": "2025-01-01T00:00:00Z",
+        "start": "2021-01-01T00:00:00Z",
         "end": "2026-04-01T00:00:00Z"
       },
       "validation_period": {
@@ -136,7 +262,7 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.635 m relative to IGN69; RAM id Brest in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 26.585545384788702
+      "residual_benchmark_cm": 15.801191897278866
     }
   ]
 }

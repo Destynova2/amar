@@ -1,12 +1,12 @@
 {
-  "height_m": 1.09,
+  "height_m": 1.081,
   "next_high": {
-    "height_m": 7.336,
-    "t": "2026-08-15T17:43:06Z"
+    "height_m": 7.347,
+    "t": "2026-08-15T17:47:37Z"
   },
   "next_low": {
-    "height_m": 1.088,
-    "t": "2026-08-16T00:09:32Z"
+    "height_m": 1.079,
+    "t": "2026-08-16T00:14:58Z"
   },
   "datum": "zero_hydrographique_brest",
   "source": {
@@ -14,11 +14,11 @@
     "id": "refmar:3",
     "name": "Brest",
     "distance_km": 0.011,
-    "data_version": "2026-07-06"
+    "data_version": "2026-07-06-m2.2"
   },
   "confidence": {
     "method": "calibrated_station_experimental",
-    "residual_benchmark_cm": 26.6,
+    "residual_benchmark_cm": 15.8,
     "validation_period": "2026-04-01T00:00:00Z/2026-07-01T00:00:00Z"
   },
   "warnings": [

@@ -6,7 +6,7 @@
   compte.
 - L'incertitude publiée s'applique aux seuils. Pour Brest, une fenêtre calculée
   autour de `above_m`/`below_m` porte une incertitude verticale de l'ordre du
-  benchmark expérimental, soit 26,6 cm p95 sur la fenêtre figée.
+  benchmark expérimental, soit 15,8 cm p95 sur la fenêtre figée.
 - Non utilisable pour la navigation.
 - Brest est calculé uniquement via le pack expérimental `refmar:3`.
 - Brest n'utilise pas de constantes SHOM : les constantes sont dérivées des

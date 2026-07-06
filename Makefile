@@ -60,7 +60,7 @@ m0-validate:
 	cargo run -p amar -- validate --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
 
 m2-benchmark:
-	cargo run -p amar -- benchmark-brest --p95-limit-cm 30
+	cargo run -p amar -- benchmark-brest --p95-limit-cm 19
 
 m3-check: test m0-validate m2-benchmark
 	cargo run -p amar -- validate-hilo --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
@@ -127,7 +127,7 @@ m1-smoke:
 	grep -q '"height_m"' $$BODY; \
 	grep -q '"id":"refmar:3"' $$BODY; \
 	grep -q '"method":"calibrated_station_experimental"' $$BODY; \
-	grep -q '"residual_benchmark_cm":26.6' $$BODY; \
+	grep -q '"residual_benchmark_cm":15.8' $$BODY; \
 	grep -q '"experimental"' $$BODY; \
 	grep -q '"not_shom"' $$BODY; \
 	CODE=$$(curl -sS -o $$BODY -w '%{http_code}' -H 'content-type: application/json' -d '{"lat":91,"lon":0,"datetime":"2026-08-15T12:00:00Z"}' $$BASE/tide); \

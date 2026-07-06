@@ -1,10 +1,12 @@
+mod diagnose;
 mod fetch;
+mod ib;
 mod pack_out;
 mod qc;
 mod solve;
 
 use amar_core::{CoreError, UtcDateTime, predict_height};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -12,12 +14,12 @@ use thiserror::Error;
 
 pub(crate) const REFMAR_BASE: &str = "https://services.data.shom.fr/maregraphie";
 const DEFAULT_OBSERVATIONS: &str =
-    "fixtures/refmar/brest_validated_hourly_2025-01-01_2026-07-01.csv";
+    "fixtures/refmar/brest_validated_hourly_2021-01-01_2026-07-01.csv";
 const DEFAULT_TIDEGAUGE: &str = "fixtures/refmar/brest_tidegauge.json";
 const DEFAULT_PACK: &str = "data/packs/amar-data-brest-experimental.json";
 const DEFAULT_BENCHMARK: &str = "fixtures/refmar/benchmark_brest_v1.json";
-const DEFAULT_GENERATED_AT: &str = "2026-07-06";
-const DEFAULT_START: &str = "2025-01-01T00:00:00Z";
+const DEFAULT_GENERATED_AT: &str = "2026-07-06-m2.2";
+const DEFAULT_START: &str = "2021-01-01T00:00:00Z";
 const DEFAULT_VALIDATION_START: &str = "2026-04-01T00:00:00Z";
 const DEFAULT_END: &str = "2026-07-01T00:00:00Z";
 pub(crate) const BREST_SHOM_ID: &str = "3";
@@ -37,6 +39,8 @@ struct Cli {
 enum Command {
     FetchRefmar(FetchRefmarArgs),
     BuildBrestPack(BuildBrestPackArgs),
+    Diagnose(DiagnoseArgs),
+    DiagnoseIb(DiagnoseIbArgs),
 }
 
 #[derive(Debug, Args)]
@@ -69,10 +73,39 @@ struct BuildBrestPackArgs {
     validation_end: String,
     #[arg(long, default_value = DEFAULT_PACK)]
     out: PathBuf,
-    #[arg(long, default_value = DEFAULT_BENCHMARK)]
-    benchmark_out: PathBuf,
+    #[arg(long)]
+    benchmark_out: Option<PathBuf>,
     #[arg(long, default_value = DEFAULT_GENERATED_AT)]
     generated_at: String,
+    #[arg(long, value_enum, default_value_t = solve::ConstituentSet::M22Rayleigh37)]
+    constituent_set: solve::ConstituentSet,
+}
+
+#[derive(Debug, Args)]
+struct DiagnoseArgs {
+    #[arg(long, default_value = DEFAULT_OBSERVATIONS)]
+    observations: PathBuf,
+    #[arg(long, default_value = DEFAULT_PACK)]
+    pack: PathBuf,
+    #[arg(long, default_value = DEFAULT_BENCHMARK)]
+    benchmark: PathBuf,
+    #[arg(long, default_value = "refmar:3")]
+    station_id: String,
+}
+
+#[derive(Debug, Args)]
+struct DiagnoseIbArgs {
+    #[arg(long, default_value = DEFAULT_PACK)]
+    pack: PathBuf,
+    #[arg(long, default_value = DEFAULT_BENCHMARK)]
+    benchmark: PathBuf,
+    #[arg(
+        long,
+        default_value = "fixtures/open_meteo/brest_surface_pressure_2026-04-01_2026-06-30.json"
+    )]
+    pressure: PathBuf,
+    #[arg(long, default_value = "refmar:3")]
+    station_id: String,
 }
 
 #[derive(Debug, Error)]
@@ -81,6 +114,8 @@ pub(crate) enum CalError {
     Core(#[from] CoreError),
     #[error("{0}")]
     Pack(#[from] amar_pack::PackError),
+    #[error("{0}")]
+    Data(#[from] amar_data::DataError),
     #[error("I/O error on {path}: {source}")]
     Io {
         path: PathBuf,
@@ -98,6 +133,13 @@ pub(crate) enum CalError {
     EmptyObservations(String),
     #[error("least-squares solve failed")]
     SolveFailed,
+    #[error("missing {field} for station {station_id}")]
+    MissingStationPeriod {
+        station_id: String,
+        field: &'static str,
+    },
+    #[error("station {0} not found in pack")]
+    MissingStation(String),
     #[error("quality gate failed: {0}")]
     QualityGate(String),
     #[error(
@@ -128,6 +170,8 @@ fn run() -> Result<(), CalError> {
     match cli.command {
         Command::FetchRefmar(args) => fetch::fetch_refmar(args),
         Command::BuildBrestPack(args) => build_brest_pack(args),
+        Command::Diagnose(args) => diagnose::diagnose(args),
+        Command::DiagnoseIb(args) => ib::diagnose_ib(args),
     }
 }
 
@@ -159,7 +203,12 @@ fn build_brest_pack(args: BuildBrestPackArgs) -> Result<(), CalError> {
     qc::enforce_qc("calibration", &calibration_qc)?;
     qc::enforce_qc("validation", &validation_qc)?;
 
-    let calibration = solve::calibrate(&calibration_samples, calibration_start, validation_start)?;
+    let calibration = solve::calibrate(
+        &calibration_samples,
+        calibration_start,
+        validation_start,
+        args.constituent_set,
+    )?;
     let residuals = validation_samples
         .iter()
         .map(|observation| {
@@ -181,14 +230,16 @@ fn build_brest_pack(args: BuildBrestPackArgs) -> Result<(), CalError> {
 
     let observations_sha256 = pack_out::sha256_file(&args.observations)?;
     let tidegauge_sha256 = pack_out::sha256_file(&args.tidegauge)?;
-    let benchmark = pack_out::build_benchmark(
-        &validation_samples,
-        validation_start,
-        validation_end,
-        &observations_sha256,
-        &args.generated_at,
-    );
-    pack_out::write_json(&args.benchmark_out, &benchmark)?;
+    if let Some(benchmark_out) = &args.benchmark_out {
+        let benchmark = pack_out::build_benchmark(
+            &validation_samples,
+            validation_start,
+            validation_end,
+            &observations_sha256,
+            &args.generated_at,
+        );
+        pack_out::write_json(benchmark_out, &benchmark)?;
+    }
 
     let pack = pack_out::build_pack(pack_out::PackBuildInput {
         tidegauge: &tidegauge,
@@ -210,6 +261,7 @@ fn build_brest_pack(args: BuildBrestPackArgs) -> Result<(), CalError> {
         all_qc.gaps.len(),
         all_qc.jumps.len()
     );
+    print_yearly_qc(&observations, calibration_start, validation_end);
     qc::print_qc("calibration", &calibration_qc);
     qc::print_qc("validation", &validation_qc);
     println!(
@@ -228,6 +280,30 @@ fn build_brest_pack(args: BuildBrestPackArgs) -> Result<(), CalError> {
         );
     }
     Ok(())
+}
+
+fn print_yearly_qc(observations: &[Observation], start: DateTime<Utc>, end: DateTime<Utc>) {
+    for year in start.year()..=end.year() {
+        let year_start = utc_year_start(year).max(start);
+        let year_end = utc_year_start(year + 1).min(end);
+        if year_start >= year_end {
+            continue;
+        }
+        let samples = observations
+            .iter()
+            .copied()
+            .filter(|observation| observation.at >= year_start && observation.at < year_end)
+            .collect::<Vec<_>>();
+        let report = qc::qc_report(&samples, year_start, year_end);
+        qc::print_qc(&format!("year {year}"), &report);
+    }
+}
+
+fn utc_year_start(year: i32) -> DateTime<Utc> {
+    match Utc.with_ymd_and_hms(year, 1, 1, 0, 0, 0).single() {
+        Some(value) => value,
+        None => unreachable!("valid UTC year boundary"),
+    }
 }
 
 pub(crate) fn parse_rfc3339(value: &str) -> Result<DateTime<Utc>, CalError> {

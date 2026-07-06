@@ -246,7 +246,7 @@ async fn health_and_coverage_expose_loaded_pack() {
         health.body["station_count"].as_u64(),
         Some(expected_station_count as u64)
     );
-    assert_eq!(health.body["data_version"], "2026-07-06");
+    assert_eq!(health.body["data_version"], "2026-07-06+2026-07-06-m2.2");
 
     let coverage = request_json(
         service,
