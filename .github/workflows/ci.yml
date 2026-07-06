@@ -15,3 +15,4 @@ jobs:
       - run: cargo test --workspace
       - run: make m0-validate
       - run: make m1-smoke
+      - run: make m2-benchmark

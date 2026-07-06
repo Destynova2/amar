@@ -24,6 +24,7 @@ name = "amar-calibrate"
 version = "0.1.0"
 dependencies = [
  "amar-core",
+ "amar-data",
  "amar-pack",
  "chrono",
  "clap",

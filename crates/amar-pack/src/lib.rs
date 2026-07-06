@@ -21,6 +21,10 @@ pub enum PackError {
         station_id: String,
         constituent: String,
     },
+    #[error("experimental station {station_id} must define residual_benchmark_cm")]
+    MissingExperimentalResidual { station_id: String },
+    #[error("experimental station {station_id} must define validation_period")]
+    MissingExperimentalValidationPeriod { station_id: String },
     #[error("{field} must be finite")]
     NonFinite { field: &'static str },
     #[error("{field} must be between {min} and {max}, got {value}")]
@@ -121,6 +125,18 @@ impl StationPack {
         }
         if let Some(value) = self.residual_benchmark_cm {
             ensure_finite("residual_benchmark_cm", value)?;
+        }
+        if self.experimental == Some(true) {
+            if self.residual_benchmark_cm.is_none() {
+                return Err(PackError::MissingExperimentalResidual {
+                    station_id: self.station_id.clone(),
+                });
+            }
+            if self.validation_period.is_none() {
+                return Err(PackError::MissingExperimentalValidationPeriod {
+                    station_id: self.station_id.clone(),
+                });
+            }
         }
         Ok(())
     }
@@ -396,6 +412,35 @@ mod tests {
             pack.validate(),
             Err(PackError::OutOfRange { field, value, min, max })
                 if field == "longitude_deg" && value == -181.0 && min == -180.0 && max == 180.0
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_experimental_station_without_residual() {
+        let mut pack = valid_pack();
+        pack.stations[0].experimental = Some(true);
+        pack.stations[0].validation_period = Some(PeriodInfo {
+            start: "2026-04-01T00:00:00Z".to_string(),
+            end: "2026-07-01T00:00:00Z".to_string(),
+        });
+
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::MissingExperimentalResidual { station_id })
+                if station_id == "noaa:8443970"
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_experimental_station_without_validation_period() {
+        let mut pack = valid_pack();
+        pack.stations[0].experimental = Some(true);
+        pack.stations[0].residual_benchmark_cm = Some(26.6);
+
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::MissingExperimentalValidationPeriod { station_id })
+                if station_id == "noaa:8443970"
         ));
     }
 }

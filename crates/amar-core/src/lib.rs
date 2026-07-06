@@ -43,12 +43,61 @@ pub struct HarmonicBasis {
     pub nodal_factor: f64,
 }
 
+#[derive(Clone, Copy)]
+pub struct HarmonicYearContext {
+    year_start: UtcDateTime,
+    start_astro: astro::AstronomicalTerms,
+    mid_year_nodal: NodalTerms,
+}
+
+impl HarmonicYearContext {
+    pub fn new(at: UtcDateTime) -> Self {
+        let year_start = at.civil_year_start();
+        let start_astro = astronomical_terms(year_start);
+        let mid_year_astro = astronomical_terms(at.civil_year_midpoint());
+        let mid_year_nodal = nodal_terms(&mid_year_astro);
+        Self {
+            year_start,
+            start_astro,
+            mid_year_nodal,
+        }
+    }
+
+    pub fn contains(self, at: UtcDateTime) -> bool {
+        at.civil_year_start() == self.year_start
+    }
+
+    pub fn basis(
+        self,
+        constituent_id: &ConstituentId,
+        speed: DegreesPerHour,
+        at: UtcDateTime,
+    ) -> Result<HarmonicBasis, CoreError> {
+        if !self.contains(at) {
+            return Err(CoreError::InvalidTimestamp(
+                "harmonic year context does not match timestamp".to_string(),
+            ));
+        }
+        let definition = constituent_definition(constituent_id.as_str())
+            .ok_or_else(|| CoreError::UnknownConstituent(constituent_id.to_string()))?;
+        Ok(HarmonicBasis {
+            argument_degrees: astronomical_argument_degrees(definition, &self.start_astro)
+                + speed.as_degrees_per_hour() * at.hours_since(self.year_start)
+                + definition.nodal_phase_degrees(&self.mid_year_nodal),
+            nodal_factor: definition.nodal_factor(&self.mid_year_nodal),
+        })
+    }
+}
+
 pub fn harmonic_basis(
     constituent_id: &ConstituentId,
     speed: DegreesPerHour,
     method: PredictionMethod,
     at: UtcDateTime,
 ) -> Result<HarmonicBasis, CoreError> {
+    if method == PredictionMethod::StationHarmonicsV0 {
+        return HarmonicYearContext::new(at).basis(constituent_id, speed, at);
+    }
     let definition = constituent_definition(constituent_id.as_str())
         .ok_or_else(|| CoreError::UnknownConstituent(constituent_id.to_string()))?;
     let constituent = HarmonicConstituent::new(

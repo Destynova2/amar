@@ -24,6 +24,30 @@ pub const DEFAULT_WARNINGS: [&str; 3] = [
     "no_weather_surge",
 ];
 
+/// Distance confidence scale shared by the CLI and HTTP API.
+pub const CONFIDENCE_GRADES: [ConfidenceGrade; 3] = [
+    ConfidenceGrade::new(2.0, "A", 8),
+    ConfidenceGrade::new(10.0, "B", 15),
+    ConfidenceGrade::new(MAX_CONFIDENCE_DISTANCE_KM, "C", 30),
+];
+
+#[derive(Clone, Copy, Debug)]
+pub struct ConfidenceGrade {
+    pub max_distance_km: f64,
+    pub grade: &'static str,
+    pub sigma_cm: u16,
+}
+
+impl ConfidenceGrade {
+    pub const fn new(max_distance_km: f64, grade: &'static str, sigma_cm: u16) -> Self {
+        Self {
+            max_distance_km,
+            grade,
+            sigma_cm,
+        }
+    }
+}
+
 /// Errors returned while loading data or running the HTTP server.
 #[derive(Debug, Error)]
 pub enum ServerError {
@@ -104,10 +128,7 @@ async fn post_tide(
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
     let Some(confidence) = confidence_for_station(&station_match) else {
-        return Err(ApiError::no_supported_source(
-            Some(station_match),
-            state.max_distance_km,
-        ));
+        return Err(ApiError::unsupported_station_confidence(station));
     };
 
     Ok(Json(TideResponse {
@@ -176,10 +197,11 @@ fn validate_coordinate(name: &'static str, value: f64, min: f64, max: f64) -> Re
     }
 }
 
-// M1 confidence is deliberately distance-only:
-// <= 2 km -> A / 8 cm, <= 10 km -> B / 15 cm, <= 20 km -> C / 30 cm.
-// Later milestones replace this with empirical validation, not a wider radius.
-fn confidence_for_station(station_match: &StationMatch<'_>) -> Option<ConfidenceResponse> {
+/// Confidence metadata for a matched station.
+///
+/// NOAA-style stations use the M1 distance heuristic. Experimental stations
+/// must carry empirical benchmark metadata in their pack.
+pub fn confidence_for_station(station_match: &StationMatch<'_>) -> Option<ConfidenceResponse> {
     let station = station_match.station.pack();
     if station.experimental == Some(true) {
         let validation_period = station.validation_period.as_ref()?;
@@ -192,24 +214,22 @@ fn confidence_for_station(station_match: &StationMatch<'_>) -> Option<Confidence
     confidence_for_distance_km(station_match.distance_km)
 }
 
-fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse> {
-    let (grade, sigma_cm) = if distance_km <= 2.0 {
-        ("A", 8)
-    } else if distance_km <= 10.0 {
-        ("B", 15)
-    } else if distance_km <= MAX_CONFIDENCE_DISTANCE_KM {
-        ("C", 30)
-    } else {
-        return None;
-    };
+/// M1 confidence is deliberately distance-only.
+///
+/// Later milestones replace this with empirical validation, not a wider radius.
+pub fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse> {
+    let confidence = CONFIDENCE_GRADES
+        .iter()
+        .find(|confidence| distance_km <= confidence.max_distance_km)?;
     Some(ConfidenceResponse::Distance {
-        grade,
-        sigma_cm,
+        grade: confidence.grade,
+        sigma_cm: confidence.sigma_cm,
         method: CONFIDENCE_METHOD,
     })
 }
 
-fn warnings_for_station(station: &amar_pack::StationPack) -> Vec<&'static str> {
+/// Warning set shared by CLI and HTTP responses.
+pub fn warnings_for_station(station: &amar_pack::StationPack) -> Vec<&'static str> {
     let mut warnings = DEFAULT_WARNINGS.to_vec();
     if station.experimental == Some(true) {
         warnings.push("experimental");
@@ -269,7 +289,7 @@ impl From<&StationMatch<'_>> for SourceResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-enum ConfidenceResponse {
+pub enum ConfidenceResponse {
     Distance {
         grade: &'static str,
         sigma_cm: u16,
@@ -341,6 +361,21 @@ impl ApiError {
                 message,
                 max_distance_km: Some(max_distance_km),
                 nearest_source,
+            }),
+        }
+    }
+
+    fn unsupported_station_confidence(station: &amar_pack::StationPack) -> Self {
+        Self {
+            status: StatusCode::UNPROCESSABLE_ENTITY,
+            body: Box::new(ErrorResponse {
+                error: "no_supported_source",
+                message: format!(
+                    "station {} has no supported confidence metadata",
+                    station.station_id
+                ),
+                max_distance_km: None,
+                nearest_source: None,
             }),
         }
     }

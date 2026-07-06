@@ -4,7 +4,7 @@ use amar_core::{
     PredictionMethod, TideModel, UtcDateTime, predict_height,
 };
 use amar_data::{
-    DataError, StationMatch, build_noaa_pack, load_official_predictions, load_pack_from_path,
+    DataError, build_noaa_pack, load_official_predictions, load_pack_from_path,
     load_packs_from_paths, percentile, prediction_signed_error_meters,
 };
 use clap::{Args, Parser, Subcommand};
@@ -47,6 +47,16 @@ enum CliError {
     MissingStation(String),
     #[error("benchmark has no usable samples")]
     EmptyBenchmark,
+    #[error("station {station_id} has no supported confidence metadata")]
+    UnsupportedStationConfidence { station_id: String },
+    #[error("station {station_id} has no M2 constituent")]
+    MissingM2Constituent { station_id: String },
+    #[error("benchmark p95 exceeded {limit_cm:.1} cm: {model} p95_cm={p95_cm:.1}")]
+    BenchmarkThreshold {
+        model: &'static str,
+        limit_cm: f64,
+        p95_cm: f64,
+    },
 }
 
 #[derive(Debug, Parser)]
@@ -118,6 +128,8 @@ struct BenchmarkBrestArgs {
     benchmark: PathBuf,
     #[arg(long, default_value = "refmar:3")]
     station_id: String,
+    #[arg(long = "p95-limit-cm", value_parser = parse_non_negative_f64)]
+    p95_limit_cm: Option<f64>,
 }
 
 #[tokio::main]
@@ -162,12 +174,17 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
     )?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
+    let confidence = server::confidence_for_station(&station_match).ok_or_else(|| {
+        CliError::UnsupportedStationConfidence {
+            station_id: station.station_id.clone(),
+        }
+    })?;
     let output = json!({
         "height_m": round3(prediction.height().as_meters()),
         "datum": station.datum,
         "source": SourceResponse::from(&station_match),
-        "confidence": confidence_json(&station_match),
-        "warnings": warnings_json(station),
+        "confidence": confidence,
+        "warnings": server::warnings_for_station(station),
     });
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
@@ -317,6 +334,15 @@ fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
     print_benchmark_stats("calibrated_station_experimental", calibrated);
     print_benchmark_stats("z0_constant", z0);
     print_benchmark_stats("m2_only", m2);
+    if let Some(limit_cm) = args.p95_limit_cm
+        && calibrated.p95_cm > limit_cm
+    {
+        return Err(CliError::BenchmarkThreshold {
+            model: "calibrated_station_experimental",
+            limit_cm,
+            p95_cm: calibrated.p95_cm,
+        });
+    }
     Ok(())
 }
 
@@ -354,46 +380,6 @@ fn effective_pack_paths(paths: &[PathBuf]) -> Vec<PathBuf> {
         defaults.push(brest);
     }
     defaults
-}
-
-fn confidence_json(station_match: &StationMatch<'_>) -> serde_json::Value {
-    let station = station_match.station.pack();
-    if station.experimental == Some(true) {
-        let validation_period = station
-            .validation_period
-            .as_ref()
-            .map(|period| format!("{}/{}", period.start, period.end))
-            .unwrap_or_else(|| "unknown".to_string());
-        return json!({
-            "method": "calibrated_station_experimental",
-            "residual_benchmark_cm": station.residual_benchmark_cm.map(round1).unwrap_or(0.0),
-            "validation_period": validation_period,
-        });
-    }
-
-    let (grade, sigma_cm) = if station_match.distance_km <= 2.0 {
-        ("A", 8)
-    } else if station_match.distance_km <= 10.0 {
-        ("B", 15)
-    } else {
-        ("C", 30)
-    };
-    json!({
-        "grade": grade,
-        "sigma_cm": sigma_cm,
-        "method": server::CONFIDENCE_METHOD,
-    })
-}
-
-fn warnings_json(station: &amar_pack::StationPack) -> Vec<&'static str> {
-    let mut warnings = server::DEFAULT_WARNINGS.to_vec();
-    if station.experimental == Some(true) {
-        warnings.push("experimental");
-    }
-    if station.not_shom == Some(true) {
-        warnings.push("not_shom");
-    }
-    warnings
 }
 
 fn default_noaa_stations() -> impl Iterator<Item = &'static str> {
@@ -515,7 +501,9 @@ fn m2_only_model(station: &amar_data::LoadedStation) -> Result<TideModel, CliErr
         .constituents
         .iter()
         .find(|constituent| constituent.name == "M2")
-        .ok_or_else(|| CliError::MissingStation("M2 constituent".to_string()))?;
+        .ok_or_else(|| CliError::MissingM2Constituent {
+            station_id: station.pack().station_id.clone(),
+        })?;
     let constituent = HarmonicConstituent::new(
         ConstituentId::new(&m2.name)?,
         Meters::new(m2.amplitude_m.get())?,
@@ -575,10 +563,6 @@ fn round3(value: f64) -> f64 {
     (value * 1000.0).round() / 1000.0
 }
 
-fn round1(value: f64) -> f64 {
-    (value * 10.0).round() / 10.0
-}
-
 fn parse_latitude(value: &str) -> Result<f64, String> {
     parse_coordinate(value, "latitude", -90.0, 90.0)
 }
@@ -597,5 +581,16 @@ fn parse_coordinate(value: &str, name: &str, min: f64, max: f64) -> Result<f64, 
         Err(format!(
             "{name} must be between {min:.0} and {max:.0} degrees"
         ))
+    }
+}
+
+fn parse_non_negative_f64(value: &str) -> Result<f64, String> {
+    let parsed = value
+        .parse::<f64>()
+        .map_err(|error| format!("invalid non-negative number {value}: {error}"))?;
+    if parsed.is_finite() && parsed >= 0.0 {
+        Ok(parsed)
+    } else {
+        Err("value must be a finite non-negative number".to_string())
     }
 }

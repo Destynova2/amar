@@ -43,7 +43,7 @@ m0-validate:
 	cargo run -p amar -- validate --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
 
 m2-benchmark:
-	cargo run -p amar -- benchmark-brest
+	cargo run -p amar -- benchmark-brest --p95-limit-cm 30
 
 release:
 	cargo build --release -p amar
