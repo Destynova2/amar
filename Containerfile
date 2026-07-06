@@ -21,7 +21,7 @@ RUN set -eux; \
         *) echo "unsupported TARGETARCH=${TARGETARCH:-$(uname -m)}" >&2; exit 1 ;; \
     esac; \
     rustup target add "$RUST_TARGET"; \
-    cargo chef cook --release --locked --target "$RUST_TARGET" --recipe-path recipe.json
+    cargo chef cook --release --locked --target "$RUST_TARGET" --package amar --recipe-path recipe.json
 COPY . .
 RUN set -eux; \
     case "${TARGETARCH:-$(uname -m)}" in \
