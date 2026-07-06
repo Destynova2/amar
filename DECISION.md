@@ -289,3 +289,8 @@ Taguer M2.
 
 Le milestone reste borné : une station, un datum, une période, un pack. Pas de
 M3 dans cette livraison.
+
+## Décision M2.1
+
+- Durcissement post-audit : confidence/warnings partagés CLI-serveur, packs expérimentaux incomplets refusés, benchmark Brest gaté à `p95 <= 30 cm`.
+- Calibrateur scindé en `fetch`/`qc`/`solve`/`pack_out` avec QC trous/sauts, garde SA/SSA, tests locaux, artefacts Brest byte-identiques.
