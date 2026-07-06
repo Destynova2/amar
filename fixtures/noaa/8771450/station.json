@@ -1,0 +1,78 @@
+{
+  "count": 1,
+  "units": null,
+  "stations": [
+    {
+      "tidal": true,
+      "greatlakes": false,
+      "shefcode": "GTOT2",
+      "details": {
+        "id": "8771450",
+        "established": "1904-01-01 00:00:00",
+        "removed": "",
+        "noaachart": "11323",
+        "timemeridian": -90,
+        "timezone": -6.0,
+        "origyear": "1991-04-16 00:00:00",
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/details.json"
+      },
+      "sensors": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/sensors.json"
+      },
+      "floodlevels": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/floodlevels.json"
+      },
+      "datums": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/datums.json"
+      },
+      "supersededdatums": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/supersededdatums.json"
+      },
+      "harmonicConstituents": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/harcon.json"
+      },
+      "benchmarks": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/benchmarks.json"
+      },
+      "tidePredOffsets": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/tidepredoffsets.json"
+      },
+      "ofsMapOffsets": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/ofsmapoffsets.json"
+      },
+      "state": "TX",
+      "timezone": "CST",
+      "timezonecorr": -6,
+      "observedst": true,
+      "stormsurge": false,
+      "nearby": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/nearby.json"
+      },
+      "forecast": true,
+      "outlook": true,
+      "HTFhistorical": true,
+      "HTFmonthly": true,
+      "nonNavigational": false,
+      "inundationdb": true,
+      "id": "8771450",
+      "name": "Galveston Pier 21",
+      "lat": 29.31,
+      "lng": -94.7933,
+      "affiliations": "NWLORTS",
+      "portscode": "hg",
+      "products": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/products.json"
+      },
+      "disclaimers": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/disclaimers.json"
+      },
+      "notices": {
+        "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/notices.json"
+      },
+      "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450.json",
+      "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+      "tideType": "Diurnal"
+    }
+  ],
+  "self": null
+}

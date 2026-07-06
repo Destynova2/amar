@@ -1,0 +1,21 @@
+{
+  "height_m": 0.76,
+  "datum": "MLLW",
+  "source": {
+    "kind": "station",
+    "id": "noaa:9414290",
+    "name": "San Francisco",
+    "distance_km": 0.085,
+    "data_version": "2026-07-06"
+  },
+  "confidence": {
+    "grade": "A",
+    "sigma_cm": 8,
+    "method": "station_harmonics_v0_distance_heuristic"
+  },
+  "warnings": [
+    "astronomical_tide_only",
+    "not_for_navigation",
+    "no_weather_surge"
+  ]
+}

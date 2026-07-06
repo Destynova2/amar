@@ -76,8 +76,22 @@ impl DataSet {
         longitude_deg: f64,
         max_distance_km: f64,
     ) -> Result<StationMatch<'_>, DataError> {
-        let best = self
-            .stations
+        let best = self.closest_station(latitude_deg, longitude_deg);
+
+        match best {
+            Some(station_match) if station_match.distance_km <= max_distance_km => {
+                Ok(station_match)
+            }
+            _ => Err(DataError::NoSupportedSource { max_distance_km }),
+        }
+    }
+
+    pub fn closest_station(
+        &self,
+        latitude_deg: f64,
+        longitude_deg: f64,
+    ) -> Option<StationMatch<'_>> {
+        self.stations
             .iter()
             .map(|station| {
                 let distance_km = haversine_km(
@@ -91,14 +105,7 @@ impl DataSet {
                     distance_km,
                 }
             })
-            .min_by(|left, right| left.distance_km.total_cmp(&right.distance_km));
-
-        match best {
-            Some(station_match) if station_match.distance_km <= max_distance_km => {
-                Ok(station_match)
-            }
-            _ => Err(DataError::NoSupportedSource { max_distance_km }),
-        }
+            .min_by(|left, right| left.distance_km.total_cmp(&right.distance_km))
     }
 }
 

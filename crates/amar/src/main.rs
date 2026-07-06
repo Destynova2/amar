@@ -1,3 +1,4 @@
+use amar::server::{self, ServerError};
 use amar_core::{CoreError, UtcDateTime, predict_height};
 use amar_data::{
     DataError, build_noaa_pack, load_official_predictions, load_pack_from_path, percentile,
@@ -15,7 +16,9 @@ const DEFAULT_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.05;
-const DEFAULT_NOAA_STATIONS: &[&str] = &["8443970", "9414290", "8729840", "9447130"];
+const DEFAULT_NOAA_STATIONS: &[&str] = &[
+    "8410140", "8443970", "9414290", "8729840", "9447130", "1612340", "8724580", "8771450",
+];
 
 #[derive(Debug, Error)]
 enum CliError {
@@ -30,6 +33,8 @@ enum CliError {
     },
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("{0}")]
+    Server(#[from] ServerError),
     #[error("validation p95 exceeded {limit_cm:.1} cm:\n{failures}")]
     ValidationThreshold { limit_cm: f64, failures: String },
     #[error("validation missing samples:\n{failures}")]
@@ -47,6 +52,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     Tide(TideArgs),
+    Serve(ServeArgs),
     Validate(ValidateArgs),
     PackNoaa(PackNoaaArgs),
 }
@@ -59,6 +65,16 @@ struct TideArgs {
     lon: f64,
     #[arg(long)]
     at: String,
+    #[arg(long, default_value = DEFAULT_PACK)]
+    pack: PathBuf,
+    #[arg(long, default_value_t = DEFAULT_MAX_DISTANCE_KM)]
+    max_distance_km: f64,
+}
+
+#[derive(Debug, Args)]
+struct ServeArgs {
+    #[arg(long, default_value = "127.0.0.1:3000")]
+    addr: String,
     #[arg(long, default_value = DEFAULT_PACK)]
     pack: PathBuf,
     #[arg(long, default_value_t = DEFAULT_MAX_DISTANCE_KM)]
@@ -85,8 +101,9 @@ struct PackNoaaArgs {
     stations: Vec<String>,
 }
 
-fn main() -> ExitCode {
-    match run() {
+#[tokio::main]
+async fn main() -> ExitCode {
+    match run().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("{error}");
@@ -95,13 +112,19 @@ fn main() -> ExitCode {
     }
 }
 
-fn run() -> Result<(), CliError> {
+async fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
     match cli.command {
         Command::Tide(args) => tide(args),
+        Command::Serve(args) => serve(args).await,
         Command::Validate(args) => validate(args),
         Command::PackNoaa(args) => pack_noaa(args),
     }
+}
+
+async fn serve(args: ServeArgs) -> Result<(), CliError> {
+    server::serve(&args.addr, &args.pack, args.max_distance_km).await?;
+    Ok(())
 }
 
 fn tide(args: TideArgs) -> Result<(), CliError> {

@@ -26,7 +26,9 @@ fn unique_temp_dir(name: &str) -> PathBuf {
 fn validate_rejects_stations_without_prediction_samples() {
     let root = workspace_root();
     let fixtures = unique_temp_dir("empty-predictions");
-    for station_id in ["8443970", "9414290", "8729840", "9447130"] {
+    for station_id in [
+        "8410140", "8443970", "9414290", "8729840", "9447130", "1612340", "8724580", "8771450",
+    ] {
         must(fs::create_dir_all(fixtures.join(station_id)));
     }
 
