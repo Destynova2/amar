@@ -1,32 +1,15 @@
+use crate::DiagnoseArgs;
+use crate::common::{CalError, Observation, format_rfc3339, parse_rfc3339};
 use crate::pack_out::read_observations_csv;
 use crate::solve::M22_RAYLEIGH37;
-use crate::{CalError, DiagnoseArgs, Observation, format_rfc3339, parse_rfc3339};
 use amar_core::{UtcDateTime, predict_height};
+use amar_pack::{BrestBenchmark, BrestBenchmarkSample};
 use chrono::{DateTime, Utc};
 use nalgebra::{DMatrix, DVector};
-use serde::Deserialize;
 use std::fs;
 
 const LOW_PASS_RADIUS_HOURS: usize = 24;
 const TIDAL_DECISION_FLOOR_CM: f64 = 3.0;
-
-#[derive(Debug, Deserialize)]
-struct BrestBenchmark {
-    validation_period: BenchmarkPeriod,
-    samples: Vec<BrestBenchmarkSample>,
-}
-
-#[derive(Debug, Deserialize)]
-struct BenchmarkPeriod {
-    start: String,
-    end: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct BrestBenchmarkSample {
-    timestamp: String,
-    observed_m: Option<f64>,
-}
 
 #[derive(Clone, Copy)]
 struct ResidualSample {

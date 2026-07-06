@@ -1,4 +1,4 @@
-use crate::{CalError, Observation, format_rfc3339};
+use crate::common::{CalError, Observation, format_rfc3339};
 use chrono::{DateTime, Utc};
 
 const MIN_COVERAGE: f64 = 0.90;
@@ -129,20 +129,12 @@ pub(crate) fn residual_stats(residuals_m: &[f64]) -> Option<ResidualStats> {
         .map(|residual| residual.abs())
         .collect::<Vec<_>>();
     absolute.sort_by(|left, right| left.total_cmp(right));
-    let p95_m = percentile(&absolute, 0.95)?;
+    let p95_m = amar_data::percentile(&absolute, 0.95)?;
     Some(ResidualStats {
         samples,
         bias_cm: bias_m * 100.0,
         p95_cm: p95_m * 100.0,
     })
-}
-
-fn percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {
-    if sorted_values.is_empty() || !(0.0..=1.0).contains(&percentile) {
-        return None;
-    }
-    let index = ((sorted_values.len() - 1) as f64 * percentile).ceil() as usize;
-    sorted_values.get(index).copied()
 }
 
 #[cfg(test)]
@@ -151,7 +143,7 @@ mod tests {
     use chrono::Duration;
 
     fn at(value: &str) -> DateTime<Utc> {
-        match crate::parse_rfc3339(value) {
+        match crate::common::parse_rfc3339(value) {
             Ok(value) => value,
             Err(error) => panic!("{error:?}"),
         }
@@ -211,27 +203,5 @@ mod tests {
 
         assert_eq!(report.expected, 0);
         assert_eq!(report.coverage, 0.0);
-    }
-
-    #[test]
-    fn residual_stats_uses_the_same_p95_as_amar_data() {
-        let residuals = [-0.1, 0.2, -0.3, 0.4, -0.5];
-        let stats = match residual_stats(&residuals) {
-            Some(stats) => stats,
-            None => panic!("expected residual stats"),
-        };
-        let mut absolute = residuals
-            .iter()
-            .map(|value| value.abs())
-            .collect::<Vec<_>>();
-        absolute.sort_by(|left, right| left.total_cmp(right));
-        let expected_p95 = match amar_data::percentile(&absolute, 0.95) {
-            Some(value) => value * 100.0,
-            None => panic!("expected percentile"),
-        };
-
-        assert_eq!(stats.samples, residuals.len());
-        assert!((stats.bias_cm + 6.0).abs() < 1.0e-12);
-        assert_eq!(stats.p95_cm, expected_p95);
     }
 }

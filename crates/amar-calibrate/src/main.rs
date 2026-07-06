@@ -1,3 +1,4 @@
+mod common;
 mod diagnose;
 mod fetch;
 mod ib;
@@ -5,14 +6,13 @@ mod pack_out;
 mod qc;
 mod solve;
 
-use amar_core::{CoreError, UtcDateTime, predict_height};
+use amar_core::{UtcDateTime, predict_height};
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use clap::{Args, Parser, Subcommand};
+use common::{BREST_SHOM_ID, CalError, Observation, VALIDATED_HOURLY_SOURCE, parse_rfc3339};
 use std::path::PathBuf;
 use std::process::ExitCode;
-use thiserror::Error;
 
-pub(crate) const REFMAR_BASE: &str = "https://services.data.shom.fr/maregraphie";
 const DEFAULT_OBSERVATIONS: &str =
     "fixtures/refmar/brest_validated_hourly_2021-01-01_2026-07-01.csv";
 const DEFAULT_TIDEGAUGE: &str = "fixtures/refmar/brest_tidegauge.json";
@@ -22,8 +22,6 @@ const DEFAULT_GENERATED_AT: &str = "2026-07-06-m2.2";
 const DEFAULT_START: &str = "2021-01-01T00:00:00Z";
 const DEFAULT_VALIDATION_START: &str = "2026-04-01T00:00:00Z";
 const DEFAULT_END: &str = "2026-07-01T00:00:00Z";
-pub(crate) const BREST_SHOM_ID: &str = "3";
-pub(crate) const VALIDATED_HOURLY_SOURCE: u8 = 4;
 const DRIFT_P95_LIMIT_CM: f64 = 100.0;
 const DRIFT_BIAS_LIMIT_CM: f64 = 50.0;
 
@@ -106,67 +104,6 @@ struct DiagnoseIbArgs {
     pressure: PathBuf,
     #[arg(long, default_value = "refmar:3")]
     station_id: String,
-}
-
-#[derive(Debug, Error)]
-pub(crate) enum CalError {
-    #[error("{0}")]
-    Core(#[from] CoreError),
-    #[error("{0}")]
-    Pack(#[from] amar_pack::PackError),
-    #[error("{0}")]
-    Data(#[from] amar_data::DataError),
-    #[error("I/O error on {path}: {source}")]
-    Io {
-        path: PathBuf,
-        source: std::io::Error,
-    },
-    #[error("HTTP error: {0}")]
-    Http(#[from] reqwest::Error),
-    #[error("json error: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("invalid timestamp {0}")]
-    InvalidTimestamp(String),
-    #[error(
-        "open-meteo hourly time length {time_len} does not match surface_pressure length {pressure_len}"
-    )]
-    OpenMeteoHourlyLength {
-        time_len: usize,
-        pressure_len: usize,
-    },
-    #[error(
-        "open-meteo timezone must be GMT with utc_offset_seconds=0, got {timezone} with offset {utc_offset_seconds}"
-    )]
-    OpenMeteoTimezone {
-        timezone: String,
-        utc_offset_seconds: i32,
-    },
-    #[error("invalid observation CSV line {line}: {reason}")]
-    InvalidCsvLine { line: String, reason: String },
-    #[error("no observations available for {0}")]
-    EmptyObservations(String),
-    #[error("least-squares solve failed")]
-    SolveFailed,
-    #[error("missing {field} for station {station_id}")]
-    MissingStationPeriod {
-        station_id: String,
-        field: &'static str,
-    },
-    #[error("station {0} not found in pack")]
-    MissingStation(String),
-    #[error("quality gate failed: {0}")]
-    QualityGate(String),
-    #[error(
-        "calibration window is too short for annual constituents SA/SSA: got {days} days, need at least {required_days} days; extend calibration_start or remove annual terms"
-    )]
-    UnresolvableAnnualConstituents { days: i64, required_days: i64 },
-}
-
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct Observation {
-    at: DateTime<Utc>,
-    value_m: f64,
-    source: u8,
 }
 
 fn main() -> ExitCode {
@@ -318,14 +255,4 @@ fn utc_year_start(year: i32) -> DateTime<Utc> {
         Some(value) => value,
         None => unreachable!("valid UTC year boundary"),
     }
-}
-
-pub(crate) fn parse_rfc3339(value: &str) -> Result<DateTime<Utc>, CalError> {
-    DateTime::parse_from_rfc3339(value)
-        .map(|date| date.with_timezone(&Utc))
-        .map_err(|_| CalError::InvalidTimestamp(value.to_string()))
-}
-
-pub(crate) fn format_rfc3339(value: DateTime<Utc>) -> String {
-    value.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }

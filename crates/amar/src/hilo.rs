@@ -1,9 +1,11 @@
-use crate::{CliError, HILO_P95_HEIGHT_LIMIT_M, HILO_P95_TIME_LIMIT_MIN, ValidateArgs};
+use crate::{
+    CliError, HILO_P95_HEIGHT_LIMIT_M, HILO_P95_TIME_LIMIT_MIN, ValidateArgs, hilo_files,
+    hilo_window_label,
+};
 use amar_core::{UtcDateTime, extrema_between};
 use amar_data::{LoadedStation, OfficialExtremum, load_official_hilo_predictions, percentile};
 use std::collections::BTreeMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub(crate) fn validate(args: ValidateArgs) -> Result<(), CliError> {
     let data = amar_data::load_pack_from_path(&args.pack)?;
@@ -210,36 +212,6 @@ fn print_station_report(report: &StationHiloReport) {
             window_stats.max_dh_m * 100.0
         );
     }
-}
-
-fn hilo_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
-    let mut files = Vec::new();
-    for entry in fs::read_dir(station_dir).map_err(|source| CliError::Io {
-        path: station_dir.to_path_buf(),
-        source,
-    })? {
-        let entry = entry.map_err(|source| CliError::Io {
-            path: station_dir.to_path_buf(),
-            source,
-        })?;
-        let path = entry.path();
-        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-            continue;
-        };
-        if name.starts_with("hilo_") && name.ends_with(".json") {
-            files.push(path);
-        }
-    }
-    files.sort();
-    Ok(files)
-}
-
-fn hilo_window_label(path: &Path) -> String {
-    path.file_stem()
-        .and_then(|name| name.to_str())
-        .and_then(|name| name.strip_prefix("hilo_"))
-        .unwrap_or("unknown")
-        .to_string()
 }
 
 fn official_time_bounds(official: &[OfficialExtremum]) -> Option<(UtcDateTime, UtcDateTime)> {

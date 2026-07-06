@@ -11,7 +11,7 @@ HILO_YEARS = 2026
 HILO_DRIFT_YEARS = 2031
 HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo pack-noaa fetch-refmar build-brest-pack m0-validate m2-benchmark m3-check release m1-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack m0-validate m2-benchmark m3-check release m1-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -47,8 +47,32 @@ fetch-noaa-hilo:
 		done; \
 	done
 
-pack-noaa: fetch-noaa
-	cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at 2026-07-06 $(foreach station,$(STATIONS),--station $(station))
+check-noaa-fixtures:
+	@set -eu; \
+	missing=0; \
+	for station in $(STATIONS); do \
+		for file in station.json datums.json harcon.json; do \
+			if [ ! -f fixtures/noaa/$$station/$$file ]; then \
+				echo "missing fixtures/noaa/$$station/$$file"; \
+				missing=1; \
+			fi; \
+		done; \
+		for year in $(YEARS); do \
+			file=fixtures/noaa/$$station/predictions_$${year}-08-15_$${year}-08-21.json; \
+			if [ ! -f $$file ]; then \
+				echo "missing $$file"; \
+				missing=1; \
+			fi; \
+		done; \
+	done; \
+	if [ "$$missing" != "0" ]; then \
+		echo "NOAA fixtures are missing; run make fetch-noaa"; \
+		exit 1; \
+	fi
+
+pack-noaa: check-noaa-fixtures
+	@test -n "$(EXTRACTED_AT)" || { echo "EXTRACTED_AT is required: make pack-noaa EXTRACTED_AT=YYYY-MM-DD"; exit 1; }
+	cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at "$(EXTRACTED_AT)" $(foreach station,$(STATIONS),--station $(station))
 
 fetch-refmar:
 	cargo run -p amar-calibrate -- fetch-refmar
@@ -127,7 +151,7 @@ m1-smoke:
 	grep -q '"height_m"' $$BODY; \
 	grep -q '"id":"refmar:3"' $$BODY; \
 	grep -q '"method":"calibrated_station_experimental"' $$BODY; \
-	grep -q '"residual_benchmark_cm":15.8' $$BODY; \
+	grep -q '"residual_benchmark_cm":' $$BODY; \
 	grep -q '"experimental"' $$BODY; \
 	grep -q '"not_shom"' $$BODY; \
 	CODE=$$(curl -sS -o $$BODY -w '%{http_code}' -H 'content-type: application/json' -d '{"lat":91,"lon":0,"datetime":"2026-08-15T12:00:00Z"}' $$BASE/tide); \

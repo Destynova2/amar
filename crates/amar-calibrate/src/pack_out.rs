@@ -1,12 +1,12 @@
-use crate::solve::CalibrationResult;
-use crate::{
+use crate::common::{
     BREST_SHOM_ID, CalError, Observation, REFMAR_BASE, VALIDATED_HOURLY_SOURCE, format_rfc3339,
     parse_rfc3339,
 };
+use crate::solve::CalibrationResult;
 use amar_core::PredictionMethod;
 use amar_pack::{
-    LatitudeDegValue, LongitudeDegValue, MetersValue, PeriodInfo, SCHEMA_VERSION, SourceInfo,
-    StationPack, TidePack,
+    BrestBenchmark, BrestBenchmarkSample, LatitudeDegValue, LongitudeDegValue, MetersValue,
+    PeriodInfo, SCHEMA_VERSION, SourceInfo, StationPack, TidePack,
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -43,36 +43,6 @@ pub(crate) struct PackBuildInput<'a> {
     pub(crate) calibration_start: DateTime<Utc>,
     pub(crate) validation_start: DateTime<Utc>,
     pub(crate) validation_end: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct Benchmark {
-    schema_version: String,
-    benchmark_id: String,
-    generated_at: String,
-    station_id: String,
-    provider_station_id: String,
-    station_name: String,
-    datum: String,
-    product: String,
-    source: String,
-    validation_period: BenchmarkPeriod,
-    observations_sha256: String,
-    checksum_sha256: String,
-    samples: Vec<BenchmarkSample>,
-}
-
-#[derive(Debug, Serialize)]
-struct BenchmarkPeriod {
-    start: String,
-    end: String,
-}
-
-#[derive(Debug, Serialize)]
-struct BenchmarkSample {
-    timestamp: String,
-    observed_m: Option<f64>,
-    missing: bool,
 }
 
 pub(crate) fn read_observations_csv(path: &Path) -> Result<Vec<Observation>, CalError> {
@@ -228,7 +198,7 @@ pub(crate) fn build_benchmark(
     validation_end: DateTime<Utc>,
     observations_sha256: &str,
     generated_at: &str,
-) -> Benchmark {
+) -> BrestBenchmark {
     let by_time = validation_samples
         .iter()
         .map(|observation| (observation.at, observation.value_m))
@@ -238,7 +208,7 @@ pub(crate) fn build_benchmark(
     let mut cursor = validation_start;
     while cursor < validation_end {
         let observed_m = by_time.get(&cursor).copied();
-        samples.push(BenchmarkSample {
+        samples.push(BrestBenchmarkSample {
             timestamp: format_rfc3339(cursor),
             observed_m,
             missing: observed_m.is_none(),
@@ -252,7 +222,7 @@ pub(crate) fn build_benchmark(
         ));
         cursor += Duration::hours(1);
     }
-    Benchmark {
+    BrestBenchmark {
         schema_version: "benchmark_brest_v1".to_string(),
         benchmark_id: "benchmark_brest_v1".to_string(),
         generated_at: generated_at.to_string(),
@@ -262,7 +232,7 @@ pub(crate) fn build_benchmark(
         datum: "zero_hydrographique_brest".to_string(),
         product: "Données horaires validées REFMAR, source 4".to_string(),
         source: "Shom / REFMAR".to_string(),
-        validation_period: BenchmarkPeriod {
+        validation_period: PeriodInfo {
             start: format_rfc3339(validation_start),
             end: format_rfc3339(validation_end),
         },

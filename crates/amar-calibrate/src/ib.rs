@@ -1,5 +1,7 @@
-use crate::{CalError, DiagnoseIbArgs, parse_rfc3339};
+use crate::DiagnoseIbArgs;
+use crate::common::{CalError, parse_rfc3339};
 use amar_core::{UtcDateTime, predict_height};
+use amar_pack::BrestBenchmark;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -8,17 +10,6 @@ use std::path::Path;
 
 const STANDARD_PRESSURE_HPA: f64 = 1013.25;
 const IB_CM_PER_HPA: f64 = -0.9933;
-
-#[derive(Debug, Deserialize)]
-struct BrestBenchmark {
-    samples: Vec<BrestBenchmarkSample>,
-}
-
-#[derive(Debug, Deserialize)]
-struct BrestBenchmarkSample {
-    timestamp: String,
-    observed_m: Option<f64>,
-}
 
 #[derive(Debug, Deserialize)]
 struct OpenMeteoPressure {

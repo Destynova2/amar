@@ -1,4 +1,4 @@
-use crate::{CalError, Observation};
+use crate::common::{CalError, Observation};
 use amar_core::{
     ConstituentId, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, HarmonicYearContext,
     Meters, PredictionMethod, TideModel, UtcDateTime,
@@ -217,7 +217,7 @@ mod tests {
     use super::*;
 
     fn at(value: &str) -> DateTime<Utc> {
-        match crate::parse_rfc3339(value) {
+        match crate::common::parse_rfc3339(value) {
             Ok(value) => value,
             Err(error) => panic!("{error:?}"),
         }

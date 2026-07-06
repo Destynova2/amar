@@ -1,20 +1,21 @@
 mod hilo;
 
 use amar::contract::{
-    self, ThresholdOptionsError, TideExtremumResponse, TidePointResponse, TideWindowResponse,
+    self, SourceResponse, ThresholdOptionsError, TideExtremumResponse, TidePointResponse,
+    TideWindowResponse,
 };
-use amar::server::{self, ServerError, SourceResponse};
+use amar::server::{self, ServerError};
 use amar_core::{
     ConstituentId, CoreError, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, Meters,
     PredictionMethod, TideModel, UtcDateTime, next_extrema_after, predict_height, predict_series,
     tide_windows,
 };
 use amar_data::{
-    DataError, build_noaa_pack, load_official_predictions, load_pack_from_path,
+    DataError, LoadedStation, build_noaa_pack, load_official_predictions, load_pack_from_path,
     load_packs_from_paths, percentile, prediction_signed_error_meters,
 };
+use amar_pack::BrestBenchmark;
 use clap::{Args, Parser, Subcommand};
-use serde::Deserialize;
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::fs;
@@ -152,7 +153,7 @@ struct PackNoaaArgs {
     fixtures: PathBuf,
     #[arg(long, default_value = DEFAULT_NOAA_PACK)]
     out: PathBuf,
-    #[arg(long, default_value = "2026-07-06")]
+    #[arg(long)]
     extracted_at: String,
     #[arg(long = "station")]
     stations: Vec<String>,
@@ -214,7 +215,7 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
     )?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
-    let confidence = server::confidence_for_station(&station_match).ok_or_else(|| {
+    let confidence = contract::confidence_for_station(&station_match).ok_or_else(|| {
         CliError::UnsupportedStationConfidence {
             station_id: station.station_id.clone(),
         }
@@ -232,7 +233,7 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             "datum": station.datum,
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": server::warnings_for_station(station),
+            "warnings": contract::warnings_for_station(station),
         })
     } else {
         if args.step_min.is_some() {
@@ -252,7 +253,7 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             "datum": station.datum,
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": server::warnings_for_station(station),
+            "warnings": contract::warnings_for_station(station),
         })
     };
     println!("{}", serde_json::to_string_pretty(&output)?);
@@ -272,7 +273,7 @@ fn window(args: WindowArgs) -> Result<(), CliError> {
         effective_max_distance_km(args.max_distance_km),
     )?;
     let station = station_match.station.pack();
-    let confidence = server::confidence_for_station(&station_match).ok_or_else(|| {
+    let confidence = contract::confidence_for_station(&station_match).ok_or_else(|| {
         CliError::UnsupportedStationConfidence {
             station_id: station.station_id.clone(),
         }
@@ -292,7 +293,7 @@ fn window(args: WindowArgs) -> Result<(), CliError> {
         "datum": station.datum,
         "source": SourceResponse::from(&station_match),
         "confidence": confidence,
-        "warnings": server::warnings_for_station(station),
+        "warnings": contract::warnings_for_station(station),
     });
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
@@ -304,77 +305,10 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
     let mut sample_failures = Vec::new();
 
     for station in data.stations() {
-        let station_id = &station.pack().provider_station_id;
-        let station_dir = args.fixtures.join(station_id);
-        let mut errors = Vec::new();
-        let mut window_summaries = BTreeMap::new();
-        for prediction_path in prediction_files(&station_dir)? {
-            let predictions = load_official_predictions(&prediction_path)?;
-            let mut window_errors = Vec::new();
-            for official in predictions {
-                let error = prediction_signed_error_meters(station.model(), official);
-                errors.push(error);
-                window_errors.push(error);
-            }
-            let Some(window_stats) = error_stats(&window_errors) else {
-                sample_failures.push(format!(
-                    "{} {} samples=0",
-                    station.pack().station_id,
-                    prediction_window_label(&prediction_path)
-                ));
-                continue;
-            };
-            window_summaries.insert(prediction_window_label(&prediction_path), window_stats);
-        }
-        let Some(stats) = error_stats(&errors) else {
-            println!(
-                "{} {} method={} samples=0 bias_cm=NA std_cm=NA p95_m=NA p95_cm=NA",
-                station.pack().station_id,
-                station.pack().name,
-                station.model().method().as_str(),
-            );
-            sample_failures.push(format!("{} samples=0", station.pack().station_id));
-            continue;
-        };
-        println!(
-            "{} {} method={} samples={} bias_cm={:.1} std_cm={:.1} p95_m={:.3} p95_cm={:.1}",
-            station.pack().station_id,
-            station.pack().name,
-            station.model().method().as_str(),
-            stats.samples,
-            stats.bias * 100.0,
-            stats.std_dev * 100.0,
-            stats.p95_abs,
-            stats.p95_abs * 100.0
-        );
-        if stats.p95_abs > M0_P95_LIMIT_M {
-            failures.push(format!(
-                "{} all p95_cm={:.1}",
-                station.pack().station_id,
-                stats.p95_abs * 100.0
-            ));
-        }
-        for (window, window_stats) in window_summaries {
-            println!(
-                "{} {} window={} samples={} bias_cm={:.1} std_cm={:.1} p95_m={:.3} p95_cm={:.1}",
-                station.pack().station_id,
-                station.pack().name,
-                window,
-                window_stats.samples,
-                window_stats.bias * 100.0,
-                window_stats.std_dev * 100.0,
-                window_stats.p95_abs,
-                window_stats.p95_abs * 100.0
-            );
-            if window_stats.p95_abs > M0_P95_LIMIT_M {
-                failures.push(format!(
-                    "{} {} p95_cm={:.1}",
-                    station.pack().station_id,
-                    window,
-                    window_stats.p95_abs * 100.0
-                ));
-            }
-        }
+        let report = validate_station(station, &args.fixtures)?;
+        print_validation_report(&report);
+        failures.extend(report.failures);
+        sample_failures.extend(report.sample_failures);
     }
 
     if data.stations().is_empty() {
@@ -392,6 +326,130 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
         });
     }
     Ok(())
+}
+
+struct StationValidationReport {
+    station_id: String,
+    name: String,
+    method: &'static str,
+    stats: Option<ErrorStats>,
+    window_summaries: BTreeMap<String, ErrorStats>,
+    failures: Vec<String>,
+    sample_failures: Vec<String>,
+}
+
+struct PredictionWindowReport {
+    label: String,
+    errors: Vec<f64>,
+}
+
+fn validate_station(
+    station: &LoadedStation,
+    fixtures: &Path,
+) -> Result<StationValidationReport, CliError> {
+    let station_dir = fixtures.join(&station.pack().provider_station_id);
+    let mut errors = Vec::new();
+    let mut sample_failures = Vec::new();
+    let mut window_summaries = BTreeMap::new();
+
+    for prediction_path in prediction_files(&station_dir)? {
+        let report = validate_prediction_window(station, &prediction_path)?;
+        errors.extend(report.errors.iter().copied());
+        if let Some(window_stats) = error_stats(&report.errors) {
+            window_summaries.insert(report.label, window_stats);
+        } else {
+            sample_failures.push(format!(
+                "{} {} samples=0",
+                station.pack().station_id,
+                report.label
+            ));
+        }
+    }
+
+    let stats = error_stats(&errors);
+    let mut failures = Vec::new();
+    if let Some(stats) = stats {
+        if stats.p95_abs > M0_P95_LIMIT_M {
+            failures.push(format!(
+                "{} all p95_cm={:.1}",
+                station.pack().station_id,
+                stats.p95_abs * 100.0
+            ));
+        }
+    } else {
+        sample_failures.push(format!("{} samples=0", station.pack().station_id));
+    }
+
+    for (window, window_stats) in &window_summaries {
+        if window_stats.p95_abs > M0_P95_LIMIT_M {
+            failures.push(format!(
+                "{} {} p95_cm={:.1}",
+                station.pack().station_id,
+                window,
+                window_stats.p95_abs * 100.0
+            ));
+        }
+    }
+
+    Ok(StationValidationReport {
+        station_id: station.pack().station_id.clone(),
+        name: station.pack().name.clone(),
+        method: station.model().method().as_str(),
+        stats,
+        window_summaries,
+        failures,
+        sample_failures,
+    })
+}
+
+fn validate_prediction_window(
+    station: &LoadedStation,
+    prediction_path: &Path,
+) -> Result<PredictionWindowReport, CliError> {
+    let predictions = load_official_predictions(prediction_path)?;
+    let errors = predictions
+        .into_iter()
+        .map(|official| prediction_signed_error_meters(station.model(), official))
+        .collect::<Vec<_>>();
+    Ok(PredictionWindowReport {
+        label: prediction_window_label(prediction_path),
+        errors,
+    })
+}
+
+fn print_validation_report(report: &StationValidationReport) {
+    let Some(stats) = report.stats else {
+        println!(
+            "{} {} method={} samples=0 bias_cm=NA std_cm=NA p95_m=NA p95_cm=NA",
+            report.station_id, report.name, report.method,
+        );
+        return;
+    };
+
+    println!(
+        "{} {} method={} samples={} bias_cm={:.1} std_cm={:.1} p95_m={:.3} p95_cm={:.1}",
+        report.station_id,
+        report.name,
+        report.method,
+        stats.samples,
+        stats.bias * 100.0,
+        stats.std_dev * 100.0,
+        stats.p95_abs,
+        stats.p95_abs * 100.0
+    );
+    for (window, window_stats) in &report.window_summaries {
+        println!(
+            "{} {} window={} samples={} bias_cm={:.1} std_cm={:.1} p95_m={:.3} p95_cm={:.1}",
+            report.station_id,
+            report.name,
+            window,
+            window_stats.samples,
+            window_stats.bias * 100.0,
+            window_stats.std_dev * 100.0,
+            window_stats.p95_abs,
+            window_stats.p95_abs * 100.0
+        );
+    }
 }
 
 fn validate_hilo(args: ValidateArgs) -> Result<(), CliError> {
@@ -439,7 +497,7 @@ fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
         benchmark.validation_period.end,
         calibrated_residuals.len(),
         missing,
-        benchmark.checksum_sha256.as_deref().unwrap_or("NA"),
+        benchmark.checksum_sha256,
     );
     println!("résidu = niveau d'eau observé − marée astronomique prédite (météo incluse)");
     println!("model,rms_cm,bias_cm,mae_cm,p95_cm,max_cm");
@@ -502,10 +560,18 @@ fn default_noaa_stations() -> impl Iterator<Item = &'static str> {
 }
 
 fn effective_max_distance_km(max_distance_km: f64) -> f64 {
-    max_distance_km.min(server::MAX_CONFIDENCE_DISTANCE_KM)
+    max_distance_km.min(contract::MAX_CONFIDENCE_DISTANCE_KM)
 }
 
 fn prediction_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
+    fixture_files(station_dir, "predictions_")
+}
+
+pub(crate) fn hilo_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
+    fixture_files(station_dir, "hilo_")
+}
+
+fn fixture_files(station_dir: &Path, prefix: &str) -> Result<Vec<PathBuf>, CliError> {
     let mut files = Vec::new();
     for entry in fs::read_dir(station_dir).map_err(|source| CliError::Io {
         path: station_dir.to_path_buf(),
@@ -519,7 +585,7 @@ fn prediction_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
         let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
             continue;
         };
-        if name.starts_with("predictions_") && name.ends_with(".json") {
+        if name.starts_with(prefix) && name.ends_with(".json") {
             files.push(path);
         }
     }
@@ -528,9 +594,17 @@ fn prediction_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
 }
 
 fn prediction_window_label(path: &Path) -> String {
+    fixture_window_label(path, "predictions_")
+}
+
+pub(crate) fn hilo_window_label(path: &Path) -> String {
+    fixture_window_label(path, "hilo_")
+}
+
+fn fixture_window_label(path: &Path, prefix: &str) -> String {
     path.file_stem()
         .and_then(|name| name.to_str())
-        .and_then(|name| name.strip_prefix("predictions_"))
+        .and_then(|name| name.strip_prefix(prefix))
         .unwrap_or("unknown")
         .to_string()
 }
@@ -566,28 +640,6 @@ fn error_stats(errors: &[f64]) -> Option<ErrorStats> {
         std_dev: variance.sqrt(),
         p95_abs,
     })
-}
-
-#[derive(Debug, Deserialize)]
-struct BrestBenchmark {
-    station_id: String,
-    datum: String,
-    validation_period: BenchmarkPeriod,
-    #[serde(default)]
-    checksum_sha256: Option<String>,
-    samples: Vec<BrestBenchmarkSample>,
-}
-
-#[derive(Debug, Deserialize)]
-struct BenchmarkPeriod {
-    start: String,
-    end: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct BrestBenchmarkSample {
-    timestamp: String,
-    observed_m: Option<f64>,
 }
 
 #[derive(Clone, Copy)]

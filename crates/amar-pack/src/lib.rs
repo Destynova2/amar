@@ -149,6 +149,30 @@ pub struct PeriodInfo {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BrestBenchmark {
+    pub schema_version: String,
+    pub benchmark_id: String,
+    pub generated_at: String,
+    pub station_id: String,
+    pub provider_station_id: String,
+    pub station_name: String,
+    pub datum: String,
+    pub product: String,
+    pub source: String,
+    pub validation_period: PeriodInfo,
+    pub observations_sha256: String,
+    pub checksum_sha256: String,
+    pub samples: Vec<BrestBenchmarkSample>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BrestBenchmarkSample {
+    pub timestamp: String,
+    pub observed_m: Option<f64>,
+    pub missing: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConstituentPack {
     pub name: String,
     pub amplitude_m: MetersValue,

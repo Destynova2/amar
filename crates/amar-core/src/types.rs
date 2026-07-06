@@ -41,11 +41,6 @@ impl Degrees {
 pub struct Radians(pub(crate) f64);
 
 impl Radians {
-    pub fn new(value: f64) -> Result<Self, CoreError> {
-        ensure_finite("Radians", value)?;
-        Ok(Self(value))
-    }
-
     pub fn as_radians(self) -> f64 {
         self.0
     }
@@ -316,16 +311,11 @@ impl TideModel {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TidePrediction {
     pub(crate) height: Meters,
-    pub(crate) method: PredictionMethod,
 }
 
 impl TidePrediction {
     pub fn height(&self) -> Meters {
         self.height
-    }
-
-    pub fn method(&self) -> PredictionMethod {
-        self.method
     }
 }
 

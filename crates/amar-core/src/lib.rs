@@ -36,7 +36,6 @@ pub fn predict_height(model: &TideModel, at: UtcDateTime) -> TidePrediction {
 
     TidePrediction {
         height: Meters(height),
-        method: model.method,
     }
 }
 
@@ -115,26 +114,6 @@ impl HarmonicYearContext {
             nodal_factor: definition.nodal_factor(&self.mid_year_nodal),
         })
     }
-}
-
-pub fn harmonic_basis(
-    constituent_id: &ConstituentId,
-    speed: DegreesPerHour,
-    method: PredictionMethod,
-    at: UtcDateTime,
-) -> Result<HarmonicBasis, CoreError> {
-    if method == PredictionMethod::StationHarmonicsV0 {
-        return HarmonicYearContext::new(at).basis(constituent_id, speed, at);
-    }
-    let definition = constituent_definition(constituent_id.as_str())
-        .ok_or_else(|| CoreError::UnknownConstituent(constituent_id.to_string()))?;
-    let constituent = HarmonicConstituent::new(
-        constituent_id.clone(),
-        Meters::new(1.0)?,
-        Degrees::new(0.0)?,
-        speed,
-    );
-    Ok(PredictionConvention::new(method, at).basis(definition, &constituent))
 }
 
 struct PredictionConvention {
