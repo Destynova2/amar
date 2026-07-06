@@ -102,3 +102,35 @@ borne pour Brest, pas un clone UTide.
 Pour Brest, le vocabulaire impose est : résidu = niveau d'eau observé − marée
 astronomique prédite (météo incluse). Ce résidu n'est pas une validation
 officielle.
+
+## France v0.4 -- coefficient de maree
+
+Le coefficient reste une couche de presentation francaise dans `amar`, jamais
+dans `amar-core`.
+
+La convention retenue suit la fiche REFMAR/Shom "Prediction de maree"
+(mai 2024), section "Coefficients de maree" :
+
+```text
+C = 100 * (H - N0) / U
+```
+
+Avec :
+
+- `H` : hauteur de la pleine mer de Brest au-dessus du zero hydrographique ;
+- `N0` : niveau de mi-maree de Brest, assimile ici au `Z0` du pack Brest
+  calibre par amar ;
+- `U` : unite de niveau de Brest.
+
+La constante de presentation publique retenue est `U = 3,05 m` pour Brest.
+Elle est codee dans `amar::coefficient::BREST_TIDAL_UNIT_M`. Le coefficient est
+arrondi a l'entier le plus proche puis clampe dans l'intervalle conventionnel
+`20..=120`.
+
+Le coefficient est calcule uniquement depuis notre Brest calibre (`refmar:3`),
+puis associe a la pleine mer Brest la plus proche de la pleine mer du port
+francais demande. La fiche REFMAR/Shom rappelle que le coefficient est calcule
+pour Brest uniquement et applique conventionnellement aux cotes de France
+metropolitaine, en tenant compte du decalage horaire entre Brest et le port.
+
+Source : `https://refmar.shom.fr/sites/default/files/2025-01/GT-TSH_CatD_Fiche_Prediction_maree.pdf`.

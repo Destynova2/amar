@@ -142,13 +142,22 @@ pub fn format_utc(at: UtcDateTime) -> String {
 pub struct TideExtremumResponse {
     t: String,
     height_m: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    coefficient: Option<u8>,
 }
 
 impl From<TideExtremum> for TideExtremumResponse {
     fn from(extremum: TideExtremum) -> Self {
+        Self::from_extremum(extremum, None)
+    }
+}
+
+impl TideExtremumResponse {
+    pub fn from_extremum(extremum: TideExtremum, coefficient: Option<u8>) -> Self {
         Self {
             t: format_utc(extremum.at()),
             height_m: round3(extremum.height().as_meters()),
+            coefficient,
         }
     }
 }
@@ -254,12 +263,22 @@ pub fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse
 
 /// Warning set shared by CLI and HTTP responses.
 pub fn warnings_for_station(station: &StationPack) -> Vec<&'static str> {
+    warnings_for_station_with_coefficient(station, false)
+}
+
+pub fn warnings_for_station_with_coefficient(
+    station: &StationPack,
+    has_coefficient: bool,
+) -> Vec<&'static str> {
     let mut warnings = DEFAULT_WARNINGS.to_vec();
     if station.experimental == Some(true) {
         warnings.push("experimental");
     }
     if station.not_shom == Some(true) {
         warnings.push("not_shom");
+    }
+    if has_coefficient {
+        warnings.push(crate::coefficient::COEFFICIENT_EXPERIMENTAL_WARNING);
     }
     warnings
 }

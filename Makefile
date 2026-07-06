@@ -5,13 +5,15 @@ STATIONS := $(shell awk 'NF { print $$1 }' data/stations.txt)
 NOAA_STATION_COUNT := $(words $(STATIONS))
 BREST_PACK = data/packs/amar-data-brest-experimental.json
 BREST_STATION_COUNT := $(shell test -f $(BREST_PACK) && printf 1 || printf 0)
-STATION_COUNT := $(shell expr $(NOAA_STATION_COUNT) + $(BREST_STATION_COUNT))
+FRANCE_PACK = data/packs/amar-data-france-experimental.json
+FRANCE_STATION_COUNT := $(shell test -f $(FRANCE_PACK) && grep -c '"station_id"' $(FRANCE_PACK) || printf 0)
+STATION_COUNT := $(shell expr $(NOAA_STATION_COUNT) + $(BREST_STATION_COUNT) + $(FRANCE_STATION_COUNT))
 YEARS = 2026 2031 2036
 HILO_YEARS = 2026
 HILO_DRIFT_YEARS = 2031
 HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack m0-validate m2-benchmark m3-check release m1-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france m0-validate m2-benchmark m3-check release m1-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -80,11 +82,14 @@ fetch-refmar:
 build-brest-pack:
 	cargo run -p amar-calibrate -- build-brest-pack
 
+calibrate-france:
+	cargo run -p amar-calibrate -- calibrate-france
+
 m0-validate:
 	cargo run -p amar -- validate --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
 
 m2-benchmark:
-	cargo run -p amar -- benchmark-brest --p95-limit-cm 19
+	cargo run -p amar -- benchmark-brest --brest-p95-limit-cm 19 --p95-limit-cm 40 --min-rms-factor 2
 
 m3-check: test m0-validate m2-benchmark
 	cargo run -p amar -- validate-hilo --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
@@ -95,6 +100,7 @@ release:
 	install -m 755 target/release/amar dist/amar
 	cp data/packs/noaa_m0.json dist/packs/noaa_m0.json
 	cp data/packs/amar-data-brest-experimental.json dist/packs/amar-data-brest-experimental.json
+	if [ -f data/packs/amar-data-france-experimental.json ]; then cp data/packs/amar-data-france-experimental.json dist/packs/amar-data-france-experimental.json; fi
 	printf '%s\n' \
 		'# Installation' \
 		'' \
@@ -108,7 +114,7 @@ release:
 		'Puis lancer le serveur :' \
 		'' \
 		'```bash' \
-		'amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --addr 127.0.0.1:3000' \
+		'amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --pack ~/.local/share/amar/packs/amar-data-france-experimental.json --addr 127.0.0.1:3000' \
 		'```' \
 		> dist/install.md
 

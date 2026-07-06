@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:54",
+  "provider_station_id": "54",
+  "station_name": "Roscoff",
+  "source": 4,
+  "datum": "zero_hydrographique_roscoff",
+  "datum_note": "zero_hydrographique; ZH = -4.764 m relative to IGN69; RAM id Roscoff in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/54",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/54?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "232e848b1c58234c59d60f847c8a3f1ba0c073f87c5273af3933447522c7d339",
+  "tidegauge_sha256": "2a1917cbb5a6f4ac9f892a407a29a98fa477010b742f6126b4cfb8db34930b69",
+  "qc": {
+    "expected": 48168,
+    "observed": 47685,
+    "coverage": 0.9899725959143,
+    "gaps": 23,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_roscoff_v1",
+    "checksum_sha256": "cf5bbf8c6f1d5cb428980a6bc8d8fcdbb4213add209a894120c6926b4e1e5b4f",
+    "calibrated_rms_cm": 8.764893675599541,
+    "calibrated_mae_cm": 6.907221182201674,
+    "calibrated_p95_cm": 17.635249135074726,
+    "calibrated_max_cm": 32.201843938692896,
+    "z0_rms_cm": 200.88004243229923,
+    "z0_mae_cm": 174.2156803275582,
+    "z0_p95_cm": 344.67153691347056,
+    "z0_max_cm": 451.07153691347054,
+    "rms_factor_vs_z0": 22.91870841417349
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

@@ -1,3 +1,4 @@
+use crate::coefficient;
 use crate::contract::{
     self, ConfidenceResponse, SourceResponse, ThresholdField, ThresholdOptionsError,
     TideExtremumResponse, TidePointResponse, TideWindowResponse,
@@ -104,15 +105,23 @@ async fn post_tide(
         at,
         contract::NEXT_EXTREMA_HORIZON_H,
     );
+    let next_high_coefficient = next_high.and_then(|high| {
+        coefficient::coefficient_for_station_high(&state.data, station, high.at())
+            .map(|coefficient| coefficient.coefficient)
+    });
 
     Ok(Json(TideResponse {
         height_m: contract::round3(prediction.height().as_meters()),
-        next_high: next_high.map(TideExtremumResponse::from),
+        next_high: next_high
+            .map(|high| TideExtremumResponse::from_extremum(high, next_high_coefficient)),
         next_low: next_low.map(TideExtremumResponse::from),
         datum: station.datum.clone(),
         source: SourceResponse::from(&station_match),
         confidence,
-        warnings: contract::warnings_for_station(station),
+        warnings: contract::warnings_for_station_with_coefficient(
+            station,
+            next_high_coefficient.is_some(),
+        ),
     }))
 }
 

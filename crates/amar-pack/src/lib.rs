@@ -149,7 +149,7 @@ pub struct PeriodInfo {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct BrestBenchmark {
+pub struct TideBenchmark {
     pub schema_version: String,
     pub benchmark_id: String,
     pub generated_at: String,
@@ -162,15 +162,18 @@ pub struct BrestBenchmark {
     pub validation_period: PeriodInfo,
     pub observations_sha256: String,
     pub checksum_sha256: String,
-    pub samples: Vec<BrestBenchmarkSample>,
+    pub samples: Vec<TideBenchmarkSample>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct BrestBenchmarkSample {
+pub struct TideBenchmarkSample {
     pub timestamp: String,
     pub observed_m: Option<f64>,
     pub missing: bool,
 }
+
+pub type BrestBenchmark = TideBenchmark;
+pub type BrestBenchmarkSample = TideBenchmarkSample;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConstituentPack {

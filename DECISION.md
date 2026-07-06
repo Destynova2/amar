@@ -580,3 +580,102 @@ tentés puis retirés : `predict_series` régressait de +1,29 % et
 | `make m1-smoke` | vert |
 | `make m2-benchmark` | vert, Brest p95 15,8 cm |
 | `make m3-check` | vert, hilo p95 max Δt 0,78 min et Δh 0,1 cm |
+
+## v0.4 -- France prioritaire et coefficient
+
+Date : 2026-07-06.
+
+La garde "une station" de M2 est levée. Le pipeline Brest est généralisé dans
+`amar-calibrate calibrate-france` :
+
+- découverte du catalogue `service/tidegauges` REFMAR ;
+- cache de reprise sous `target/refmar-cache`, par station et fenêtre 31 jours ;
+- throttle HTTP par défaut : 600 ms, refusé sous 500 ms ;
+- absence de retry storm : une erreur de station exclut le port et la boucle
+  continue ;
+- observations longues non commitées ; seuls pack, benchmarks 3 mois et
+  manifestes SHA-256 sont commités.
+
+Cette session livre le lot prioritaire Manche/Atlantique, avec 11 ports inclus.
+`make calibrate-france` reste rejouable pour compléter le catalogue
+métropolitain éligible.
+
+Commandes :
+
+```bash
+cargo run -p amar-calibrate -- calibrate-france \
+  --station 410 --station 4 --station 13 --station 37 --station 34 \
+  --station 160 --station 152 --station 54 --station 2 --station 111 \
+  --station 55 --station 24 --station 311
+cargo run -p amar -- benchmark-brest --brest-p95-limit-cm 19 --p95-limit-cm 40 --min-rms-factor 2
+```
+
+Pack France :
+`data/packs/amar-data-france-experimental.json`, SHA-256
+`9aa5249920396be1fa91cdd1c5ec58301dc5e3c074230290c0a98f83591830b2`.
+
+Périodes :
+
+| Fenêtre | Début | Fin |
+|---|---|---|
+| Entrée | 2021-01-01T00:00:00Z | 2026-07-01T00:00:00Z |
+| Calibration | 2021-01-01T00:00:00Z | 2026-04-01T00:00:00Z |
+| Validation | 2026-04-01T00:00:00Z | 2026-07-01T00:00:00Z |
+
+Critère d'inclusion : `p95 <= 40 cm` sur benchmark figé et facteur RMS
+`z0_constant / calibrated >= 2`. Brest conserve son gate historique
+`p95 <= 19 cm`.
+
+| Port | Station | Couverture validation | RMS cm | p95 cm | RMS z0 cm | Facteur | Décision |
+|---|---|---:|---:|---:|---:|---:|---|
+| Saint-Malo | `refmar:410` | 100,0 % | 14,7 | 28,5 | 277,7 | 18,83 | inclus |
+| Le Havre | `refmar:4` | 100,0 % | 19,5 | 37,4 | 197,8 | 10,14 | inclus |
+| Saint-Nazaire | `refmar:37` | 100,0 % | 9,2 | 18,4 | 131,6 | 14,25 | inclus |
+| La Rochelle-Pallice | `refmar:34` | 100,0 % | 9,5 | 18,8 | 131,0 | 13,78 | inclus |
+| Concarneau | `refmar:160` | 99,8 % | 7,3 | 14,5 | 110,1 | 15,19 | inclus |
+| Le Conquet | `refmar:152` | 100,0 % | 7,3 | 15,1 | 149,9 | 20,57 | inclus |
+| Roscoff | `refmar:54` | 99,8 % | 8,8 | 17,6 | 200,9 | 22,92 | inclus |
+| Dunkerque | `refmar:2` | 100,0 % | 16,4 | 32,9 | 162,5 | 9,91 | inclus |
+| Boulogne-sur-Mer | `refmar:111` | 100,0 % | 18,2 | 35,9 | 224,4 | 12,33 | inclus |
+| Dieppe | `refmar:24` | 99,7 % | 16,0 | 31,5 | 231,7 | 14,47 | inclus |
+| Ouistreham | `refmar:311` | 100,0 % | 18,3 | 35,0 | 192,9 | 10,53 | inclus |
+| Cherbourg | `refmar:13` | 0,0 % | NA | NA | NA | NA | exclu : aucune observation validée `source=4` sur la validation |
+| Calais | `refmar:55` | 0,0 % | NA | NA | NA | NA | exclu : aucune observation validée `source=4` sur la validation |
+
+Le seuil QC de saut instantané passe de 2,5 m à 4,0 m. Le seuil historique
+Brest était trop strict pour Saint-Malo : un port macrotidal peut avoir une
+pente horaire naturelle supérieure à 2,5 m autour des plus grands marnages.
+Les sauts restent conditionnés à `Δt <= 90 min`.
+
+### Coefficient
+
+Le coefficient de marée est ajouté dans `amar` uniquement. Il n'entre pas dans
+`amar-core`.
+
+Convention :
+
+```text
+C = 100 * (hauteur PM Brest - niveau moyen Brest) / U
+U = 3,05 m
+```
+
+Le coefficient est calculé depuis notre pack Brest (`refmar:3`), arrondi,
+clampé entre 20 et 120, puis attaché à `next_high` pour les stations REFMAR de
+France métropolitaine. Les réponses portent le warning
+`coefficient_experimental` parce que ces coefficients dérivent de notre
+calibration et non de l'annuaire officiel.
+
+CLI :
+
+```bash
+amar coef --at 2026-08-15T12:00:00Z
+```
+
+Résultat de référence :
+
+```json
+{
+  "coefficient": 101,
+  "unit_m": 3.05
+}
+```

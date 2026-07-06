@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:410",
+  "provider_station_id": "410",
+  "station_name": "Saint-malo",
+  "source": 4,
+  "datum": "zero_hydrographique_saint_malo",
+  "datum_note": "zero_hydrographique; ZH = -6.289 m relative to IGN69; RAM id Saint-Malo in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/410",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/410?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "e124beecbd91efbc2e9a68835986fb87d4d981e304d2f9e2a537d5f226b6fe94",
+  "tidegauge_sha256": "b57618e3548cc67d9d16506dde78c612d6888fe4eb9e1086e8057514098947fa",
+  "qc": {
+    "expected": 48168,
+    "observed": 48162,
+    "coverage": 0.9998754359740907,
+    "gaps": 1,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_saint_malo_v1",
+    "checksum_sha256": "5fca3ed63a4a1ffc58e86b333f5f10d6d58e4f36af56f9b0c8efc021a95cd0b9",
+    "calibrated_rms_cm": 14.748409074024805,
+    "calibrated_mae_cm": 11.791069224021625,
+    "calibrated_p95_cm": 28.460336185894874,
+    "calibrated_max_cm": 50.932835018634925,
+    "z0_rms_cm": 277.7318655660475,
+    "z0_mae_cm": 240.00796418112932,
+    "z0_p95_cm": 482.9146912169888,
+    "z0_max_cm": 588.2853087830111,
+    "rms_factor_vs_z0": 18.831310155018308
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

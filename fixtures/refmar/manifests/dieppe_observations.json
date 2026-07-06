@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:24",
+  "provider_station_id": "24",
+  "station_name": "Dieppe",
+  "source": 4,
+  "datum": "zero_hydrographique_dieppe",
+  "datum_note": "zero_hydrographique; ZH = -4.454 m relative to IGN69; RAM id Dieppe in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/24",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/24?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "fc64ac304b35a4fc921458d3a247f6d463de527217c7f4c27f6d20823ceeb22b",
+  "tidegauge_sha256": "bb48b8214a16887740e50de90897e3ca155f0a033e4ef495c5c44b0118d7834c",
+  "qc": {
+    "expected": 48168,
+    "observed": 47773,
+    "coverage": 0.99179953496097,
+    "gaps": 68,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_dieppe_v1",
+    "checksum_sha256": "843ff7f35260dd77ce72de098f766dc0f59c30e42743bfc4074a0e712d1aa4d2",
+    "calibrated_rms_cm": 16.010363260338593,
+    "calibrated_mae_cm": 12.6743090059269,
+    "calibrated_p95_cm": 31.477300896067195,
+    "calibrated_max_cm": 64.06869762090395,
+    "z0_rms_cm": 231.7224933573503,
+    "z0_mae_cm": 202.88681073466037,
+    "z0_p95_cm": 386.84388300829517,
+    "z0_max_cm": 457.65611699170495,
+    "rms_factor_vs_z0": 14.473281435867293
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

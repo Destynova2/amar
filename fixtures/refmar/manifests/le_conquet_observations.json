@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:152",
+  "provider_station_id": "152",
+  "station_name": "Le Conquet",
+  "source": 4,
+  "datum": "zero_hydrographique_le_conquet",
+  "datum_note": "zero_hydrographique; ZH = -3.503 m relative to IGN69; RAM id Le Conquet in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/152",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/152?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "70d5d2e01a8172743286ed5090f5ed99f43ed2f0e18eec6d0c8e7e9c0e474d52",
+  "tidegauge_sha256": "d83970821cca91b0de023a5ae94e59504134febdc5910fb42226484e65aebced",
+  "qc": {
+    "expected": 48168,
+    "observed": 47333,
+    "coverage": 0.98266483972762,
+    "gaps": 16,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_le_conquet_v1",
+    "checksum_sha256": "d717701827eae4e9fc906f196a1ebbf97abc0a82c15f9e31496f8c36cdc74a71",
+    "calibrated_rms_cm": 7.287861986355955,
+    "calibrated_mae_cm": 5.700403219699355,
+    "calibrated_p95_cm": 15.051033413561221,
+    "calibrated_max_cm": 29.6578836787456,
+    "z0_rms_cm": 149.9086020439797,
+    "z0_mae_cm": 129.42812605075002,
+    "z0_p95_cm": 263.2064006641009,
+    "z0_max_cm": 337.59359933589906,
+    "rms_factor_vs_z0": 20.56962691179287
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

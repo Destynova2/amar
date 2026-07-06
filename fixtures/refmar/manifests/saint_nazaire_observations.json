@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:37",
+  "provider_station_id": "37",
+  "station_name": "Saint-nazaire",
+  "source": 4,
+  "datum": "zero_hydrographique_saint_nazaire",
+  "datum_note": "zero_hydrographique; ZH = -3.16 m relative to IGN69; RAM id Saint-Nazaire in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/37",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/37?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "2ccbb3b36fb174aff5222fddc7107b4eca66cf286ba29c388c97bdeec19f747d",
+  "tidegauge_sha256": "8bcac14755248148ad058505c3ab5396cfdf19ecdc5a802b430e439d392c9895",
+  "qc": {
+    "expected": 48168,
+    "observed": 48145,
+    "coverage": 0.9995225045673476,
+    "gaps": 2,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_saint_nazaire_v1",
+    "checksum_sha256": "a528f700d03fd849ae8d9c57c20240df88b15db7df3f786a407e26a57df2b0ef",
+    "calibrated_rms_cm": 9.23488839388841,
+    "calibrated_mae_cm": 7.27545352320804,
+    "calibrated_p95_cm": 18.37940425868718,
+    "calibrated_max_cm": 36.680610605651594,
+    "z0_rms_cm": 131.58940666495928,
+    "z0_mae_cm": 113.21601687487137,
+    "z0_p95_cm": 229.87457163608394,
+    "z0_max_cm": 324.57457163608393,
+    "rms_factor_vs_z0": 14.249160471938602
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

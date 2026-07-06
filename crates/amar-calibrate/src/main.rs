@@ -1,6 +1,7 @@
 mod common;
 mod diagnose;
 mod fetch;
+mod france;
 mod ib;
 mod pack_out;
 mod qc;
@@ -37,6 +38,7 @@ struct Cli {
 enum Command {
     FetchRefmar(FetchRefmarArgs),
     BuildBrestPack(BuildBrestPackArgs),
+    CalibrateFrance(france::CalibrateFranceArgs),
     Diagnose(DiagnoseArgs),
     DiagnoseIb(DiagnoseIbArgs),
 }
@@ -47,8 +49,8 @@ pub(crate) struct FetchRefmarArgs {
     start: String,
     #[arg(long, default_value = DEFAULT_END)]
     end: String,
-    #[arg(long, default_value = BREST_SHOM_ID)]
-    shom_id: String,
+    #[arg(long = "station", alias = "shom-id", default_value = BREST_SHOM_ID)]
+    station: String,
     #[arg(long, default_value_t = VALIDATED_HOURLY_SOURCE)]
     source: u8,
     #[arg(long, default_value = DEFAULT_OBSERVATIONS)]
@@ -121,6 +123,7 @@ fn run() -> Result<(), CalError> {
     match cli.command {
         Command::FetchRefmar(args) => fetch::fetch_refmar(args),
         Command::BuildBrestPack(args) => build_brest_pack(args),
+        Command::CalibrateFrance(args) => france::calibrate_france(args),
         Command::Diagnose(args) => diagnose::diagnose(args),
         Command::DiagnoseIb(args) => ib::diagnose_ib(args),
     }

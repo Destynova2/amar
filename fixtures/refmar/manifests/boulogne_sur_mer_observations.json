@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:111",
+  "provider_station_id": "111",
+  "station_name": "Boulogne-sur-mer",
+  "source": 4,
+  "datum": "zero_hydrographique_boulogne_sur_mer",
+  "datum_note": "zero_hydrographique; ZH = -4.382 m relative to IGN69; RAM id Boulogne-sur-Mer in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/111",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/111?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "16b2ff8809ce806026fcfcb6e4bdf0ca0cefb472f8e07c31dcfd73c47fad5616",
+  "tidegauge_sha256": "e78a1fe16dc79307d5918de309b658db54262cf2d0cb268ab6c0fcfa8caf92bd",
+  "qc": {
+    "expected": 48168,
+    "observed": 48143,
+    "coverage": 0.9994809832253778,
+    "gaps": 3,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_boulogne_sur_mer_v1",
+    "checksum_sha256": "973f5da1433534bee543ad9a75d1d977b1385948ddf20a15b4270880e6c79af9",
+    "calibrated_rms_cm": 18.199557334561113,
+    "calibrated_mae_cm": 14.209558859163154,
+    "calibrated_p95_cm": 35.91735679652115,
+    "calibrated_max_cm": 91.1613807974612,
+    "z0_rms_cm": 224.38482577398085,
+    "z0_mae_cm": 197.96131037310303,
+    "z0_p95_cm": 366.6916812404584,
+    "z0_max_cm": 423.8916812404585,
+    "rms_factor_vs_z0": 12.329136453658252
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

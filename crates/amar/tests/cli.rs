@@ -108,8 +108,37 @@ fn tide_returns_brest_experimental_confidence() {
     );
     assert_eq!(body["confidence"]["residual_benchmark_cm"], 15.8);
     assert!(body["confidence"]["grade"].is_null());
+    assert_eq!(body["next_high"]["coefficient"], 101);
     assert!(body["warnings"].to_string().contains("experimental"));
     assert!(body["warnings"].to_string().contains("not_shom"));
+    assert!(
+        body["warnings"]
+            .to_string()
+            .contains("coefficient_experimental")
+    );
+}
+
+#[test]
+fn coef_returns_brest_derived_coefficient() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("coef")
+            .arg("--at")
+            .arg("2026-08-15T12:00:00Z")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["coefficient"], 101);
+    assert_eq!(body["unit_m"], 3.05);
+    assert_eq!(body["brest_high"]["coefficient"], 101);
+    assert_eq!(body["brest_high"]["t"], "2026-08-15T17:47:37Z");
 }
 
 #[test]

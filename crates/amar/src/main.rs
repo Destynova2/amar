@@ -1,5 +1,6 @@
 mod hilo;
 
+use amar::coefficient;
 use amar::contract::{
     self, SourceResponse, ThresholdOptionsError, TideExtremumResponse, TidePointResponse,
     TideWindowResponse,
@@ -25,7 +26,9 @@ use thiserror::Error;
 
 const DEFAULT_NOAA_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_BREST_PACK: &str = "data/packs/amar-data-brest-experimental.json";
+const DEFAULT_FRANCE_PACK: &str = "data/packs/amar-data-france-experimental.json";
 const DEFAULT_BREST_BENCHMARK: &str = "fixtures/refmar/benchmark_brest_v1.json";
+const DEFAULT_REFMAR_BENCHMARKS_DIR: &str = "fixtures/refmar/benchmarks";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.02;
@@ -60,12 +63,8 @@ enum CliError {
     UnsupportedStationConfidence { station_id: String },
     #[error("station {station_id} has no M2 constituent")]
     MissingM2Constituent { station_id: String },
-    #[error("benchmark p95 exceeded {limit_cm:.1} cm: {model} p95_cm={p95_cm:.1}")]
-    BenchmarkThreshold {
-        model: &'static str,
-        limit_cm: f64,
-        p95_cm: f64,
-    },
+    #[error("benchmark gate failed:\n{failures}")]
+    BenchmarkThreshold { failures: String },
     #[error("hilo validation p95 exceeded:\n{failures}")]
     HiloThreshold { failures: String },
     #[error("{0}")]
@@ -88,6 +87,7 @@ enum Command {
     Validate(ValidateArgs),
     ValidateHilo(ValidateArgs),
     BenchmarkBrest(BenchmarkBrestArgs),
+    Coef(CoefArgs),
     PackNoaa(PackNoaaArgs),
 }
 
@@ -165,10 +165,24 @@ struct BenchmarkBrestArgs {
     pack: Vec<PathBuf>,
     #[arg(long, default_value = DEFAULT_BREST_BENCHMARK)]
     benchmark: PathBuf,
-    #[arg(long, default_value = "refmar:3")]
-    station_id: String,
-    #[arg(long = "p95-limit-cm", value_parser = parse_non_negative_f64)]
-    p95_limit_cm: Option<f64>,
+    #[arg(long = "benchmark-dir", default_value = DEFAULT_REFMAR_BENCHMARKS_DIR)]
+    benchmark_dir: PathBuf,
+    #[arg(long)]
+    station_id: Option<String>,
+    #[arg(long = "p95-limit-cm", default_value_t = 40.0, value_parser = parse_non_negative_f64)]
+    p95_limit_cm: f64,
+    #[arg(long = "brest-p95-limit-cm", default_value_t = 19.0, value_parser = parse_non_negative_f64)]
+    brest_p95_limit_cm: f64,
+    #[arg(long = "min-rms-factor", default_value_t = 2.0, value_parser = parse_non_negative_f64)]
+    min_rms_factor: f64,
+}
+
+#[derive(Debug, Args)]
+struct CoefArgs {
+    #[arg(long)]
+    at: String,
+    #[arg(long = "pack")]
+    pack: Vec<PathBuf>,
 }
 
 #[tokio::main]
@@ -191,6 +205,7 @@ async fn run() -> Result<(), CliError> {
         Command::Validate(args) => validate(args),
         Command::ValidateHilo(args) => validate_hilo(args),
         Command::BenchmarkBrest(args) => benchmark_brest(args),
+        Command::Coef(args) => coef(args),
         Command::PackNoaa(args) => pack_noaa(args),
     }
 }
@@ -246,14 +261,18 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             at,
             contract::NEXT_EXTREMA_HORIZON_H,
         );
+        let next_high_coefficient = next_high.and_then(|high| {
+            coefficient::coefficient_for_station_high(&data, station, high.at())
+                .map(|coefficient| coefficient.coefficient)
+        });
         json!({
             "height_m": contract::round3(prediction.height().as_meters()),
-            "next_high": next_high.map(TideExtremumResponse::from),
+            "next_high": next_high.map(|high| TideExtremumResponse::from_extremum(high, next_high_coefficient)),
             "next_low": next_low.map(TideExtremumResponse::from),
             "datum": station.datum,
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": contract::warnings_for_station(station),
+            "warnings": contract::warnings_for_station_with_coefficient(station, next_high_coefficient.is_some()),
         })
     };
     println!("{}", serde_json::to_string_pretty(&output)?);
@@ -456,14 +475,85 @@ fn validate_hilo(args: ValidateArgs) -> Result<(), CliError> {
     hilo::validate(args)
 }
 
+fn coef(args: CoefArgs) -> Result<(), CliError> {
+    let data = load_packs_from_paths(&effective_pack_paths(&args.pack))?;
+    let at = UtcDateTime::parse_rfc3339(&args.at)?;
+    let coefficient = coefficient::coefficient_after(&data, at)
+        .ok_or_else(|| CliError::MissingStation(coefficient::BREST_STATION_ID.to_string()))?;
+    let output = json!({
+        "coefficient": coefficient.coefficient,
+        "brest_high": TideExtremumResponse::from_extremum(
+            coefficient.brest_high,
+            Some(coefficient.coefficient),
+        ),
+        "unit_m": coefficient::BREST_TIDAL_UNIT_M,
+        "warnings": [coefficient::COEFFICIENT_EXPERIMENTAL_WARNING],
+    });
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
+}
+
 fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
     let data = load_packs_from_paths(&effective_pack_paths(&args.pack))?;
-    let station = data
-        .stations()
-        .iter()
-        .find(|station| station.pack().station_id == args.station_id)
-        .ok_or_else(|| CliError::MissingStation(args.station_id.clone()))?;
-    let benchmark = load_brest_benchmark(&args.benchmark)?;
+    let mut failures = Vec::new();
+    println!("résidu = niveau d'eau observé − marée astronomique prédite (météo incluse)");
+    println!(
+        "station,benchmark_id,model,rms_cm,bias_cm,mae_cm,p95_cm,max_cm,z0_rms_factor,gate_p95_cm"
+    );
+    for benchmark_path in refmar_benchmark_files(&args)? {
+        let benchmark = load_brest_benchmark(&benchmark_path)?;
+        if let Some(station_id) = &args.station_id
+            && &benchmark.station_id != station_id
+        {
+            continue;
+        }
+        let station = data
+            .stations()
+            .iter()
+            .find(|station| station.pack().station_id == benchmark.station_id)
+            .ok_or_else(|| CliError::MissingStation(benchmark.station_id.clone()))?;
+        let report = run_refmar_benchmark(station, &benchmark)?;
+        let p95_limit_cm = if station.pack().station_id == "refmar:3" {
+            args.brest_p95_limit_cm
+        } else {
+            args.p95_limit_cm
+        };
+        print_refmar_benchmark_report(&benchmark, report, p95_limit_cm);
+        if report.calibrated.p95_cm > p95_limit_cm {
+            failures.push(format!(
+                "{} p95_cm={:.1} limit_cm={:.1}",
+                benchmark.station_id, report.calibrated.p95_cm, p95_limit_cm
+            ));
+        }
+        if report.z0_rms_factor < args.min_rms_factor {
+            failures.push(format!(
+                "{} rms_factor={:.2} min={:.2}",
+                benchmark.station_id, report.z0_rms_factor, args.min_rms_factor
+            ));
+        }
+    }
+    if !failures.is_empty() {
+        return Err(CliError::BenchmarkThreshold {
+            failures: failures.join("\n"),
+        });
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct RefmarBenchmarkReport {
+    calibrated: BenchmarkStats,
+    z0: BenchmarkStats,
+    m2: BenchmarkStats,
+    z0_rms_factor: f64,
+    samples: usize,
+    missing: usize,
+}
+
+fn run_refmar_benchmark(
+    station: &amar_data::LoadedStation,
+    benchmark: &BrestBenchmark,
+) -> Result<RefmarBenchmarkReport, CliError> {
     let z0_m = station.pack().z0_m.get();
     let m2_model = m2_only_model(station)?;
 
@@ -488,32 +578,86 @@ fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
     let calibrated = benchmark_stats(&calibrated_residuals).ok_or(CliError::EmptyBenchmark)?;
     let z0 = benchmark_stats(&z0_residuals).ok_or(CliError::EmptyBenchmark)?;
     let m2 = benchmark_stats(&m2_residuals).ok_or(CliError::EmptyBenchmark)?;
+    let z0_rms_factor = if calibrated.rms_cm > 0.0 {
+        z0.rms_cm / calibrated.rms_cm
+    } else {
+        f64::INFINITY
+    };
+    Ok(RefmarBenchmarkReport {
+        calibrated,
+        z0,
+        m2,
+        z0_rms_factor,
+        samples: calibrated_residuals.len(),
+        missing,
+    })
+}
 
+fn print_refmar_benchmark_report(
+    benchmark: &BrestBenchmark,
+    report: RefmarBenchmarkReport,
+    p95_limit_cm: f64,
+) {
     println!(
-        "benchmark_brest_v1 station={} datum={} validation_period={}/{} samples={} missing={} checksum={}",
+        "# {} station={} datum={} validation_period={}/{} samples={} missing={} checksum={}",
+        benchmark.benchmark_id,
         benchmark.station_id,
         benchmark.datum,
         benchmark.validation_period.start,
         benchmark.validation_period.end,
-        calibrated_residuals.len(),
-        missing,
+        report.samples,
+        report.missing,
         benchmark.checksum_sha256,
     );
-    println!("résidu = niveau d'eau observé − marée astronomique prédite (météo incluse)");
-    println!("model,rms_cm,bias_cm,mae_cm,p95_cm,max_cm");
-    print_benchmark_stats("calibrated_station_experimental", calibrated);
-    print_benchmark_stats("z0_constant", z0);
-    print_benchmark_stats("m2_only", m2);
-    if let Some(limit_cm) = args.p95_limit_cm
-        && calibrated.p95_cm > limit_cm
-    {
-        return Err(CliError::BenchmarkThreshold {
-            model: "calibrated_station_experimental",
-            limit_cm,
-            p95_cm: calibrated.p95_cm,
-        });
+    print_benchmark_stats(
+        &benchmark.station_id,
+        &benchmark.benchmark_id,
+        "calibrated_station_experimental",
+        report.calibrated,
+        report.z0_rms_factor,
+        p95_limit_cm,
+    );
+    print_benchmark_stats(
+        &benchmark.station_id,
+        &benchmark.benchmark_id,
+        "z0_constant",
+        report.z0,
+        report.z0_rms_factor,
+        p95_limit_cm,
+    );
+    print_benchmark_stats(
+        &benchmark.station_id,
+        &benchmark.benchmark_id,
+        "m2_only",
+        report.m2,
+        report.z0_rms_factor,
+        p95_limit_cm,
+    );
+}
+
+fn refmar_benchmark_files(args: &BenchmarkBrestArgs) -> Result<Vec<PathBuf>, CliError> {
+    let mut files = Vec::new();
+    if args.benchmark.exists() {
+        files.push(args.benchmark.clone());
     }
-    Ok(())
+    if args.benchmark_dir.exists() {
+        for entry in fs::read_dir(&args.benchmark_dir).map_err(|source| CliError::Io {
+            path: args.benchmark_dir.clone(),
+            source,
+        })? {
+            let entry = entry.map_err(|source| CliError::Io {
+                path: args.benchmark_dir.clone(),
+                source,
+            })?;
+            let path = entry.path();
+            if path.extension().and_then(|extension| extension.to_str()) == Some("json") {
+                files.push(path);
+            }
+        }
+    }
+    files.sort();
+    files.dedup();
+    Ok(files)
 }
 
 fn pack_noaa(args: PackNoaaArgs) -> Result<(), CliError> {
@@ -548,6 +692,10 @@ fn effective_pack_paths(paths: &[PathBuf]) -> Vec<PathBuf> {
     let brest = PathBuf::from(DEFAULT_BREST_PACK);
     if brest.exists() {
         defaults.push(brest);
+    }
+    let france = PathBuf::from(DEFAULT_FRANCE_PACK);
+    if france.exists() {
+        defaults.push(france);
     }
     defaults
 }
@@ -716,10 +864,23 @@ fn benchmark_stats(residuals_m: &[f64]) -> Option<BenchmarkStats> {
     })
 }
 
-fn print_benchmark_stats(name: &str, stats: BenchmarkStats) {
+fn print_benchmark_stats(
+    station_id: &str,
+    benchmark_id: &str,
+    name: &str,
+    stats: BenchmarkStats,
+    z0_rms_factor: f64,
+    gate_p95_cm: f64,
+) {
     println!(
-        "{name},{:.1},{:.1},{:.1},{:.1},{:.1}",
-        stats.rms_cm, stats.bias_cm, stats.mae_cm, stats.p95_cm, stats.max_cm
+        "{station_id},{benchmark_id},{name},{:.1},{:.1},{:.1},{:.1},{:.1},{:.2},{:.1}",
+        stats.rms_cm,
+        stats.bias_cm,
+        stats.mae_cm,
+        stats.p95_cm,
+        stats.max_cm,
+        z0_rms_factor,
+        gate_p95_cm
     );
 }
 

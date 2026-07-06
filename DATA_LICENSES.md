@@ -131,6 +131,36 @@ Les constantes Brest publiées par amar sont dérivées des observations REFMAR 
 elles ne sont pas des constantes SHOM et ne doivent pas être présentées comme
 équivalentes.
 
+## REFMAR France v0.4 expérimental
+
+Le pack France v0.4 utilise la même source et la même licence que Brest :
+service REFMAR/data.shom.fr, attribution `Shom / REFMAR`, Licence Ouverte 2.0
+Etalab, produit `sources=4` données horaires validées, en mètres, UTC,
+référence verticale `zero_hydrographique` locale.
+
+Les observations longues de calibration ne sont pas commitées. Les manifestes
+ci-dessous publient le SHA-256 des CSV d'entrée produits par re-fetch via
+`amar-calibrate calibrate-france`; les benchmarks commités couvrent seulement
+la fenêtre de validation de trois mois.
+
+| Fichier | Origine | SHA-256 |
+|---|---|---|
+| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france` | `9aa5249920396be1fa91cdd1c5ec58301dc5e3c074230290c0a98f83591830b2` |
+
+| Station | Observations SHA-256 | Manifeste | Benchmark |
+|---|---|---|---|
+| `refmar:111` Boulogne-sur-Mer | `16b2ff8809ce806026fcfcb6e4bdf0ca0cefb472f8e07c31dcfd73c47fad5616` | `fixtures/refmar/manifests/boulogne_sur_mer_observations.json` | `fixtures/refmar/benchmarks/benchmark_boulogne_sur_mer_v1.json` |
+| `refmar:160` Concarneau | `c8b4daaf998278bfaf08260e436309bdaa08d82e5fe8ce6ff3a2969b00b1b8a1` | `fixtures/refmar/manifests/concarneau_observations.json` | `fixtures/refmar/benchmarks/benchmark_concarneau_v1.json` |
+| `refmar:24` Dieppe | `fc64ac304b35a4fc921458d3a247f6d463de527217c7f4c27f6d20823ceeb22b` | `fixtures/refmar/manifests/dieppe_observations.json` | `fixtures/refmar/benchmarks/benchmark_dieppe_v1.json` |
+| `refmar:2` Dunkerque | `f8bb2eef957a1371fa1ffa89f1a2f58fedf7743b7aa86f620d13ad88e0d7d870` | `fixtures/refmar/manifests/dunkerque_observations.json` | `fixtures/refmar/benchmarks/benchmark_dunkerque_v1.json` |
+| `refmar:34` La Rochelle-Pallice | `4d449b0b21fb1410cd7754e64eed11a5dd7da9e62deafb3fc737ade9f087021d` | `fixtures/refmar/manifests/la_rochelle_pallice_observations.json` | `fixtures/refmar/benchmarks/benchmark_la_rochelle_pallice_v1.json` |
+| `refmar:152` Le Conquet | `70d5d2e01a8172743286ed5090f5ed99f43ed2f0e18eec6d0c8e7e9c0e474d52` | `fixtures/refmar/manifests/le_conquet_observations.json` | `fixtures/refmar/benchmarks/benchmark_le_conquet_v1.json` |
+| `refmar:4` Le Havre | `48222b92a9c0a93fa4393d10081580d1edac0b1a92ff09baf07d3ca79f5d38d2` | `fixtures/refmar/manifests/le_havre_observations.json` | `fixtures/refmar/benchmarks/benchmark_le_havre_v1.json` |
+| `refmar:311` Ouistreham | `c733522556ae7c3fab0d46a9250b5de25190cb863981f854032ccd000d3ae109` | `fixtures/refmar/manifests/ouistreham_observations.json` | `fixtures/refmar/benchmarks/benchmark_ouistreham_v1.json` |
+| `refmar:54` Roscoff | `232e848b1c58234c59d60f847c8a3f1ba0c073f87c5273af3933447522c7d339` | `fixtures/refmar/manifests/roscoff_observations.json` | `fixtures/refmar/benchmarks/benchmark_roscoff_v1.json` |
+| `refmar:410` Saint-Malo | `e124beecbd91efbc2e9a68835986fb87d4d981e304d2f9e2a537d5f226b6fe94` | `fixtures/refmar/manifests/saint_malo_observations.json` | `fixtures/refmar/benchmarks/benchmark_saint_malo_v1.json` |
+| `refmar:37` Saint-Nazaire | `2ccbb3b36fb174aff5222fddc7107b4eca66cf286ba29c388c97bdeec19f747d` | `fixtures/refmar/manifests/saint_nazaire_observations.json` | `fixtures/refmar/benchmarks/benchmark_saint_nazaire_v1.json` |
+
 ## Open-Meteo diagnostic Brest M2.2
 
 La pression horaire de surface utilisée pour le diagnostic baromètre inverse

@@ -3,10 +3,11 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.1.x ajoute Brest expérimental au socle NOAA, puis M3 ajoute les
-prochains PM/BM, les séries bornées et les fenêtres de seuil : on lance un
-serveur local, on envoie `lat/lon/datetime`, et la réponse donne soit une
-hauteur traçable, soit un refus utile.
+amar v0.4 ajoute un premier pack France expérimental au socle NOAA et à Brest :
+11 ports REFMAR Manche/Atlantique, les prochains PM/BM, les séries bornées, les
+fenêtres de seuil et le coefficient de marée français dérivé de notre Brest
+calibré. On lance un serveur local, on envoie `lat/lon/datetime`, et la réponse
+donne soit une hauteur traçable, soit un refus utile.
 
 ## Installation
 
@@ -19,7 +20,7 @@ make release && mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 75
 Lancer le serveur :
 
 ```bash
-amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --addr 127.0.0.1:3000
+amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --pack ~/.local/share/amar/packs/amar-data-france-experimental.json --addr 127.0.0.1:3000
 ```
 
 Le serveur charge le pack au démarrage, puis fonctionne offline.
@@ -86,6 +87,7 @@ curl -i -H 'content-type: application/json' \
 {
   "height_m": 1.081,
   "next_high": {
+    "coefficient": 101,
     "height_m": 7.347,
     "t": "2026-08-15T17:47:37Z"
   },
@@ -111,7 +113,8 @@ curl -i -H 'content-type: application/json' \
     "not_for_navigation",
     "no_weather_surge",
     "experimental",
-    "not_shom"
+    "not_shom",
+    "coefficient_experimental"
   ]
 }
 ```
@@ -162,6 +165,10 @@ Pour Brest, `confidence.method` vaut `calibrated_station_experimental` et
 `residual_benchmark_cm` mesure le p95 du benchmark hors calibration. Le résidu
 = niveau d'eau observé − marée astronomique prédite (météo incluse).
 
+Pour les stations françaises, `next_high.coefficient` est un entier 20–120
+calculé depuis notre Brest calibré (`U = 3,05 m`) et porte le warning
+`coefficient_experimental`. Ce coefficient n'est pas l'annuaire officiel SHOM.
+
 Les réponses `/tide/series` et `/tide/windows` gardent la même forme de
 `datum`, `source`, `confidence` et `warnings` que `/tide`.
 
@@ -172,6 +179,7 @@ Le même binaire garde l'usage CLI M0 :
 ```bash
 amar tide --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json
 amar tide --lat 48.383 --lon -4.495 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
+amar coef --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
 ```
 
 Série NOAA de 3 h à San Francisco :
@@ -241,7 +249,8 @@ Commandes disponibles :
 | `amar serve --addr 127.0.0.1:3000` | Sert l'API locale |
 | `amar validate` | Gate p95 vs prédictions NOAA, exit 1 au-delà de 2 cm |
 | `amar validate-hilo` | Gate p95 vs PM/BM NOAA, exit 1 au-delà de 10 min ou 3 cm |
-| `amar benchmark-brest` | Rejoue `benchmark_brest_v1` et les deux baselines |
+| `amar benchmark-brest` | Rejoue Brest et les benchmarks REFMAR France avec les baselines |
+| `amar coef --at <utc>` | Calcule le coefficient depuis la prochaine PM Brest |
 | `amar pack-noaa` | Compile les fixtures NOAA brutes en pack |
 
 ## Données
@@ -249,11 +258,19 @@ Commandes disponibles :
 Le pack NOAA contient 8 stations harmoniques : Boston, San Francisco,
 Pensacola, Seattle, Eastport, Honolulu, Key West et Galveston Pier 21.
 
-Le pack Brest expérimental contient une seule station (`refmar:3`) au zéro
-hydrographique de Brest. Les observations d'entrée couvrent
+Le pack Brest expérimental contient `refmar:3` au zéro hydrographique de Brest.
+Les observations d'entrée couvrent
 `2021-01-01T00:00:00Z/2026-07-01T00:00:00Z`; la calibration
 `2021-01-01T00:00:00Z/2026-04-01T00:00:00Z` exclut les trois derniers mois,
 réservés à `benchmark_brest_v1`.
+
+Le pack France expérimental v0.4 contient 11 ports REFMAR :
+Boulogne-sur-Mer, Concarneau, Dieppe, Dunkerque, La Rochelle-Pallice,
+Le Conquet, Le Havre, Ouistreham, Roscoff, Saint-Malo et Saint-Nazaire.
+Chaque port a un benchmark figé de trois mois, un manifeste avec SHA-256 des
+observations longues d'entrée, `experimental`, `not_official` et `not_shom`.
+Cherbourg et Calais sont exclus de ce pack parce que `source=4` n'a aucune
+observation validée sur `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z`.
 
 Les fixtures, URLs d'origine et checksums sont listés dans
 [`DATA_LICENSES.md`](DATA_LICENSES.md).

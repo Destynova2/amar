@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:160",
+  "provider_station_id": "160",
+  "station_name": "Concarneau",
+  "source": 4,
+  "datum": "zero_hydrographique_concarneau",
+  "datum_note": "zero_hydrographique; ZH = -2.534 m relative to IGN69; RAM id Concarneau in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/160",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/160?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "c8b4daaf998278bfaf08260e436309bdaa08d82e5fe8ce6ff3a2969b00b1b8a1",
+  "tidegauge_sha256": "5aa3870ef512f431cce02363fb350abad73084d444fb4dd7acdf9d2834bfc5bf",
+  "qc": {
+    "expected": 48168,
+    "observed": 48019,
+    "coverage": 0.9969066600232519,
+    "gaps": 3,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_concarneau_v1",
+    "checksum_sha256": "d017ade029cf6b92e04b244542a0994ded059ddee89e8eb51650296c24578291",
+    "calibrated_rms_cm": 7.2524459523650915,
+    "calibrated_mae_cm": 5.738950311478641,
+    "calibrated_p95_cm": 14.516849547296706,
+    "calibrated_max_cm": 30.30535060215125,
+    "z0_rms_cm": 110.14386848239552,
+    "z0_mae_cm": 94.88414997457038,
+    "z0_p95_cm": 193.8372054117145,
+    "z0_max_cm": 256.7627945882855,
+    "rms_factor_vs_z0": 15.187133996700322
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

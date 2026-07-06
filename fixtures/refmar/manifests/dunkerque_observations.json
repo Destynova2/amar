@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:2",
+  "provider_station_id": "2",
+  "station_name": "Dunkerque",
+  "source": 4,
+  "datum": "zero_hydrographique_dunkerque",
+  "datum_note": "zero_hydrographique; ZH = -2.693 m relative to IGN69; RAM id Dunkerque in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/2",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/2?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "f8bb2eef957a1371fa1ffa89f1a2f58fedf7743b7aa86f620d13ad88e0d7d870",
+  "tidegauge_sha256": "547d3752bbc74b431a7cfb557b7f6b024031efae2f3bfe818dce32a307ca1aa9",
+  "qc": {
+    "expected": 48168,
+    "observed": 47965,
+    "coverage": 0.9957855837900681,
+    "gaps": 8,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_dunkerque_v1",
+    "checksum_sha256": "2bf1dfd70527b0e93d89a7c5929d5f5a9de8d3408caa49a74ac995bc3eab5943",
+    "calibrated_rms_cm": 16.401433864157923,
+    "calibrated_mae_cm": 12.786497897089099,
+    "calibrated_p95_cm": 32.865567158942596,
+    "calibrated_max_cm": 70.67001505121895,
+    "z0_rms_cm": 162.46159026158747,
+    "z0_mae_cm": 144.3564084696797,
+    "z0_p95_cm": 260.51247991458257,
+    "z0_max_cm": 305.9875200854174,
+    "rms_factor_vs_z0": 9.90532849793182
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

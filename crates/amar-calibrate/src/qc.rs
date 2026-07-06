@@ -2,7 +2,7 @@ use crate::common::{CalError, Observation, format_rfc3339};
 use chrono::{DateTime, Utc};
 
 const MIN_COVERAGE: f64 = 0.90;
-const JUMP_THRESHOLD_M: f64 = 2.5;
+const JUMP_THRESHOLD_M: f64 = 4.0;
 const MAX_JUMP_INTERVAL_MINUTES: i64 = 90;
 
 #[derive(Debug)]
@@ -31,8 +31,11 @@ pub(crate) struct Jump {
 #[derive(Clone, Copy)]
 pub(crate) struct ResidualStats {
     pub(crate) samples: usize,
+    pub(crate) rms_cm: f64,
     pub(crate) bias_cm: f64,
+    pub(crate) mae_cm: f64,
     pub(crate) p95_cm: f64,
+    pub(crate) max_cm: f64,
 }
 
 pub(crate) fn qc_report(
@@ -124,16 +127,31 @@ pub(crate) fn residual_stats(residuals_m: &[f64]) -> Option<ResidualStats> {
     }
     let samples = residuals_m.len();
     let bias_m = residuals_m.iter().sum::<f64>() / samples as f64;
+    let rms_m = (residuals_m
+        .iter()
+        .map(|residual| residual * residual)
+        .sum::<f64>()
+        / samples as f64)
+        .sqrt();
+    let mae_m = residuals_m
+        .iter()
+        .map(|residual| residual.abs())
+        .sum::<f64>()
+        / samples as f64;
     let mut absolute = residuals_m
         .iter()
         .map(|residual| residual.abs())
         .collect::<Vec<_>>();
     absolute.sort_by(|left, right| left.total_cmp(right));
     let p95_m = amar_data::percentile(&absolute, 0.95)?;
+    let max_m = absolute.last().copied().unwrap_or(0.0);
     Some(ResidualStats {
         samples,
+        rms_cm: rms_m * 100.0,
         bias_cm: bias_m * 100.0,
+        mae_cm: mae_m * 100.0,
         p95_cm: p95_m * 100.0,
+        max_cm: max_m * 100.0,
     })
 }
 
@@ -165,7 +183,7 @@ mod tests {
             observation(start, 0.0),
             observation(start + Duration::hours(1), 0.1),
             observation(start + Duration::hours(3), 5.0),
-            observation(start + Duration::hours(4), 8.0),
+            observation(start + Duration::hours(4), 10.0),
         ];
 
         let report = qc_report(&observations, start, end);

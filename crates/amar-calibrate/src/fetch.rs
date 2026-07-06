@@ -30,7 +30,7 @@ pub(crate) fn fetch_refmar(args: FetchRefmarArgs) -> Result<(), CalError> {
     let client = reqwest::blocking::Client::builder()
         .user_agent("amar-calibrate/0.1")
         .build()?;
-    let tidegauge_url = format!("{REFMAR_BASE}/service/completetidegauge/{}", args.shom_id);
+    let tidegauge_url = format!("{REFMAR_BASE}/service/completetidegauge/{}", args.station);
     let tidegauge_value = client
         .get(&tidegauge_url)
         .send()?
@@ -46,7 +46,7 @@ pub(crate) fn fetch_refmar(args: FetchRefmarArgs) -> Result<(), CalError> {
     while cursor < end {
         let window_end = (cursor + Duration::days(31)).min(end);
         let response = client
-            .get(format!("{REFMAR_BASE}/observation/json/{}", args.shom_id))
+            .get(format!("{REFMAR_BASE}/observation/json/{}", args.station))
             .query(&[
                 ("sources", args.source.to_string()),
                 ("dtStart", format_refmar_query_time(cursor)),
@@ -75,12 +75,12 @@ pub(crate) fn fetch_refmar(args: FetchRefmarArgs) -> Result<(), CalError> {
     }
 
     if observations.is_empty() {
-        return Err(CalError::EmptyObservations(args.shom_id));
+        return Err(CalError::EmptyObservations(args.station));
     }
     write_observations_csv(&args.out, observations.values().copied())?;
     println!(
         "refmar shom_id={} source={} observations={} start={} end={} out={}",
-        args.shom_id,
+        args.station,
         args.source,
         observations.len(),
         format_rfc3339(start),

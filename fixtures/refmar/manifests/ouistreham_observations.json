@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:311",
+  "provider_station_id": "311",
+  "station_name": "Ouistreham",
+  "source": 4,
+  "datum": "zero_hydrographique_ouistreham",
+  "datum_note": "zero_hydrographique; ZH = -4.08 m relative to IGN69; RAM id Ouistreham in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/311",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/311?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "c733522556ae7c3fab0d46a9250b5de25190cb863981f854032ccd000d3ae109",
+  "tidegauge_sha256": "7fe619a98747d2343bb2d200873c7560f5d29d0cf9956d528ab2dc47b66d90c7",
+  "qc": {
+    "expected": 48168,
+    "observed": 47948,
+    "coverage": 0.995432652383325,
+    "gaps": 46,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_ouistreham_v1",
+    "checksum_sha256": "92a371d373667108808b0a578467101153624ceca58d367df8d4ede9692e9cfd",
+    "calibrated_rms_cm": 18.332084904861535,
+    "calibrated_mae_cm": 14.893118773750722,
+    "calibrated_p95_cm": 35.01164781860293,
+    "calibrated_max_cm": 68.3522676888916,
+    "z0_rms_cm": 192.94715512314465,
+    "z0_mae_cm": 172.16543827169585,
+    "z0_p95_cm": 309.1029069193855,
+    "z0_max_cm": 397.7029069193855,
+    "rms_factor_vs_z0": 10.525106998166722
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

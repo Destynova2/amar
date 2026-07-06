@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:4",
+  "provider_station_id": "4",
+  "station_name": "Le Havre",
+  "source": 4,
+  "datum": "zero_hydrographique_le_havre",
+  "datum_note": "zero_hydrographique; ZH = -4.375 m relative to IGN69; RAM id Le Havre in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/4",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/4?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "48222b92a9c0a93fa4393d10081580d1edac0b1a92ff09baf07d3ca79f5d38d2",
+  "tidegauge_sha256": "21eec7dac98433dfbf264b7d65628c044b5a5cc294c14aa9c83f162c8ebc1813",
+  "qc": {
+    "expected": 48168,
+    "observed": 47636,
+    "coverage": 0.9889553230360405,
+    "gaps": 78,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_le_havre_v1",
+    "checksum_sha256": "3695d3505a842c99ad03fd3f9a2f4a28d786968cf0792354eac8e667245e0719",
+    "calibrated_rms_cm": 19.502313219778724,
+    "calibrated_mae_cm": 15.672624708235915,
+    "calibrated_p95_cm": 37.36289865445519,
+    "calibrated_max_cm": 79.01670271334069,
+    "z0_rms_cm": 197.83263974214788,
+    "z0_mae_cm": 176.21587910070235,
+    "z0_p95_cm": 321.003020514836,
+    "z0_max_cm": 408.603020514836,
+    "rms_factor_vs_z0": 10.144060220585079
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

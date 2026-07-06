@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-06-v0.4-france",
+  "station_id": "refmar:34",
+  "provider_station_id": "34",
+  "station_name": "La Rochelle-pallice",
+  "source": 4,
+  "datum": "zero_hydrographique_la_rochelle_pallice",
+  "datum_note": "zero_hydrographique; ZH = -3.503 m relative to IGN69; RAM id La Rochelle - La Pallice in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/34",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/34?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "4d449b0b21fb1410cd7754e64eed11a5dd7da9e62deafb3fc737ade9f087021d",
+  "tidegauge_sha256": "20a750e5af64c879c61521528c0805a3f206cc2113671c99ccf34afac3e312a3",
+  "qc": {
+    "expected": 48168,
+    "observed": 45604,
+    "coverage": 0.9467696395947517,
+    "gaps": 48,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_la_rochelle_pallice_v1",
+    "checksum_sha256": "0b29501b1b4ea56f4ae18cb59b810e28dde2139ac4dbbf8b3ee54c8bbeed777e",
+    "calibrated_rms_cm": 9.511682396201762,
+    "calibrated_mae_cm": 7.5594004933356205,
+    "calibrated_p95_cm": 18.76476358946393,
+    "calibrated_max_cm": 37.67092184405414,
+    "z0_rms_cm": 131.0284026023828,
+    "z0_mae_cm": 111.73534087764327,
+    "z0_p95_cm": 232.17769673899582,
+    "z0_max_cm": 327.0776967389958,
+    "rms_factor_vs_z0": 13.775523313804667
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

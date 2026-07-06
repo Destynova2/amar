@@ -5,8 +5,8 @@ use crate::common::{
 use crate::solve::CalibrationResult;
 use amar_core::PredictionMethod;
 use amar_pack::{
-    BrestBenchmark, BrestBenchmarkSample, LatitudeDegValue, LongitudeDegValue, MetersValue,
-    PeriodInfo, SCHEMA_VERSION, SourceInfo, StationPack, TidePack,
+    LatitudeDegValue, LongitudeDegValue, MetersValue, PeriodInfo, SCHEMA_VERSION, SourceInfo,
+    StationPack, TideBenchmark, TideBenchmarkSample, TidePack,
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -17,20 +17,20 @@ use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct TideGauge {
-    shom_id: String,
-    name: String,
-    longitude: f64,
-    latitude: f64,
-    id_ram: Option<String>,
+    pub(crate) shom_id: String,
+    pub(crate) name: String,
+    pub(crate) longitude: f64,
+    pub(crate) latitude: f64,
+    pub(crate) id_ram: Option<String>,
     #[serde(rename = "verticalRef")]
-    vertical_ref: Option<VerticalRef>,
+    pub(crate) vertical_ref: Option<VerticalRef>,
 }
 
 #[derive(Debug, Deserialize)]
-struct VerticalRef {
-    zero_hydro: String,
-    zh_ref: String,
-    nom_ref: String,
+pub(crate) struct VerticalRef {
+    pub(crate) zero_hydro: String,
+    pub(crate) zh_ref: String,
+    pub(crate) nom_ref: String,
 }
 
 pub(crate) struct PackBuildInput<'a> {
@@ -43,6 +43,40 @@ pub(crate) struct PackBuildInput<'a> {
     pub(crate) calibration_start: DateTime<Utc>,
     pub(crate) validation_start: DateTime<Utc>,
     pub(crate) validation_end: DateTime<Utc>,
+}
+
+pub(crate) struct StationPackBuildInput<'a> {
+    pub(crate) tidegauge: &'a TideGauge,
+    pub(crate) station_id: &'a str,
+    pub(crate) datum: &'a str,
+    pub(crate) calibration: CalibrationResult,
+    pub(crate) residual_p95_cm: f64,
+    pub(crate) generated_at: &'a str,
+    pub(crate) observations_sha256: &'a str,
+    pub(crate) tidegauge_sha256: &'a str,
+    pub(crate) calibration_start: DateTime<Utc>,
+    pub(crate) validation_start: DateTime<Utc>,
+    pub(crate) validation_end: DateTime<Utc>,
+}
+
+pub(crate) struct BenchmarkBuildInput<'a> {
+    pub(crate) validation_samples: &'a [Observation],
+    pub(crate) validation_start: DateTime<Utc>,
+    pub(crate) validation_end: DateTime<Utc>,
+    pub(crate) observations_sha256: &'a str,
+    pub(crate) generated_at: &'a str,
+    pub(crate) benchmark_id: &'a str,
+    pub(crate) station_id: &'a str,
+    pub(crate) provider_station_id: &'a str,
+    pub(crate) station_name: &'a str,
+    pub(crate) datum: &'a str,
+}
+
+pub(crate) struct ObservationCsvMetadata<'a> {
+    pub(crate) station_name: &'a str,
+    pub(crate) shom_id: &'a str,
+    pub(crate) source: u8,
+    pub(crate) datum: &'a str,
 }
 
 pub(crate) fn read_observations_csv(path: &Path) -> Result<Vec<Observation>, CalError> {
@@ -95,13 +129,33 @@ pub(crate) fn write_observations_csv(
     path: &Path,
     observations: impl IntoIterator<Item = Observation>,
 ) -> Result<(), CalError> {
+    write_station_observations_csv(
+        path,
+        ObservationCsvMetadata {
+            station_name: "BREST",
+            shom_id: BREST_SHOM_ID,
+            source: VALIDATED_HOURLY_SOURCE,
+            datum: "zero_hydrographique",
+        },
+        observations,
+    )
+}
+
+pub(crate) fn write_station_observations_csv(
+    path: &Path,
+    metadata: ObservationCsvMetadata<'_>,
+    observations: impl IntoIterator<Item = Observation>,
+) -> Result<(), CalError> {
     let mut output = String::new();
-    output.push_str("# station=BREST\n");
-    output.push_str("# shom_id=3\n");
+    output.push_str(&format!("# station={}\n", metadata.station_name));
+    output.push_str(&format!("# shom_id={}\n", metadata.shom_id));
     output.push_str("# provider=Shom / REFMAR\n");
     output.push_str("# license=Licence Ouverte 2.0 Etalab\n");
-    output.push_str("# product=Donnees horaires validees REFMAR, source 4\n");
-    output.push_str("# datum=zero_hydrographique\n");
+    output.push_str(&format!(
+        "# product=Donnees horaires validees REFMAR, source {}\n",
+        metadata.source
+    ));
+    output.push_str(&format!("# datum={}\n", metadata.datum));
     output.push_str("# unit=m\n");
     output.push_str("timestamp,value_m,source\n");
     for observation in observations {
@@ -120,6 +174,31 @@ pub(crate) fn read_tidegauge(path: &Path) -> Result<TideGauge, CalError> {
 }
 
 pub(crate) fn build_pack(input: PackBuildInput<'_>) -> Result<TidePack, CalError> {
+    let station = build_station_pack(StationPackBuildInput {
+        tidegauge: input.tidegauge,
+        station_id: "refmar:3",
+        datum: "zero_hydrographique_brest",
+        calibration: input.calibration,
+        residual_p95_cm: input.residual_p95_cm,
+        generated_at: input.generated_at,
+        observations_sha256: input.observations_sha256,
+        tidegauge_sha256: input.tidegauge_sha256,
+        calibration_start: input.calibration_start,
+        validation_start: input.validation_start,
+        validation_end: input.validation_end,
+    })?;
+    let pack = TidePack {
+        schema_version: SCHEMA_VERSION.to_string(),
+        generated_at: input.generated_at.to_string(),
+        stations: vec![station],
+    };
+    pack.validate()?;
+    Ok(pack)
+}
+
+pub(crate) fn build_station_pack(
+    input: StationPackBuildInput<'_>,
+) -> Result<StationPack, CalError> {
     let tidegauge = input.tidegauge;
     let vertical_ref = tidegauge.vertical_ref.as_ref();
     let datum_note = vertical_ref
@@ -142,12 +221,12 @@ pub(crate) fn build_pack(input: PackBuildInput<'_>) -> Result<TidePack, CalError
         tidegauge.shom_id
     );
     let station = StationPack {
-        station_id: "refmar:3".to_string(),
+        station_id: input.station_id.to_string(),
         provider_station_id: tidegauge.shom_id.clone(),
         name: title_case_station(&tidegauge.name),
         latitude_deg: LatitudeDegValue::new(tidegauge.latitude),
         longitude_deg: LongitudeDegValue::new(tidegauge.longitude),
-        datum: "zero_hydrographique_brest".to_string(),
+        datum: input.datum.to_string(),
         z0_m: MetersValue::new(input.calibration.z0_m),
         method: PredictionMethod::StationHarmonicsV0.as_str().to_string(),
         constituents: input.calibration.constituents,
@@ -183,13 +262,13 @@ pub(crate) fn build_pack(input: PackBuildInput<'_>) -> Result<TidePack, CalError
         datum_note: Some(datum_note),
         residual_benchmark_cm: Some(input.residual_p95_cm),
     };
-    let pack = TidePack {
+    TidePack {
         schema_version: SCHEMA_VERSION.to_string(),
         generated_at: input.generated_at.to_string(),
-        stations: vec![station],
-    };
-    pack.validate()?;
-    Ok(pack)
+        stations: vec![station.clone()],
+    }
+    .validate()?;
+    Ok(station)
 }
 
 pub(crate) fn build_benchmark(
@@ -198,17 +277,33 @@ pub(crate) fn build_benchmark(
     validation_end: DateTime<Utc>,
     observations_sha256: &str,
     generated_at: &str,
-) -> BrestBenchmark {
-    let by_time = validation_samples
+) -> TideBenchmark {
+    build_station_benchmark(BenchmarkBuildInput {
+        validation_samples,
+        validation_start,
+        validation_end,
+        observations_sha256,
+        generated_at,
+        benchmark_id: "benchmark_brest_v1",
+        station_id: "refmar:3",
+        provider_station_id: BREST_SHOM_ID,
+        station_name: "Brest",
+        datum: "zero_hydrographique_brest",
+    })
+}
+
+pub(crate) fn build_station_benchmark(input: BenchmarkBuildInput<'_>) -> TideBenchmark {
+    let by_time = input
+        .validation_samples
         .iter()
         .map(|observation| (observation.at, observation.value_m))
         .collect::<BTreeMap<_, _>>();
     let mut samples = Vec::new();
     let mut checksum_input = String::new();
-    let mut cursor = validation_start;
-    while cursor < validation_end {
+    let mut cursor = input.validation_start;
+    while cursor < input.validation_end {
         let observed_m = by_time.get(&cursor).copied();
-        samples.push(BrestBenchmarkSample {
+        samples.push(TideBenchmarkSample {
             timestamp: format_rfc3339(cursor),
             observed_m,
             missing: observed_m.is_none(),
@@ -222,21 +317,21 @@ pub(crate) fn build_benchmark(
         ));
         cursor += Duration::hours(1);
     }
-    BrestBenchmark {
-        schema_version: "benchmark_brest_v1".to_string(),
-        benchmark_id: "benchmark_brest_v1".to_string(),
-        generated_at: generated_at.to_string(),
-        station_id: "refmar:3".to_string(),
-        provider_station_id: BREST_SHOM_ID.to_string(),
-        station_name: "Brest".to_string(),
-        datum: "zero_hydrographique_brest".to_string(),
+    TideBenchmark {
+        schema_version: input.benchmark_id.to_string(),
+        benchmark_id: input.benchmark_id.to_string(),
+        generated_at: input.generated_at.to_string(),
+        station_id: input.station_id.to_string(),
+        provider_station_id: input.provider_station_id.to_string(),
+        station_name: input.station_name.to_string(),
+        datum: input.datum.to_string(),
         product: "Données horaires validées REFMAR, source 4".to_string(),
         source: "Shom / REFMAR".to_string(),
         validation_period: PeriodInfo {
-            start: format_rfc3339(validation_start),
-            end: format_rfc3339(validation_end),
+            start: format_rfc3339(input.validation_start),
+            end: format_rfc3339(input.validation_end),
         },
-        observations_sha256: observations_sha256.to_string(),
+        observations_sha256: input.observations_sha256.to_string(),
         checksum_sha256: sha256_hex(checksum_input.as_bytes()),
         samples,
     }
@@ -285,7 +380,7 @@ fn sha256_hex(data: &[u8]) -> String {
     output
 }
 
-fn title_case_station(value: &str) -> String {
+pub(crate) fn title_case_station(value: &str) -> String {
     value
         .split('_')
         .map(|part| {
