@@ -1,6 +1,6 @@
 use amar_core::{CoreError, UtcDateTime, predict_height};
 use amar_data::{
-    DataError, build_noaa_pack, load_official_predictions, load_pack_from_path,
+    DataError, build_noaa_pack, load_official_predictions, load_pack_from_path, percentile,
     prediction_error_meters,
 };
 use clap::{Args, Parser, Subcommand};
@@ -15,6 +15,7 @@ const DEFAULT_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.05;
+const DEFAULT_NOAA_STATIONS: &[&str] = &["8443970", "9414290", "8729840", "9447130"];
 
 #[derive(Debug, Error)]
 enum CliError {
@@ -31,6 +32,8 @@ enum CliError {
     Json(#[from] serde_json::Error),
     #[error("validation p95 exceeded {limit_cm:.1} cm:\n{failures}")]
     ValidationThreshold { limit_cm: f64, failures: String },
+    #[error("validation missing samples:\n{failures}")]
+    ValidationSamples { failures: String },
 }
 
 #[derive(Debug, Parser)]
@@ -50,9 +53,9 @@ enum Command {
 
 #[derive(Debug, Args)]
 struct TideArgs {
-    #[arg(long, allow_hyphen_values = true)]
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_latitude)]
     lat: f64,
-    #[arg(long, allow_hyphen_values = true)]
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_longitude)]
     lon: f64,
     #[arg(long)]
     at: String,
@@ -78,6 +81,8 @@ struct PackNoaaArgs {
     out: PathBuf,
     #[arg(long, default_value = "2026-07-06")]
     extracted_at: String,
+    #[arg(long = "station")]
+    stations: Vec<String>,
 }
 
 fn main() -> ExitCode {
@@ -124,6 +129,7 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
 fn validate(args: ValidateArgs) -> Result<(), CliError> {
     let data = load_pack_from_path(&args.pack)?;
     let mut failures = Vec::new();
+    let mut sample_failures = Vec::new();
 
     for station in data.stations() {
         let station_id = &station.pack().provider_station_id;
@@ -139,14 +145,30 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
                 window_errors.push(error);
             }
             window_errors.sort_by(|left, right| left.total_cmp(right));
-            let window_p95 = percentile(&window_errors, 0.95).unwrap_or(0.0);
+            let Some(window_p95) = percentile(&window_errors, 0.95) else {
+                sample_failures.push(format!(
+                    "{} {} samples=0",
+                    station.pack().station_id,
+                    prediction_window_label(&prediction_path)
+                ));
+                continue;
+            };
             window_summaries.insert(
                 prediction_window_label(&prediction_path),
                 (window_errors.len(), window_p95),
             );
         }
         errors.sort_by(|left, right| left.total_cmp(right));
-        let p95 = percentile(&errors, 0.95).unwrap_or(0.0);
+        let Some(p95) = percentile(&errors, 0.95) else {
+            println!(
+                "{} {} method={} samples=0 p95_m=NA p95_cm=NA",
+                station.pack().station_id,
+                station.pack().name,
+                station.model().method().as_str(),
+            );
+            sample_failures.push(format!("{} samples=0", station.pack().station_id));
+            continue;
+        };
         println!(
             "{} {} method={} samples={} p95_m={:.3} p95_cm={:.1}",
             station.pack().station_id,
@@ -187,6 +209,11 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
     if data.stations().is_empty() {
         println!("no stations validated");
     }
+    if !sample_failures.is_empty() {
+        return Err(CliError::ValidationSamples {
+            failures: sample_failures.join("\n"),
+        });
+    }
     if !failures.is_empty() {
         return Err(CliError::ValidationThreshold {
             limit_cm: M0_P95_LIMIT_M * 100.0,
@@ -197,7 +224,19 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
 }
 
 fn pack_noaa(args: PackNoaaArgs) -> Result<(), CliError> {
-    let pack = build_noaa_pack(&args.fixtures, &args.extracted_at)?;
+    let pack = if args.stations.is_empty() {
+        build_noaa_pack(
+            &args.fixtures,
+            &args.extracted_at,
+            DEFAULT_NOAA_STATIONS.iter().copied(),
+        )?
+    } else {
+        build_noaa_pack(
+            &args.fixtures,
+            &args.extracted_at,
+            args.stations.iter().map(String::as_str),
+        )?
+    };
     let output = serde_json::to_string_pretty(&pack)?;
     if let Some(parent) = args.out.parent() {
         fs::create_dir_all(parent).map_err(|source| CliError::Io {
@@ -242,14 +281,27 @@ fn prediction_window_label(path: &Path) -> String {
         .to_string()
 }
 
-fn percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {
-    if sorted_values.is_empty() {
-        return None;
-    }
-    let index = ((sorted_values.len() - 1) as f64 * percentile).ceil() as usize;
-    sorted_values.get(index).copied()
-}
-
 fn round3(value: f64) -> f64 {
     (value * 1000.0).round() / 1000.0
+}
+
+fn parse_latitude(value: &str) -> Result<f64, String> {
+    parse_coordinate(value, "latitude", -90.0, 90.0)
+}
+
+fn parse_longitude(value: &str) -> Result<f64, String> {
+    parse_coordinate(value, "longitude", -180.0, 180.0)
+}
+
+fn parse_coordinate(value: &str, name: &str, min: f64, max: f64) -> Result<f64, String> {
+    let parsed = value
+        .parse::<f64>()
+        .map_err(|error| format!("invalid {name} {value}: {error}"))?;
+    if (min..=max).contains(&parsed) {
+        Ok(parsed)
+    } else {
+        Err(format!(
+            "{name} must be between {min:.0} and {max:.0} degrees"
+        ))
+    }
 }

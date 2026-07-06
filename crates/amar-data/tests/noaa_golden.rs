@@ -1,4 +1,8 @@
-use amar_data::{load_official_predictions, load_pack_from_path, prediction_error_meters};
+use amar_core::CoreError;
+use amar_data::{
+    DataError, load_official_predictions, load_pack_from_path, load_pack_from_str, percentile,
+    prediction_error_meters,
+};
 use std::path::{Path, PathBuf};
 
 fn must<T, E: std::fmt::Debug>(result: Result<T, E>) -> T {
@@ -23,7 +27,7 @@ fn noaa_golden_p95_is_measured_without_threshold() {
             }
         }
         errors.sort_by(|left, right| left.total_cmp(right));
-        let p95 = percentile(&errors, 0.95);
+        let p95 = must_some(percentile(&errors, 0.95));
         println!(
             "{} {} method={} samples={} p95_m={:.3}",
             station.pack().station_id,
@@ -36,6 +40,44 @@ fn noaa_golden_p95_is_measured_without_threshold() {
     }
 }
 
+#[test]
+fn load_pack_rejects_unknown_constituents() {
+    let pack = r#"{
+        "schema_version": "amar-pack-v0",
+        "generated_at": "2026-07-06",
+        "stations": [{
+            "station_id": "noaa:8443970",
+            "provider_station_id": "8443970",
+            "name": "Boston",
+            "latitude_deg": 42.3539,
+            "longitude_deg": -71.0503,
+            "datum": "MLLW",
+            "z0_m": 1.0,
+            "method": "station_harmonics_v0",
+            "constituents": [{
+                "name": "ZZ9",
+                "amplitude_m": 0.5,
+                "phase_gmt_deg": 10.0,
+                "speed_deg_per_hour": 28.984104
+            }],
+            "source": {
+                "provider": "NOAA CO-OPS",
+                "license": "United States public domain",
+                "extracted_at": "2026-07-06",
+                "station_url": "https://example.test/station",
+                "datums_url": "https://example.test/datums",
+                "harcon_url": "https://example.test/harcon",
+                "checksum_sha256": "abc"
+            }
+        }]
+    }"#;
+    let result = load_pack_from_str(pack);
+    assert!(matches!(
+        result,
+        Err(DataError::Core(CoreError::UnknownConstituent(name))) if name == "ZZ9"
+    ));
+}
+
 fn prediction_files(root: &Path, station_id: &str) -> [PathBuf; 3] {
     let station_dir = root.join("fixtures/noaa").join(station_id);
     [
@@ -45,10 +87,9 @@ fn prediction_files(root: &Path, station_id: &str) -> [PathBuf; 3] {
     ]
 }
 
-fn percentile(sorted_values: &[f64], percentile: f64) -> f64 {
-    if sorted_values.is_empty() {
-        return 0.0;
+fn must_some<T>(option: Option<T>) -> T {
+    match option {
+        Some(value) => value,
+        None => panic!("missing value"),
     }
-    let index = ((sorted_values.len() - 1) as f64 * percentile).ceil() as usize;
-    sorted_values[index]
 }

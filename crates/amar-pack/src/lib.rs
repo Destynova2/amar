@@ -23,6 +23,13 @@ pub enum PackError {
     },
     #[error("{field} must be finite")]
     NonFinite { field: &'static str },
+    #[error("{field} must be between {min} and {max}, got {value}")]
+    OutOfRange {
+        field: &'static str,
+        value: f64,
+        min: f64,
+        max: f64,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -72,6 +79,10 @@ impl StationPack {
     fn validate(&self) -> Result<(), PackError> {
         self.latitude_deg.ensure_finite("latitude_deg")?;
         self.longitude_deg.ensure_finite("longitude_deg")?;
+        self.latitude_deg
+            .ensure_range("latitude_deg", -90.0, 90.0)?;
+        self.longitude_deg
+            .ensure_range("longitude_deg", -180.0, 180.0)?;
         self.z0_m.ensure_finite("z0_m")?;
         if self.constituents.is_empty() {
             return Err(PackError::EmptyConstituents {
@@ -201,6 +212,19 @@ impl LatitudeDegValue {
             Err(PackError::NonFinite { field })
         }
     }
+
+    fn ensure_range(self, field: &'static str, min: f64, max: f64) -> Result<(), PackError> {
+        if (min..=max).contains(&self.0) {
+            Ok(())
+        } else {
+            Err(PackError::OutOfRange {
+                field,
+                value: self.0,
+                min,
+                max,
+            })
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
@@ -222,5 +246,120 @@ impl LongitudeDegValue {
         } else {
             Err(PackError::NonFinite { field })
         }
+    }
+
+    fn ensure_range(self, field: &'static str, min: f64, max: f64) -> Result<(), PackError> {
+        if (min..=max).contains(&self.0) {
+            Ok(())
+        } else {
+            Err(PackError::OutOfRange {
+                field,
+                value: self.0,
+                min,
+                max,
+            })
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_pack() -> TidePack {
+        TidePack {
+            schema_version: SCHEMA_VERSION.to_string(),
+            generated_at: "2026-07-06".to_string(),
+            stations: vec![valid_station("noaa:8443970")],
+        }
+    }
+
+    fn valid_station(station_id: &str) -> StationPack {
+        StationPack {
+            station_id: station_id.to_string(),
+            provider_station_id: "8443970".to_string(),
+            name: "Boston".to_string(),
+            latitude_deg: LatitudeDegValue::new(42.3539),
+            longitude_deg: LongitudeDegValue::new(-71.0503),
+            datum: "MLLW".to_string(),
+            z0_m: MetersValue::new(1.0),
+            method: "station_harmonics_v0".to_string(),
+            constituents: vec![ConstituentPack {
+                name: "M2".to_string(),
+                amplitude_m: MetersValue::new(0.5),
+                phase_gmt_deg: DegreesValue::new(10.0),
+                speed_deg_per_hour: DegreesPerHourValue::new(28.984_104),
+            }],
+            source: SourceInfo {
+                provider: "NOAA CO-OPS".to_string(),
+                license: "United States public domain".to_string(),
+                extracted_at: "2026-07-06".to_string(),
+                station_url: "https://example.test/station".to_string(),
+                datums_url: "https://example.test/datums".to_string(),
+                harcon_url: "https://example.test/harcon".to_string(),
+                checksum_sha256: "abc".to_string(),
+            },
+        }
+    }
+
+    #[test]
+    fn validate_rejects_unsupported_schema_version() {
+        let mut pack = valid_pack();
+        pack.schema_version = "amar-pack-v9".to_string();
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::UnsupportedSchemaVersion(version)) if version == "amar-pack-v9"
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_duplicate_station_ids() {
+        let mut pack = valid_pack();
+        pack.stations.push(valid_station("noaa:8443970"));
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::DuplicateStation(station_id)) if station_id == "noaa:8443970"
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_duplicate_constituents() {
+        let mut pack = valid_pack();
+        let duplicate = pack.stations[0].constituents[0].clone();
+        pack.stations[0].constituents.push(duplicate);
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::DuplicateConstituent { station_id, constituent })
+                if station_id == "noaa:8443970" && constituent == "M2"
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_non_finite_values() {
+        let mut pack = valid_pack();
+        pack.stations[0].constituents[0].amplitude_m = MetersValue::new(f64::NAN);
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::NonFinite { field }) if field == "amplitude_m"
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_coordinates_out_of_range() {
+        let mut pack = valid_pack();
+        pack.stations[0].latitude_deg = LatitudeDegValue::new(91.0);
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::OutOfRange { field, value, min, max })
+                if field == "latitude_deg" && value == 91.0 && min == -90.0 && max == 90.0
+        ));
+
+        let mut pack = valid_pack();
+        pack.stations[0].longitude_deg = LongitudeDegValue::new(-181.0);
+        assert!(matches!(
+            pack.validate(),
+            Err(PackError::OutOfRange { field, value, min, max })
+                if field == "longitude_deg" && value == -181.0 && min == -180.0 && max == 180.0
+        ));
     }
 }

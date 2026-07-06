@@ -11,7 +11,7 @@ constituants du pack NOAA M0 : origine de `tau` à 1899-12-31 12:00 UTC,
 constantes V0 par constituant, et corrections nodales Schureman `f/u`.
 
 Les constituants inconnus ne sont plus prédits avec une époque de secours
-J2000 : ils sont ignorés par le cœur.
+J2000 : ils sont refusés au chargement du modèle.
 
 ## Validation
 
@@ -41,6 +41,8 @@ Fenêtres de dérive nodale :
 
 `make m0-validate` échoue désormais si une p95 station ou fenêtre dépasse
 5 cm.
+M0.2 échoue aussi si une station n'a aucun échantillon de validation.
+M0.2 refuse les constituants inconnus au chargement, avant toute prédiction.
 
 ## Décision
 

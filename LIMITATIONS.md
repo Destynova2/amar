@@ -11,4 +11,4 @@
   20 km maximum, sinon refus `no supported source`.
 - Maree astronomique seule.
 - Non utilisable pour la navigation.
-- Methode M0 : `harmonic_basic_no_nodal`, sans corrections nodales appliquees.
+- Methode M0 : `station_harmonics_v0`, avec corrections nodales Schureman.

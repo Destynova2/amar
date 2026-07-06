@@ -11,7 +11,6 @@ use amar_pack::{
 use chrono::{NaiveDateTime, Utc};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -92,11 +91,7 @@ impl DataSet {
                     distance_km,
                 }
             })
-            .min_by(|left, right| {
-                left.distance_km
-                    .partial_cmp(&right.distance_km)
-                    .unwrap_or(Ordering::Equal)
-            });
+            .min_by(|left, right| left.distance_km.total_cmp(&right.distance_km));
 
         match best {
             Some(station_match) if station_match.distance_km <= max_distance_km => {
@@ -152,10 +147,12 @@ pub fn load_pack_from_str(data: &str) -> Result<DataSet, DataError> {
 pub fn build_noaa_pack(
     fixtures_dir: impl AsRef<Path>,
     extracted_at: &str,
+    station_ids: impl IntoIterator<Item = impl AsRef<str>>,
 ) -> Result<TidePack, DataError> {
     let fixtures_dir = fixtures_dir.as_ref();
     let mut stations = Vec::new();
-    for station_id in ["8443970", "9414290", "8729840", "9447130"] {
+    for station_id in station_ids {
+        let station_id = station_id.as_ref();
         stations.push(build_noaa_station(fixtures_dir, station_id, extracted_at)?);
     }
     stations.sort_by(|left, right| left.station_id.cmp(&right.station_id));
@@ -197,6 +194,14 @@ pub fn load_official_predictions(
 pub fn prediction_error_meters(model: &TideModel, official: OfficialPrediction) -> f64 {
     let predicted = predict_height(model, official.at).height().as_meters();
     (predicted - official.height.as_meters()).abs()
+}
+
+pub fn percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {
+    if sorted_values.is_empty() || !(0.0..=1.0).contains(&percentile) {
+        return None;
+    }
+    let index = ((sorted_values.len() - 1) as f64 * percentile).ceil() as usize;
+    sorted_values.get(index).copied()
 }
 
 fn build_noaa_station(
