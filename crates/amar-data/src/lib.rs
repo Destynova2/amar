@@ -199,8 +199,12 @@ pub fn load_official_predictions(
 }
 
 pub fn prediction_error_meters(model: &TideModel, official: OfficialPrediction) -> f64 {
+    prediction_signed_error_meters(model, official).abs()
+}
+
+pub fn prediction_signed_error_meters(model: &TideModel, official: OfficialPrediction) -> f64 {
     let predicted = predict_height(model, official.at).height().as_meters();
-    (predicted - official.height.as_meters()).abs()
+    predicted - official.height.as_meters()
 }
 
 pub fn percentile(sorted_values: &[f64], percentile: f64) -> Option<f64> {
@@ -235,10 +239,10 @@ fn build_noaa_station(
         .into_iter()
         .map(|datum| (datum.name, datum.value))
         .collect::<BTreeMap<_, _>>();
-    let mtl = datum_values
-        .get("MTL")
+    let msl = datum_values
+        .get("MSL")
         .copied()
-        .ok_or_else(|| DataError::MissingDatum(station_id.to_string(), "MTL"))?;
+        .ok_or_else(|| DataError::MissingDatum(station_id.to_string(), "MSL"))?;
     let mllw = datum_values
         .get("MLLW")
         .copied()
@@ -273,7 +277,7 @@ fn build_noaa_station(
         latitude_deg: LatitudeDegValue::new(station.lat),
         longitude_deg: LongitudeDegValue::new(station.lng),
         datum: "MLLW".to_string(),
-        z0_m: MetersValue::new(mtl - mllw),
+        z0_m: MetersValue::new(msl - mllw),
         method: PredictionMethod::StationHarmonicsV0.as_str().to_string(),
         constituents,
         source: SourceInfo {

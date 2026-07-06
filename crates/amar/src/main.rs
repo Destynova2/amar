@@ -2,7 +2,7 @@ use amar::server::{self, ServerError, SourceResponse};
 use amar_core::{CoreError, UtcDateTime, predict_height};
 use amar_data::{
     DataError, build_noaa_pack, load_official_predictions, load_pack_from_path, percentile,
-    prediction_error_meters,
+    prediction_signed_error_meters,
 };
 use clap::{Args, Parser, Subcommand};
 use serde_json::json;
@@ -15,7 +15,7 @@ use thiserror::Error;
 const DEFAULT_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
-const M0_P95_LIMIT_M: f64 = 0.05;
+const M0_P95_LIMIT_M: f64 = 0.02;
 const DEFAULT_NOAA_STATIONS: &str = include_str!("../../../data/stations.txt");
 
 #[derive(Debug, Error)]
@@ -159,12 +159,11 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
             let predictions = load_official_predictions(&prediction_path)?;
             let mut window_errors = Vec::new();
             for official in predictions {
-                let error = prediction_error_meters(station.model(), official);
+                let error = prediction_signed_error_meters(station.model(), official);
                 errors.push(error);
                 window_errors.push(error);
             }
-            window_errors.sort_by(|left, right| left.total_cmp(right));
-            let Some(window_p95) = percentile(&window_errors, 0.95) else {
+            let Some(window_stats) = error_stats(&window_errors) else {
                 sample_failures.push(format!(
                     "{} {} samples=0",
                     station.pack().station_id,
@@ -172,15 +171,11 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
                 ));
                 continue;
             };
-            window_summaries.insert(
-                prediction_window_label(&prediction_path),
-                (window_errors.len(), window_p95),
-            );
+            window_summaries.insert(prediction_window_label(&prediction_path), window_stats);
         }
-        errors.sort_by(|left, right| left.total_cmp(right));
-        let Some(p95) = percentile(&errors, 0.95) else {
+        let Some(stats) = error_stats(&errors) else {
             println!(
-                "{} {} method={} samples=0 p95_m=NA p95_cm=NA",
+                "{} {} method={} samples=0 bias_cm=NA std_cm=NA p95_m=NA p95_cm=NA",
                 station.pack().station_id,
                 station.pack().name,
                 station.model().method().as_str(),
@@ -189,37 +184,41 @@ fn validate(args: ValidateArgs) -> Result<(), CliError> {
             continue;
         };
         println!(
-            "{} {} method={} samples={} p95_m={:.3} p95_cm={:.1}",
+            "{} {} method={} samples={} bias_cm={:.1} std_cm={:.1} p95_m={:.3} p95_cm={:.1}",
             station.pack().station_id,
             station.pack().name,
             station.model().method().as_str(),
-            errors.len(),
-            p95,
-            p95 * 100.0
+            stats.samples,
+            stats.bias * 100.0,
+            stats.std_dev * 100.0,
+            stats.p95_abs,
+            stats.p95_abs * 100.0
         );
-        if p95 > M0_P95_LIMIT_M {
+        if stats.p95_abs > M0_P95_LIMIT_M {
             failures.push(format!(
                 "{} all p95_cm={:.1}",
                 station.pack().station_id,
-                p95 * 100.0
+                stats.p95_abs * 100.0
             ));
         }
-        for (window, (samples, window_p95)) in window_summaries {
+        for (window, window_stats) in window_summaries {
             println!(
-                "{} {} window={} samples={} p95_m={:.3} p95_cm={:.1}",
+                "{} {} window={} samples={} bias_cm={:.1} std_cm={:.1} p95_m={:.3} p95_cm={:.1}",
                 station.pack().station_id,
                 station.pack().name,
                 window,
-                samples,
-                window_p95,
-                window_p95 * 100.0
+                window_stats.samples,
+                window_stats.bias * 100.0,
+                window_stats.std_dev * 100.0,
+                window_stats.p95_abs,
+                window_stats.p95_abs * 100.0
             );
-            if window_p95 > M0_P95_LIMIT_M {
+            if window_stats.p95_abs > M0_P95_LIMIT_M {
                 failures.push(format!(
                     "{} {} p95_cm={:.1}",
                     station.pack().station_id,
                     window,
-                    window_p95 * 100.0
+                    window_stats.p95_abs * 100.0
                 ));
             }
         }
@@ -305,6 +304,39 @@ fn prediction_window_label(path: &Path) -> String {
         .and_then(|name| name.strip_prefix("predictions_"))
         .unwrap_or("unknown")
         .to_string()
+}
+
+#[derive(Clone, Copy)]
+struct ErrorStats {
+    samples: usize,
+    bias: f64,
+    std_dev: f64,
+    p95_abs: f64,
+}
+
+fn error_stats(errors: &[f64]) -> Option<ErrorStats> {
+    if errors.is_empty() {
+        return None;
+    }
+    let samples = errors.len();
+    let bias = errors.iter().sum::<f64>() / samples as f64;
+    let variance = errors
+        .iter()
+        .map(|error| {
+            let centered = error - bias;
+            centered * centered
+        })
+        .sum::<f64>()
+        / samples as f64;
+    let mut absolute_errors = errors.iter().map(|error| error.abs()).collect::<Vec<_>>();
+    absolute_errors.sort_by(|left, right| left.total_cmp(right));
+    let p95_abs = percentile(&absolute_errors, 0.95)?;
+    Some(ErrorStats {
+        samples,
+        bias,
+        std_dev: variance.sqrt(),
+        p95_abs,
+    })
 }
 
 fn round3(value: f64) -> f64 {

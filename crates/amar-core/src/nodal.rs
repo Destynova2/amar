@@ -1,29 +1,4 @@
-use crate::PredictionMethod;
 use crate::astro::AstronomicalTerms;
-use crate::constituents::ConstituentDefinition;
-
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct NodalCorrection {
-    pub(crate) factor: f64,
-    pub(crate) phase_degrees: f64,
-}
-
-pub(crate) fn nodal_correction(
-    definition: ConstituentDefinition,
-    nodal: &NodalTerms,
-    method: PredictionMethod,
-) -> NodalCorrection {
-    match method {
-        PredictionMethod::StationHarmonicsV0 => NodalCorrection {
-            factor: definition.nodal_factor(nodal),
-            phase_degrees: definition.nodal_phase_degrees(nodal),
-        },
-        PredictionMethod::HarmonicBasicNoNodal => NodalCorrection {
-            factor: 1.0,
-            phase_degrees: 0.0,
-        },
-    }
-}
 
 #[derive(Clone, Copy)]
 pub(crate) struct FactorTerm {

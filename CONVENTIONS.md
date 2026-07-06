@@ -18,12 +18,12 @@ quand elles sont observables dans les constantes `harcon.json`.
 La convention canonique est :
 
 ```text
-h(t) = Z0 + sum_i f_i * A_i * cos(V_i(t) + u_i(t) - phi_i)
+h(t) = Z0 + sum_i f_i * A_i * cos(V_i(t) + u_i - phi_i)
 ```
 
 Avec :
 
-- `Z0` : niveau moyen du pack dans le datum de sortie.
+- `Z0` : niveau moyen de la mer (`MSL`) dans le datum de sortie.
 - `A_i` : amplitude du constituant en metres.
 - `phi_i` : phase Greenwich NOAA en degres.
 - `V_i(t)` : argument astronomique Greenwich en degres.
@@ -41,15 +41,26 @@ les implementations T_Tide/UTide :
 - ordre d'application : calcul de `V_i(t)`, puis corrections nodales `f/u`,
   puis soustraction de `phase_GMT`.
 
-## Etat courant (M1)
+## Etat courant (M0.3)
 
 Le moteur courant livre `method = station_harmonics_v0`.
 
 Cela signifie :
 
-- `V_i(t)` est calcule pour les constituants NOAA M0 ;
-- les corrections nodales Schureman `f_i` et `u_i` sont appliquees ;
-- `make m0-validate` est un gate bloquant : exit 1 si un p95 depasse 5 cm.
+- les constantes harmoniques NOAA sont interpretees autour de `MSL` ;
+- le pack NOAA M0 publie en `MLLW`, donc `Z0 = MSL - MLLW` ;
+- pour chaque annee civile UTC predite, `V0` est calcule au 1er janvier
+  00:00:00 UTC ;
+- `V_i(t)` avance ensuite avec la vitesse du constituant et le nombre d'heures
+  ecoulees depuis ce 1er janvier ;
+- les corrections nodales Schureman `u_i` et `f_i` sont calculees au milieu de
+  l'annee civile, puis gardees constantes sur l'annee ;
+- `make m0-validate` est un gate bloquant : exit 1 si un p95 depasse 2 cm.
+
+Cette convention reproduit la famille NOS/XTide/libtide observee dans les
+tables congen. La variante testee avec `u_i` au 1er janvier et `f_i` au milieu
+de l'annee a ete rejetee : elle degradait Boston et Eastport au-dessus du gate
+5 cm et laissait un biais constant.
 
 Le bareme de confiance M1 reste separe du moteur harmonique : A <= 2 km,
 B <= 10 km, C <= 20 km. Au-dela de 20 km, la source est refusee.

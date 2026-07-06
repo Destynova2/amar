@@ -9,7 +9,7 @@ mod types;
 
 use astro::{astronomical_argument_degrees, astronomical_terms};
 use constituents::constituent_definition;
-use nodal::{nodal_correction, nodal_terms};
+use nodal::{NodalTerms, nodal_terms};
 
 pub use types::{
     ConstituentId, CoreError, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, Meters,
@@ -18,16 +18,15 @@ pub use types::{
 
 pub fn predict_height(model: &TideModel, at: UtcDateTime) -> TidePrediction {
     let mut height = model.z0.as_meters();
-    let astro = astronomical_terms(at);
-    let nodal = nodal_terms(&astro);
+    let convention = PredictionConvention::new(model.method, at);
     for constituent in model.constituents() {
         let Some(definition) = constituent_definition(constituent.id().as_str()) else {
             unreachable!("constituents are validated by TideModel::new");
         };
-        let correction = nodal_correction(definition, &nodal, model.method);
-        let argument = astronomical_argument_degrees(definition, &astro);
-        let phase = argument + correction.phase_degrees - constituent.phase_gmt().as_degrees();
-        let contribution = correction.factor
+        let argument = convention.argument_degrees(definition, constituent);
+        let phase = argument + convention.nodal_phase_degrees(definition)
+            - constituent.phase_gmt().as_degrees();
+        let contribution = convention.nodal_factor(definition)
             * constituent.amplitude().as_meters()
             * Degrees(phase).to_radians().as_radians().cos();
         height += contribution;
@@ -36,6 +35,81 @@ pub fn predict_height(model: &TideModel, at: UtcDateTime) -> TidePrediction {
     TidePrediction {
         height: Meters(height),
         method: model.method,
+    }
+}
+
+struct PredictionConvention {
+    mode: PredictionConventionMode,
+}
+
+enum PredictionConventionMode {
+    AnnualNoaa {
+        start_astro: astro::AstronomicalTerms,
+        mid_year_nodal: NodalTerms,
+        hours_since_year_start: f64,
+    },
+    InstantNoNodal {
+        astro: astro::AstronomicalTerms,
+    },
+}
+
+impl PredictionConvention {
+    fn new(method: PredictionMethod, at: UtcDateTime) -> Self {
+        let mode = match method {
+            PredictionMethod::StationHarmonicsV0 => {
+                let year_start = at.civil_year_start();
+                let start_astro = astronomical_terms(year_start);
+                let mid_year_astro = astronomical_terms(at.civil_year_midpoint());
+                let mid_year_nodal = nodal_terms(&mid_year_astro);
+                PredictionConventionMode::AnnualNoaa {
+                    start_astro,
+                    mid_year_nodal,
+                    hours_since_year_start: at.hours_since(year_start),
+                }
+            }
+            PredictionMethod::HarmonicBasicNoNodal => PredictionConventionMode::InstantNoNodal {
+                astro: astronomical_terms(at),
+            },
+        };
+        Self { mode }
+    }
+
+    fn argument_degrees(
+        &self,
+        definition: constituents::ConstituentDefinition,
+        constituent: &HarmonicConstituent,
+    ) -> f64 {
+        match &self.mode {
+            PredictionConventionMode::AnnualNoaa {
+                start_astro,
+                hours_since_year_start,
+                ..
+            } => {
+                astronomical_argument_degrees(definition, start_astro)
+                    + constituent.speed().as_degrees_per_hour() * hours_since_year_start
+            }
+            PredictionConventionMode::InstantNoNodal { astro } => {
+                astronomical_argument_degrees(definition, astro)
+            }
+        }
+    }
+
+    fn nodal_phase_degrees(&self, definition: constituents::ConstituentDefinition) -> f64 {
+        match &self.mode {
+            PredictionConventionMode::AnnualNoaa { mid_year_nodal, .. } => {
+                definition.nodal_phase_degrees(mid_year_nodal)
+            }
+            PredictionConventionMode::InstantNoNodal { .. } => 0.0,
+        }
+    }
+
+    fn nodal_factor(&self, definition: constituents::ConstituentDefinition) -> f64 {
+        match &self.mode {
+            PredictionConventionMode::AnnualNoaa { mid_year_nodal, .. } => {
+                definition.nodal_factor(mid_year_nodal)
+            }
+            PredictionConventionMode::InstantNoNodal { .. } => 1.0,
+        }
     }
 }
 

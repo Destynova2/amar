@@ -1,5 +1,5 @@
 use crate::constituents::constituent_definition;
-use chrono::{DateTime, Datelike, TimeDelta, Timelike, Utc};
+use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Timelike, Utc};
 use std::fmt;
 use thiserror::Error;
 
@@ -153,6 +153,21 @@ impl UtcDateTime {
         Self(self.0 + TimeDelta::seconds(seconds))
     }
 
+    pub(crate) fn civil_year_start(self) -> Self {
+        utc_datetime(self.0.year(), 1, 1, 0, 0, 0)
+    }
+
+    pub(crate) fn civil_year_midpoint(self) -> Self {
+        let start = self.civil_year_start();
+        let next_start = utc_datetime(self.0.year() + 1, 1, 1, 0, 0, 0);
+        let year_seconds = (next_start.0 - start.0).num_seconds();
+        start.add_seconds(year_seconds / 2)
+    }
+
+    pub(crate) fn hours_since(self, earlier: Self) -> f64 {
+        (self.ordinal_days() - earlier.ordinal_days()) * 24.0
+    }
+
     pub(crate) fn ordinal_days(self) -> f64 {
         let date = self.0.date_naive();
         let time = self.0.time();
@@ -163,6 +178,23 @@ impl UtcDateTime {
         let seconds = f64::from(time.num_seconds_from_midnight());
         let nanos = f64::from(time.nanosecond());
         day_number as f64 + seconds / 86_400.0 + nanos / 86_400_000_000_000.0
+    }
+}
+
+fn utc_datetime(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> UtcDateTime {
+    match Utc
+        .with_ymd_and_hms(year, month, day, hour, minute, second)
+        .single()
+    {
+        Some(value) => UtcDateTime(value),
+        None => unreachable!("valid UTC civil date"),
     }
 }
 
