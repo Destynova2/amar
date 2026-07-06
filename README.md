@@ -113,6 +113,8 @@ curl -i -H 'content-type: application/json' \
 | `GET /coverage` | Stations embarquées et rayon accepté |
 
 La couverture par défaut est limitée à 20 km autour de chaque station.
+Un rayon demandé plus large est plafonné à 20 km en M1, afin de garder le
+grade C dans son domaine documenté.
 
 Barème de confiance M1 :
 
@@ -147,7 +149,7 @@ Commandes disponibles :
 |---|---|
 | `amar tide --lat <deg> --lon <deg> --at <utc>` | Calcule une hauteur instantanée |
 | `amar serve --addr 127.0.0.1:3000` | Sert l'API locale |
-| `amar validate` | Affiche le p95 vs prédictions NOAA |
+| `amar validate` | Gate p95 vs prédictions NOAA, exit 1 au-delà de 5 cm |
 | `amar pack-noaa` | Compile les fixtures NOAA brutes en pack |
 
 ## Données

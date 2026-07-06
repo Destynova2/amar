@@ -93,6 +93,9 @@ La confiance M1 est une heuristique de distance :
 Méthode exposée :
 `station_harmonics_v0_distance_heuristic`.
 
+M1.1 borne ce contrat : `--max-distance-km` ne peut pas étendre la confiance
+au-delà de 20 km ; les sources plus lointaines restent refusées.
+
 ## Décision
 
 Taguer M1.

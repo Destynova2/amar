@@ -8,7 +8,8 @@ quand elles sont observables dans les constantes `harcon.json`.
 - Amplitudes : metres.
 - Phases : degres, referencees a Greenwich (`phase_GMT` NOAA).
 - Vitesses : degres par heure.
-- Temps : UTC, entrees ISO 8601 terminees par `Z`.
+- Temps : entrees RFC 3339 avec offset, converties en UTC. `Z` reste la
+  forme canonique des exemples.
 - Hauteur : positive vers le haut.
 - Datum : celui du pack. Le pack NOAA M0 publie des hauteurs en MLLW.
 
@@ -40,17 +41,15 @@ les implementations T_Tide/UTide :
 - ordre d'application : calcul de `V_i(t)`, puis corrections nodales `f/u`,
   puis soustraction de `phase_GMT`.
 
-## Etat M0
+## Etat courant (M1)
 
-Le moteur M0 livre la porte de sortie prevue par le plan :
-`method = harmonic_basic_no_nodal`.
+Le moteur courant livre `method = station_harmonics_v0`.
 
 Cela signifie :
 
 - `V_i(t)` est calcule pour les constituants NOAA M0 ;
-- `f_i = 1` et `u_i = 0` pour tous les constituants ;
-- l'ecart a l'oracle NOAA est affiche par `make m0-validate` et n'est pas un
-  seuil bloquant en M0.
+- les corrections nodales Schureman `f_i` et `u_i` sont appliquees ;
+- `make m0-validate` est un gate bloquant : exit 1 si un p95 depasse 5 cm.
 
-La methode cible `station_harmonics_v0` est reservee au meme format de pack
-avec corrections nodales Schureman completes.
+Le bareme de confiance M1 reste separe du moteur harmonique : A <= 2 km,
+B <= 10 km, C <= 20 km. Au-dela de 20 km, la source est refusee.

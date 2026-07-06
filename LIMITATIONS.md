@@ -14,5 +14,7 @@
   20 km maximum par défaut, sinon refus utile avec station la plus proche.
 - Confiance M1 heuristique, basée seulement sur la distance à la station :
   A <= 2 km, B <= 10 km, C <= 20 km.
+- Un rayon CLI/API supérieur à 20 km n'étend pas le domaine M1 : les sources
+  plus lointaines sont refusées.
 - Méthode de calcul : `station_harmonics_v0`, avec corrections nodales
   Schureman.
