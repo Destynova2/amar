@@ -294,3 +294,67 @@ M3 dans cette livraison.
 
 - Durcissement post-audit : confidence/warnings partagés CLI-serveur, packs expérimentaux incomplets refusés, benchmark Brest gaté à `p95 <= 30 cm`.
 - Calibrateur scindé en `fetch`/`qc`/`solve`/`pack_out` avec QC trous/sauts, garde SA/SSA, tests locaux, artefacts Brest byte-identiques.
+
+## M3 — Extrema, séries, fenêtres
+
+Date : 2026-07-06.
+
+### Extrema
+
+Choix retenu : échantillonnage de `h(t)` toutes les 6 minutes, détection du
+triplet local haut/bas, puis raffinement par interpolation parabolique sur les
+trois hauteurs du triplet. La hauteur publiée est recalculée par le moteur au
+temps raffiné.
+
+Ce choix évite une dérivée numérique bruitée, reste pur et déterministe dans
+`amar-core`, et donne une précision largement meilleure que le gate NOAA
+`|Δt| <= 10 min` et `|Δh| <= 3 cm` p95.
+
+### Validation NOAA PM/BM
+
+Commande :
+
+```bash
+make m3-check
+```
+
+Le gate `validate-hilo` compare chaque PM/BM officiel NOAA
+`product=predictions&interval=hilo&datum=MLLW&units=metric&time_zone=gmt` au
+plus proche extremum prédit de même type.
+
+| Station | Échantillons | p50 Δt min | p95 Δt min | max Δt min | p50 Δh cm | p95 Δh cm | max Δh cm |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `noaa:1612340` Honolulu | 23 | 0,25 | 0,47 | 0,47 | 0,0 | 0,0 | 0,0 |
+| `noaa:8410140` Eastport | 54 | 0,28 | 0,57 | 0,57 | 0,0 | 0,1 | 0,1 |
+| `noaa:8443970` Boston | 27 | 0,27 | 0,48 | 0,60 | 0,0 | 0,1 | 0,1 |
+| `noaa:8724580` Key West | 27 | 0,25 | 0,55 | 0,57 | 0,0 | 0,1 | 0,1 |
+| `noaa:8729840` Pensacola | 15 | 0,28 | 0,72 | 0,72 | 0,0 | 0,1 | 0,1 |
+| `noaa:8771450` Galveston Pier 21 | 21 | 0,28 | 0,78 | 0,80 | 0,0 | 0,0 | 0,1 |
+| `noaa:9414290` San Francisco | 27 | 0,22 | 0,45 | 0,45 | 0,0 | 0,1 | 0,1 |
+| `noaa:9447130` Seattle | 55 | 0,32 | 0,55 | 0,57 | 0,0 | 0,1 | 0,1 |
+
+Fenêtres par fichier :
+
+| Station | Fenêtre | Échantillons | p95 Δt min | p95 Δh cm |
+|---|---|---:|---:|---:|
+| `noaa:1612340` Honolulu | 2026 | 23 | 0,47 | 0,0 |
+| `noaa:8410140` Eastport | 2026 | 27 | 0,57 | 0,1 |
+| `noaa:8410140` Eastport | 2031 | 27 | 0,45 | 0,1 |
+| `noaa:8443970` Boston | 2026 | 27 | 0,48 | 0,1 |
+| `noaa:8724580` Key West | 2026 | 27 | 0,55 | 0,1 |
+| `noaa:8729840` Pensacola | 2026 | 15 | 0,72 | 0,1 |
+| `noaa:8771450` Galveston Pier 21 | 2026 | 21 | 0,78 | 0,0 |
+| `noaa:9414290` San Francisco | 2026 | 27 | 0,45 | 0,1 |
+| `noaa:9447130` Seattle | 2026 | 27 | 0,55 | 0,1 |
+| `noaa:9447130` Seattle | 2031 | 28 | 0,52 | 0,1 |
+
+Seattle reste témoin hors réglage. Les fenêtres 2031 sont limitées à Seattle
+et Eastport pour couvrir le témoin et le plus grand marnage du pack.
+
+### Brest
+
+Brest n'a pas d'oracle PM/BM officiel dans M3. La couverture repose sur des
+tests d'invariants : alternance PM/BM, monotonie entre extrema adjacents et
+bornes de fenêtres vérifiant le seuil. Le disclaimer M2 reste applicable :
+les constantes Brest sont expérimentales, non SHOM, et le résidu p95 de 26,6 cm
+s'applique aux seuils.

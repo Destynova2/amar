@@ -1,4 +1,7 @@
-use amar_core::{UtcDateTime, predict_height};
+use amar_core::{
+    Meters, TideThresholdDirection, UtcDateTime, next_extrema_after, predict_height,
+    predict_series, tide_windows,
+};
 use amar_data::{DataError, DataSet, StationMatch, load_packs_from_paths};
 use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
@@ -30,6 +33,10 @@ pub const CONFIDENCE_GRADES: [ConfidenceGrade; 3] = [
     ConfidenceGrade::new(10.0, "B", 15),
     ConfidenceGrade::new(MAX_CONFIDENCE_DISTANCE_KM, "C", 30),
 ];
+const NEXT_EXTREMA_HORIZON_H: u32 = 72;
+const MAX_SERIES_DURATION_H: u32 = 72;
+const MIN_SERIES_STEP_MIN: u32 = 6;
+const MAX_WINDOWS_DURATION_SECONDS: i64 = 31 * 24 * 60 * 60;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ConfidenceGrade {
@@ -75,6 +82,8 @@ pub fn app(data: DataSet, max_distance_km: f64) -> Router {
     let max_distance_km = max_distance_km.min(MAX_CONFIDENCE_DISTANCE_KM);
     Router::new()
         .route("/tide", post(post_tide))
+        .route("/tide/series", post(post_tide_series))
+        .route("/tide/windows", post(post_tide_windows))
         .route("/health", get(get_health))
         .route("/coverage", get(get_coverage))
         .with_state(AppState {
@@ -130,9 +139,108 @@ async fn post_tide(
     let Some(confidence) = confidence_for_station(&station_match) else {
         return Err(ApiError::unsupported_station_confidence(station));
     };
+    let (next_high, next_low) =
+        next_extrema_after(station_match.station.model(), at, NEXT_EXTREMA_HORIZON_H);
 
     Ok(Json(TideResponse {
         height_m: round3(prediction.height().as_meters()),
+        next_high: next_high.map(TideExtremumResponse::from),
+        next_low: next_low.map(TideExtremumResponse::from),
+        datum: station.datum.clone(),
+        source: SourceResponse::from(&station_match),
+        confidence,
+        warnings: warnings_for_station(station),
+    }))
+}
+
+async fn post_tide_series(
+    State(state): State<AppState>,
+    payload: Result<Json<SeriesRequest>, JsonRejection>,
+) -> Result<Json<SeriesResponse>, ApiError> {
+    let Json(request) = payload.map_err(|rejection| {
+        ApiError::invalid_request(format!(
+            "invalid JSON request body: {}",
+            rejection.body_text()
+        ))
+    })?;
+    validate_coordinate("latitude", request.lat, -90.0, 90.0)?;
+    validate_coordinate("longitude", request.lon, -180.0, 180.0)?;
+    if request.duration_h == 0 || request.duration_h > MAX_SERIES_DURATION_H {
+        return Err(ApiError::invalid_request(format!(
+            "duration_h must be between 1 and {MAX_SERIES_DURATION_H}"
+        )));
+    }
+    if request.step_min < MIN_SERIES_STEP_MIN {
+        return Err(ApiError::invalid_request(format!(
+            "step_min must be at least {MIN_SERIES_STEP_MIN}"
+        )));
+    }
+    let from = parse_time_field("from", &request.from)?;
+    let station_match = supported_station(&state, request.lat, request.lon)?;
+    let station = station_match.station.pack();
+    let Some(confidence) = confidence_for_station(&station_match) else {
+        return Err(ApiError::unsupported_station_confidence(station));
+    };
+    let series = predict_series(
+        station_match.station.model(),
+        from,
+        request.duration_h,
+        request.step_min,
+    )
+    .into_iter()
+    .map(TidePointResponse::from)
+    .collect();
+
+    Ok(Json(SeriesResponse {
+        series,
+        datum: station.datum.clone(),
+        source: SourceResponse::from(&station_match),
+        confidence,
+        warnings: warnings_for_station(station),
+    }))
+}
+
+async fn post_tide_windows(
+    State(state): State<AppState>,
+    payload: Result<Json<WindowsRequest>, JsonRejection>,
+) -> Result<Json<WindowsResponse>, ApiError> {
+    let Json(request) = payload.map_err(|rejection| {
+        ApiError::invalid_request(format!(
+            "invalid JSON request body: {}",
+            rejection.body_text()
+        ))
+    })?;
+    validate_coordinate("latitude", request.lat, -90.0, 90.0)?;
+    validate_coordinate("longitude", request.lon, -180.0, 180.0)?;
+    let from = parse_time_field("from", &request.from)?;
+    let to = parse_time_field("to", &request.to)?;
+    if to <= from {
+        return Err(ApiError::invalid_request("to must be after from"));
+    }
+    if to.seconds_since(from) > MAX_WINDOWS_DURATION_SECONDS {
+        return Err(ApiError::invalid_request(
+            "window range must be at most 31 days",
+        ));
+    }
+    let (threshold, direction) = threshold_request(request.above_m, request.below_m)?;
+    let station_match = supported_station(&state, request.lat, request.lon)?;
+    let station = station_match.station.pack();
+    let Some(confidence) = confidence_for_station(&station_match) else {
+        return Err(ApiError::unsupported_station_confidence(station));
+    };
+    let windows = tide_windows(
+        station_match.station.model(),
+        from,
+        to,
+        threshold,
+        direction,
+    )
+    .into_iter()
+    .map(TideWindowResponse::from)
+    .collect();
+
+    Ok(Json(WindowsResponse {
+        windows,
         datum: station.datum.clone(),
         source: SourceResponse::from(&station_match),
         confidence,
@@ -197,6 +305,36 @@ fn validate_coordinate(name: &'static str, value: f64, min: f64, max: f64) -> Re
     }
 }
 
+fn parse_time_field(name: &'static str, value: &str) -> Result<UtcDateTime, ApiError> {
+    UtcDateTime::parse_rfc3339(value).map_err(|_| {
+        ApiError::invalid_request(format!("{name} must be a readable RFC 3339 timestamp"))
+    })
+}
+
+fn threshold_request(
+    above_m: Option<f64>,
+    below_m: Option<f64>,
+) -> Result<(Meters, TideThresholdDirection), ApiError> {
+    match (above_m, below_m) {
+        (Some(_), Some(_)) => Err(ApiError::invalid_request(
+            "above_m and below_m are mutually exclusive",
+        )),
+        (None, None) => Err(ApiError::invalid_request(
+            "one of above_m or below_m is required",
+        )),
+        (Some(value), None) => {
+            let threshold = Meters::new(value)
+                .map_err(|_| ApiError::invalid_request("above_m must be finite"))?;
+            Ok((threshold, TideThresholdDirection::Above))
+        }
+        (None, Some(value)) => {
+            let threshold = Meters::new(value)
+                .map_err(|_| ApiError::invalid_request("below_m must be finite"))?;
+            Ok((threshold, TideThresholdDirection::Below))
+        }
+    }
+}
+
 /// Confidence metadata for a matched station.
 ///
 /// NOAA-style stations use the M1 distance heuristic. Experimental stations
@@ -248,6 +386,10 @@ fn round1(value: f64) -> f64 {
     (value * 10.0).round() / 10.0
 }
 
+fn format_utc(at: UtcDateTime) -> String {
+    at.as_chrono().format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
 #[derive(Debug, Deserialize)]
 struct TideRequest {
     lat: f64,
@@ -258,10 +400,94 @@ struct TideRequest {
 #[derive(Debug, Serialize)]
 struct TideResponse {
     height_m: f64,
+    next_high: Option<TideExtremumResponse>,
+    next_low: Option<TideExtremumResponse>,
     datum: String,
     source: SourceResponse,
     confidence: ConfidenceResponse,
     warnings: Vec<&'static str>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SeriesRequest {
+    lat: f64,
+    lon: f64,
+    from: String,
+    duration_h: u32,
+    step_min: u32,
+}
+
+#[derive(Debug, Serialize)]
+struct SeriesResponse {
+    series: Vec<TidePointResponse>,
+    datum: String,
+    source: SourceResponse,
+    confidence: ConfidenceResponse,
+    warnings: Vec<&'static str>,
+}
+
+#[derive(Debug, Deserialize)]
+struct WindowsRequest {
+    lat: f64,
+    lon: f64,
+    from: String,
+    to: String,
+    above_m: Option<f64>,
+    below_m: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+struct WindowsResponse {
+    windows: Vec<TideWindowResponse>,
+    datum: String,
+    source: SourceResponse,
+    confidence: ConfidenceResponse,
+    warnings: Vec<&'static str>,
+}
+
+#[derive(Debug, Serialize)]
+struct TideExtremumResponse {
+    t: String,
+    height_m: f64,
+}
+
+impl From<amar_core::TideExtremum> for TideExtremumResponse {
+    fn from(extremum: amar_core::TideExtremum) -> Self {
+        Self {
+            t: format_utc(extremum.at()),
+            height_m: round3(extremum.height().as_meters()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct TidePointResponse {
+    t: String,
+    height_m: f64,
+}
+
+impl From<amar_core::TidePoint> for TidePointResponse {
+    fn from(point: amar_core::TidePoint) -> Self {
+        Self {
+            t: format_utc(point.at()),
+            height_m: round3(point.height().as_meters()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct TideWindowResponse {
+    start: String,
+    end: String,
+}
+
+impl From<amar_core::TideWindow> for TideWindowResponse {
+    fn from(window: amar_core::TideWindow) -> Self {
+        Self {
+            start: format_utc(window.start()),
+            end: format_utc(window.end()),
+        }
+    }
 }
 
 /// Serialized station source metadata shared by CLI and HTTP responses.

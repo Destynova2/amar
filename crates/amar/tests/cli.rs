@@ -111,3 +111,38 @@ fn tide_returns_brest_experimental_confidence() {
     assert!(body["warnings"].to_string().contains("experimental"));
     assert!(body["warnings"].to_string().contains("not_shom"));
 }
+
+#[test]
+fn window_returns_brest_kayak_windows() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("window")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--from")
+            .arg("2026-08-15T00:00:00Z")
+            .arg("--to")
+            .arg("2026-08-16T12:00:00Z")
+            .arg("--above")
+            .arg("4.5")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["datum"], "zero_hydrographique_brest");
+    assert_eq!(body["source"]["id"], "refmar:3");
+    assert!(body["warnings"].to_string().contains("experimental"));
+    assert!(
+        body["windows"]
+            .as_array()
+            .is_some_and(|windows| !windows.is_empty())
+    );
+}

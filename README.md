@@ -3,9 +3,10 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.1.x ajoute Brest expérimental au socle NOAA : on lance un serveur local,
-on envoie `lat/lon/datetime`, et la réponse donne soit une hauteur traçable,
-soit un refus utile.
+amar v0.1.x ajoute Brest expérimental au socle NOAA, puis M3 ajoute les
+prochains PM/BM, les séries bornées et les fenêtres de seuil : on lance un
+serveur local, on envoie `lat/lon/datetime`, et la réponse donne soit une
+hauteur traçable, soit un refus utile.
 
 ## Installation
 
@@ -39,6 +40,14 @@ curl -i -H 'content-type: application/json' \
 ```json
 {
   "height_m": 0.737,
+  "next_high": {
+    "height_m": 1.758,
+    "t": "2026-08-15T21:33:25Z"
+  },
+  "next_low": {
+    "height_m": 0.043,
+    "t": "2026-08-15T14:43:27Z"
+  },
   "datum": "MLLW",
   "source": {
     "kind": "station",
@@ -76,6 +85,14 @@ curl -i -H 'content-type: application/json' \
 ```json
 {
   "height_m": 1.09,
+  "next_high": {
+    "height_m": 7.336,
+    "t": "2026-08-15T17:43:06Z"
+  },
+  "next_low": {
+    "height_m": 1.088,
+    "t": "2026-08-16T00:09:32Z"
+  },
   "datum": "zero_hydrographique_brest",
   "source": {
     "kind": "station",
@@ -120,7 +137,9 @@ curl -i -H 'content-type: application/json' \
 
 | Endpoint | Rôle |
 |---|---|
-| `POST /tide` | Hauteur instantanée près d'une station supportée |
+| `POST /tide` | Hauteur instantanée et prochains PM/BM près d'une station supportée |
+| `POST /tide/series` | Série `[{t,height_m}]`, `duration_h <= 72`, `step_min >= 6` |
+| `POST /tide/windows` | Fenêtres `[{start,end}]` au-dessus ou au-dessous d'un seuil, plage <= 31 jours |
 | `GET /health` | Version, nombre de stations, version du pack |
 | `GET /coverage` | Stations embarquées et rayon accepté |
 
@@ -143,6 +162,9 @@ Pour Brest, `confidence.method` vaut `calibrated_station_experimental` et
 `residual_benchmark_cm` mesure le p95 du benchmark hors calibration. Le résidu
 = niveau d'eau observé − marée astronomique prédite (météo incluse).
 
+Les réponses `/tide/series` et `/tide/windows` gardent la même forme de
+`datum`, `source`, `confidence` et `warnings` que `/tide`.
+
 ## CLI
 
 Le même binaire garde l'usage CLI M0 :
@@ -152,21 +174,73 @@ amar tide --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z --pack ~/.local/
 amar tide --lat 48.383 --lon -4.495 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
 ```
 
+Série NOAA de 3 h à San Francisco :
+
+```bash
+amar tide --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z --duration-h 3 --step-min 60 --pack ~/.local/share/amar/packs/noaa_m0.json
+```
+
+Fenêtre NOAA au-dessus de 1,5 m MLLW :
+
+```bash
+amar window --lat 37.806 --lon -122.465 --from 2026-08-15T00:00:00Z --to 2026-08-16T00:00:00Z --above 1.5 --pack ~/.local/share/amar/packs/noaa_m0.json
+```
+
+```json
+{
+  "windows": [
+    {
+      "start": "2026-08-15T06:40:44Z",
+      "end": "2026-08-15T10:11:36Z"
+    },
+    {
+      "start": "2026-08-15T19:53:56Z",
+      "end": "2026-08-15T23:10:18Z"
+    }
+  ]
+}
+```
+
+Fenêtre de sortie kayak à Brest demain matin dans le calendrier du dépôt
+(`2026-07-07`), seuil exprimé au zéro hydrographique de Brest :
+
+```bash
+amar window --lat 48.383 --lon -4.495 --from 2026-07-07T04:00:00Z --to 2026-07-07T12:00:00Z --above 4.5 --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
+```
+
+```json
+{
+  "windows": [
+    {
+      "start": "2026-07-07T06:00:46Z",
+      "end": "2026-07-07T11:30:21Z"
+    }
+  ]
+}
+```
+
+Brest reste expérimental : l'incertitude verticale d'une fenêtre de seuil est
+de l'ordre du benchmark, soit `residual_benchmark_cm = 26.6`.
+
 Depuis le dépôt :
 
 ```bash
 make m0-validate
 make m1-smoke
 make m2-benchmark
+make m3-check
 ```
 
 Commandes disponibles :
 
 | Commande | Rôle |
 |---|---|
-| `amar tide --lat <deg> --lon <deg> --at <utc>` | Calcule une hauteur instantanée |
+| `amar tide --lat <deg> --lon <deg> --at <utc>` | Calcule une hauteur instantanée et les prochains PM/BM |
+| `amar tide --lat <deg> --lon <deg> --at <utc> --duration-h <h> --step-min <min>` | Calcule une série bornée |
+| `amar window --lat <deg> --lon <deg> --from <utc> --to <utc> --above <m>` | Calcule les fenêtres au-dessus d'un seuil |
 | `amar serve --addr 127.0.0.1:3000` | Sert l'API locale |
 | `amar validate` | Gate p95 vs prédictions NOAA, exit 1 au-delà de 2 cm |
+| `amar validate-hilo` | Gate p95 vs PM/BM NOAA, exit 1 au-delà de 10 min ou 3 cm |
 | `amar benchmark-brest` | Rejoue `benchmark_brest_v1` et les deux baselines |
 | `amar pack-noaa` | Compile les fixtures NOAA brutes en pack |
 
@@ -194,6 +268,8 @@ make m1-smoke
 make fetch-refmar
 make build-brest-pack
 make m2-benchmark
+make fetch-noaa-hilo
+make m3-check
 ```
 
 ## Licence

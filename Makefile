@@ -7,8 +7,11 @@ BREST_PACK = data/packs/amar-data-brest-experimental.json
 BREST_STATION_COUNT := $(shell test -f $(BREST_PACK) && printf 1 || printf 0)
 STATION_COUNT := $(shell expr $(NOAA_STATION_COUNT) + $(BREST_STATION_COUNT))
 YEARS = 2026 2031 2036
+HILO_YEARS = 2026
+HILO_DRIFT_YEARS = 2031
+HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa pack-noaa fetch-refmar build-brest-pack m0-validate m2-benchmark release m1-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo pack-noaa fetch-refmar build-brest-pack m0-validate m2-benchmark m3-check release m1-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -30,6 +33,20 @@ fetch-noaa:
 		done; \
 	done
 
+fetch-noaa-hilo:
+	for station in $(STATIONS); do \
+		mkdir -p fixtures/noaa/$$station; \
+		for year in $(HILO_YEARS); do \
+			curl -fsSL -o fixtures/noaa/$$station/hilo_$${year}-08-15_$${year}-08-21.json "$(NOAA_DATAGETTER)?product=predictions&application=amar&begin_date=$${year}0815&end_date=$${year}0821&datum=MLLW&station=$$station&time_zone=gmt&units=metric&interval=hilo&format=json"; \
+		done; \
+	done
+	for station in $(HILO_DRIFT_STATIONS); do \
+		mkdir -p fixtures/noaa/$$station; \
+		for year in $(HILO_DRIFT_YEARS); do \
+			curl -fsSL -o fixtures/noaa/$$station/hilo_$${year}-08-15_$${year}-08-21.json "$(NOAA_DATAGETTER)?product=predictions&application=amar&begin_date=$${year}0815&end_date=$${year}0821&datum=MLLW&station=$$station&time_zone=gmt&units=metric&interval=hilo&format=json"; \
+		done; \
+	done
+
 pack-noaa: fetch-noaa
 	cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at 2026-07-06 $(foreach station,$(STATIONS),--station $(station))
 
@@ -44,6 +61,9 @@ m0-validate:
 
 m2-benchmark:
 	cargo run -p amar -- benchmark-brest --p95-limit-cm 30
+
+m3-check: test m0-validate m2-benchmark
+	cargo run -p amar -- validate-hilo --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
 
 release:
 	cargo build --release -p amar

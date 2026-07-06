@@ -64,6 +64,74 @@ async fn tide_invalid_input_matches_snapshot() {
 }
 
 #[tokio::test]
+async fn tide_series_returns_bounded_points_with_metadata() {
+    let actual = post_json(
+        "/tide/series",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T12:00:00Z","duration_h":2,"step_min":60}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    assert_eq!(actual.body["datum"], "MLLW");
+    assert_eq!(actual.body["source"]["id"], "noaa:9414290");
+    assert_eq!(actual.body["series"].as_array().map(Vec::len), Some(3));
+    assert_eq!(actual.body["series"][0]["t"], "2026-08-15T12:00:00Z");
+    assert_eq!(actual.body["series"][2]["t"], "2026-08-15T14:00:00Z");
+}
+
+#[tokio::test]
+async fn tide_series_rejects_too_fine_step() {
+    let actual = post_json(
+        "/tide/series",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T12:00:00Z","duration_h":2,"step_min":5}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(actual.body["message"], "step_min must be at least 6");
+}
+
+#[tokio::test]
+async fn tide_windows_returns_threshold_crossing_windows() {
+    let actual = post_json(
+        "/tide/windows",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T00:00:00Z","to":"2026-08-16T00:00:00Z","above_m":1.5}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    assert_eq!(actual.body["datum"], "MLLW");
+    assert_eq!(actual.body["source"]["id"], "noaa:9414290");
+    assert!(
+        actual.body["windows"]
+            .as_array()
+            .is_some_and(|windows| !windows.is_empty())
+    );
+    assert!(actual.body["windows"][0]["start"].as_str().is_some());
+    assert!(actual.body["windows"][0]["end"].as_str().is_some());
+}
+
+#[tokio::test]
+async fn tide_windows_rejects_ambiguous_threshold() {
+    let actual = post_json(
+        "/tide/windows",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T00:00:00Z","to":"2026-08-16T00:00:00Z","above_m":1.5,"below_m":0.2}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        actual.body["message"],
+        "above_m and below_m are mutually exclusive"
+    );
+}
+
+#[tokio::test]
 async fn tide_malformed_json_returns_400() {
     let actual = post_tide(r#"{"lat":37.806,"lon":"#, 20.0).await;
 
@@ -206,13 +274,17 @@ async fn assert_post_snapshot(body: &str, expected_status: StatusCode, expected_
 }
 
 async fn post_tide(body: &str, max_distance_km: f64) -> JsonResponse {
+    post_json("/tide", body, max_distance_km).await
+}
+
+async fn post_json(uri: &str, body: &str, max_distance_km: f64) -> JsonResponse {
     let service = app(must(load_packs_from_paths(&pack_paths())), max_distance_km);
     request_json(
         service,
         must(
             Request::builder()
                 .method(Method::POST)
-                .uri("/tide")
+                .uri(uri)
                 .header("content-type", "application/json")
                 .body(Body::from(body.to_string())),
         ),

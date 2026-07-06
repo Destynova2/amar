@@ -1,5 +1,13 @@
 {
   "height_m": 0.737,
+  "next_high": {
+    "height_m": 1.758,
+    "t": "2026-08-15T21:33:25Z"
+  },
+  "next_low": {
+    "height_m": 0.043,
+    "t": "2026-08-15T14:43:27Z"
+  },
   "datum": "MLLW",
   "source": {
     "kind": "station",

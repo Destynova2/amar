@@ -1,5 +1,13 @@
 {
   "height_m": 1.09,
+  "next_high": {
+    "height_m": 7.336,
+    "t": "2026-08-15T17:43:06Z"
+  },
+  "next_low": {
+    "height_m": 1.088,
+    "t": "2026-08-16T00:09:32Z"
+  },
   "datum": "zero_hydrographique_brest",
   "source": {
     "kind": "station",

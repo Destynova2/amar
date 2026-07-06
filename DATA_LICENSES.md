@@ -78,6 +78,25 @@ Extraction : 2026-07-06.
 | `fixtures/noaa/9447130/predictions_2031-08-15_2031-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20310815&end_date=20310821&datum=MLLW&station=9447130&time_zone=gmt&units=metric&interval=h&format=json` | `46a8993a55d774decc1f38aea5afe85d4695a90f8d9c9818f48e7c24d4d03e39` |
 | `fixtures/noaa/9447130/predictions_2036-08-15_2036-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20360815&end_date=20360821&datum=MLLW&station=9447130&time_zone=gmt&units=metric&interval=h&format=json` | `86caf2ae69b2a6eab48dd5830689a93747e20c0ec4acf78d95086fb199625d6c` |
 
+## Fixtures M3 PM/BM
+
+Extraction : 2026-07-06. Produit NOAA `predictions`, `interval=hilo`,
+datum `MLLW`, unités métriques, fuseau `gmt`. Les fenêtres 2031 sont limitées
+à Seattle, témoin hors réglage, et Eastport, plus grand marnage du pack.
+
+| Fichier | URL d'origine | SHA-256 |
+|---|---|---|
+| `fixtures/noaa/1612340/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=1612340&time_zone=gmt&units=metric&interval=hilo&format=json` | `e39f9cdcf364e85b3b34a893e850b2f67ebd5be24e372fdf0f00acc5b9598520` |
+| `fixtures/noaa/8410140/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=8410140&time_zone=gmt&units=metric&interval=hilo&format=json` | `1383ba4be50894ca852270778adc18808952f0c4c6ea805e3752c21ba8264333` |
+| `fixtures/noaa/8410140/hilo_2031-08-15_2031-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20310815&end_date=20310821&datum=MLLW&station=8410140&time_zone=gmt&units=metric&interval=hilo&format=json` | `7e480b333cbbacd76ec2b296b0dcbf3349f30dd729716390c2990aee9e85b319` |
+| `fixtures/noaa/8443970/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=8443970&time_zone=gmt&units=metric&interval=hilo&format=json` | `dc24b154bfe1fad00538c814ca05099bead242cd6b00447daff7b1217cc918b7` |
+| `fixtures/noaa/8724580/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=8724580&time_zone=gmt&units=metric&interval=hilo&format=json` | `64a2995f3e81c68d1fb67b44a4ebd1bee83a4db894f2ad597295a6642888b021` |
+| `fixtures/noaa/8729840/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=8729840&time_zone=gmt&units=metric&interval=hilo&format=json` | `21025d74dfdddf13220183ff52857d22f8c0c78a6db3327aebbfb038fed5ea4d` |
+| `fixtures/noaa/8771450/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=8771450&time_zone=gmt&units=metric&interval=hilo&format=json` | `143ba9cb67c4efdeecb4ad4eea0ead3c58b6258cd215397b5e893962ce7b6402` |
+| `fixtures/noaa/9414290/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=9414290&time_zone=gmt&units=metric&interval=hilo&format=json` | `2a7d303b5fb4e0f4d5a96fe5c597a84f3fe9bcb31fec2222db94b9f776df7b41` |
+| `fixtures/noaa/9447130/hilo_2026-08-15_2026-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20260815&end_date=20260821&datum=MLLW&station=9447130&time_zone=gmt&units=metric&interval=hilo&format=json` | `dff6e318b4ad5e9d4d81a6ae5cdca7d9fe9353a8c90959a6bc6c00046cc9778e` |
+| `fixtures/noaa/9447130/hilo_2031-08-15_2031-08-21.json` | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=amar&begin_date=20310815&end_date=20310821&datum=MLLW&station=9447130&time_zone=gmt&units=metric&interval=hilo&format=json` | `a79449cbb1eaaac756fb8a684864661537e8b8b72c53711b9ad905b4ff7763db` |
+
 ## Pack M1
 
 | Fichier | Origine | SHA-256 |

@@ -2,7 +2,7 @@
 
 use amar_core::{
     ConstituentId, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, Meters, PredictionMethod,
-    TideModel, UtcDateTime, predict_height,
+    TideExtremumKind, TideModel, UtcDateTime, predict_height,
 };
 use amar_pack::{
     ConstituentPack, DegreesPerHourValue, DegreesValue, LatitudeDegValue, LongitudeDegValue,
@@ -41,6 +41,8 @@ pub enum DataError {
     InvalidPredictionTime(String),
     #[error("invalid NOAA prediction value {0}")]
     InvalidPredictionValue(String),
+    #[error("invalid NOAA hilo prediction type {0}")]
+    InvalidPredictionType(String),
 }
 
 #[derive(Clone, Debug)]
@@ -137,6 +139,13 @@ pub struct OfficialPrediction {
     pub height: Meters,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct OfficialExtremum {
+    pub at: UtcDateTime,
+    pub height: Meters,
+    pub kind: TideExtremumKind,
+}
+
 pub fn load_pack_from_path(path: impl AsRef<Path>) -> Result<DataSet, DataError> {
     let path = path.as_ref();
     let data = fs::read_to_string(path).map_err(|source| DataError::Io {
@@ -224,6 +233,38 @@ pub fn load_official_predictions(
             Ok(OfficialPrediction {
                 at: UtcDateTime::from_utc(naive.and_utc().with_timezone(&Utc)),
                 height: Meters::new(value)?,
+            })
+        })
+        .collect()
+}
+
+pub fn load_official_hilo_predictions(
+    path: impl AsRef<Path>,
+) -> Result<Vec<OfficialExtremum>, DataError> {
+    let path = path.as_ref();
+    let data = fs::read_to_string(path).map_err(|source| DataError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    let raw = serde_json::from_str::<NoaaHiloPredictions>(&data)?;
+    raw.predictions
+        .into_iter()
+        .map(|prediction| {
+            let naive = NaiveDateTime::parse_from_str(&prediction.t, "%Y-%m-%d %H:%M")
+                .map_err(|_| DataError::InvalidPredictionTime(prediction.t.clone()))?;
+            let value = prediction
+                .v
+                .parse::<f64>()
+                .map_err(|_| DataError::InvalidPredictionValue(prediction.v.clone()))?;
+            let kind = match prediction.prediction_type.as_str() {
+                "H" => TideExtremumKind::High,
+                "L" => TideExtremumKind::Low,
+                other => return Err(DataError::InvalidPredictionType(other.to_string())),
+            };
+            Ok(OfficialExtremum {
+                at: UtcDateTime::from_utc(naive.and_utc().with_timezone(&Utc)),
+                height: Meters::new(value)?,
+                kind,
             })
         })
         .collect()
@@ -439,6 +480,19 @@ struct NoaaPredictions {
 struct NoaaPrediction {
     t: String,
     v: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct NoaaHiloPredictions {
+    predictions: Vec<NoaaHiloPrediction>,
+}
+
+#[derive(Debug, Deserialize)]
+struct NoaaHiloPrediction {
+    t: String,
+    v: String,
+    #[serde(rename = "type")]
+    prediction_type: String,
 }
 
 #[cfg(test)]

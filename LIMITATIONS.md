@@ -1,6 +1,12 @@
-# Limitations M2
+# Limitations M3
 
 - Marée astronomique seule.
+- Les fenêtres de seuil sont des fenêtres de marée astronomique seule :
+  pression, vent, surcote, débit, houle et événements météo ne sont pas pris en
+  compte.
+- L'incertitude publiée s'applique aux seuils. Pour Brest, une fenêtre calculée
+  autour de `above_m`/`below_m` porte une incertitude verticale de l'ordre du
+  benchmark expérimental, soit 26,6 cm p95 sur la fenêtre figée.
 - Non utilisable pour la navigation.
 - Brest est calculé uniquement via le pack expérimental `refmar:3`.
 - Brest n'utilise pas de constantes SHOM : les constantes sont dérivées des
@@ -10,7 +16,7 @@
 - La validation Brest mesure un résidu = niveau d'eau observé − marée
   astronomique prédite (météo incluse), pas une validation officielle.
 - Brest n'a pas de grade A/B/C. La réponse expose le p95 du benchmark figé.
-- Pas de PM/BM, pas de séries temporelles, pas de coefficient.
+- PM/BM, séries temporelles et fenêtres sont disponibles. Pas de coefficient.
 - Pas de pression, pas de surcote météo.
 - Pas de grille.
 - Pas d'OpenAPI, pas de page démo, pas de Docker.

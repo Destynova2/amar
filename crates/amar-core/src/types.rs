@@ -131,7 +131,7 @@ impl fmt::Display for DatumId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct UtcDateTime(DateTime<Utc>);
 
 impl UtcDateTime {
@@ -151,6 +151,10 @@ impl UtcDateTime {
 
     pub fn add_seconds(self, seconds: i64) -> Self {
         Self(self.0 + TimeDelta::seconds(seconds))
+    }
+
+    pub fn seconds_since(self, earlier: Self) -> i64 {
+        (self.0 - earlier.0).num_seconds()
     }
 
     pub(crate) fn civil_year_start(self) -> Self {
@@ -322,6 +326,71 @@ impl TidePrediction {
 
     pub fn method(&self) -> PredictionMethod {
         self.method
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TideExtremumKind {
+    High,
+    Low,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TideExtremum {
+    pub(crate) at: UtcDateTime,
+    pub(crate) height: Meters,
+    pub(crate) kind: TideExtremumKind,
+}
+
+impl TideExtremum {
+    pub fn at(self) -> UtcDateTime {
+        self.at
+    }
+
+    pub fn height(self) -> Meters {
+        self.height
+    }
+
+    pub fn kind(self) -> TideExtremumKind {
+        self.kind
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TidePoint {
+    pub(crate) at: UtcDateTime,
+    pub(crate) height: Meters,
+}
+
+impl TidePoint {
+    pub fn at(self) -> UtcDateTime {
+        self.at
+    }
+
+    pub fn height(self) -> Meters {
+        self.height
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TideThresholdDirection {
+    Above,
+    Below,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TideWindow {
+    pub(crate) start: UtcDateTime,
+    pub(crate) end: UtcDateTime,
+}
+
+impl TideWindow {
+    pub fn start(self) -> UtcDateTime {
+        self.start
+    }
+
+    pub fn end(self) -> UtcDateTime {
+        self.end
     }
 }
 
