@@ -107,6 +107,30 @@ pub(crate) struct CalibrationResult {
     pub(crate) model: TideModel,
 }
 
+#[derive(Clone)]
+pub(crate) struct PreparedConstituent {
+    pub(crate) spec: ConstituentSpec,
+    pub(crate) id: ConstituentId,
+    pub(crate) speed: DegreesPerHour,
+}
+
+pub(crate) struct DesignSystem {
+    pub(crate) matrix: DMatrix<f64>,
+    pub(crate) values: DVector<f64>,
+}
+
+struct PreparedYearContext {
+    context: HarmonicYearContext,
+    constituents: Vec<PreparedYearConstituent>,
+}
+
+struct PreparedYearConstituent {
+    argument0_degrees: f64,
+    nodal_phase_degrees: f64,
+    nodal_factor: f64,
+    speed_degrees_per_hour: f64,
+}
+
 pub(crate) fn calibrate(
     samples: &[Observation],
     calibration_start: DateTime<Utc>,
@@ -119,47 +143,14 @@ pub(crate) fn calibrate(
     let constituent_specs = constituent_set.specs();
     enforce_resolvable_window(calibration_start, calibration_end, constituent_specs)?;
 
-    let columns = 1 + constituent_specs.len() * 2;
-    let mut matrix = Vec::with_capacity(samples.len() * columns);
-    let mut values = Vec::with_capacity(samples.len());
-    let mut year_contexts = BTreeMap::new();
-    let ids = constituent_specs
-        .iter()
-        .map(|spec| {
-            Ok((
-                spec,
-                ConstituentId::new(spec.name)?,
-                DegreesPerHour::new(spec.speed_deg_per_hour)?,
-            ))
-        })
-        .collect::<Result<Vec<_>, CalError>>()?;
-
-    for sample in samples {
-        matrix.push(1.0);
-        let at = UtcDateTime::from_utc(sample.at);
-        let year_context = year_contexts
-            .entry(sample.at.year())
-            .or_insert_with(|| HarmonicYearContext::new(at));
-        for (_, id, speed) in &ids {
-            let basis = year_context.basis(id, *speed, at)?;
-            let radians = basis.argument_degrees.to_radians();
-            matrix.push(basis.nodal_factor * radians.cos());
-            matrix.push(basis.nodal_factor * radians.sin());
-        }
-        values.push(sample.value_m);
-    }
-
-    let a = DMatrix::from_row_slice(samples.len(), columns, &matrix);
-    let y = DVector::from_row_slice(&values);
-    let solution = a
-        .svd(true, true)
-        .solve(&y, 1.0e-10)
-        .map_err(|_| CalError::SolveFailed)?;
+    let prepared_constituents = prepare_constituents(constituent_specs)?;
+    let design_system = assemble_design_system(samples, &prepared_constituents)?;
+    let solution = solve_svd(design_system.matrix, &design_system.values)?;
 
     let z0_m = solution[0];
-    let mut constituents = Vec::with_capacity(constituent_specs.len());
+    let mut pack_constituents = Vec::with_capacity(constituent_specs.len());
     let mut model_constituents = Vec::with_capacity(constituent_specs.len());
-    for (index, (spec, id, speed)) in ids.iter().enumerate() {
+    for (index, constituent) in prepared_constituents.iter().enumerate() {
         let cos_coefficient = solution[1 + index * 2];
         let sin_coefficient = solution[1 + index * 2 + 1];
         let amplitude_m = cos_coefficient.hypot(sin_coefficient);
@@ -167,17 +158,17 @@ pub(crate) fn calibrate(
             .atan2(cos_coefficient)
             .to_degrees()
             .rem_euclid(360.0);
-        constituents.push(ConstituentPack {
-            name: spec.name.to_string(),
+        pack_constituents.push(ConstituentPack {
+            name: constituent.spec.name.to_string(),
             amplitude_m: MetersValue::new(amplitude_m),
             phase_gmt_deg: DegreesValue::new(phase_gmt_deg),
-            speed_deg_per_hour: DegreesPerHourValue::new(spec.speed_deg_per_hour),
+            speed_deg_per_hour: DegreesPerHourValue::new(constituent.spec.speed_deg_per_hour),
         });
         model_constituents.push(HarmonicConstituent::new(
-            id.clone(),
+            constituent.id.clone(),
             Meters::new(amplitude_m)?,
             Degrees::new(phase_gmt_deg)?,
-            *speed,
+            constituent.speed,
         ));
     }
     let model = TideModel::new(
@@ -189,9 +180,92 @@ pub(crate) fn calibrate(
 
     Ok(CalibrationResult {
         z0_m,
-        constituents,
+        constituents: pack_constituents,
         model,
     })
+}
+
+pub(crate) fn prepare_constituents(
+    constituent_specs: &[ConstituentSpec],
+) -> Result<Vec<PreparedConstituent>, CalError> {
+    constituent_specs
+        .iter()
+        .map(|spec| {
+            Ok(PreparedConstituent {
+                spec: *spec,
+                id: ConstituentId::new(spec.name)?,
+                speed: DegreesPerHour::new(spec.speed_deg_per_hour)?,
+            })
+        })
+        .collect()
+}
+
+pub(crate) fn assemble_design_system(
+    samples: &[Observation],
+    constituents: &[PreparedConstituent],
+) -> Result<DesignSystem, CalError> {
+    let columns = 1 + constituents.len() * 2;
+    let mut matrix = DMatrix::zeros(samples.len(), columns);
+    let mut values = DVector::zeros(samples.len());
+    let mut year_contexts = BTreeMap::new();
+
+    for (row, sample) in samples.iter().enumerate() {
+        matrix[(row, 0)] = 1.0;
+        let at = UtcDateTime::from_utc(sample.at);
+        let year_context = match year_contexts.entry(sample.at.year()) {
+            std::collections::btree_map::Entry::Occupied(entry) => entry.into_mut(),
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                entry.insert(prepare_year_context(at, constituents)?)
+            }
+        };
+        let hours = year_context.context.hours_since_year_start(at)?;
+        for (index, constituent) in year_context.constituents.iter().enumerate() {
+            let radians = (constituent.argument0_degrees
+                + constituent.speed_degrees_per_hour * hours
+                + constituent.nodal_phase_degrees)
+                .to_radians();
+            let (sin, cos) = radians.sin_cos();
+            let column = 1 + index * 2;
+            matrix[(row, column)] = constituent.nodal_factor * cos;
+            matrix[(row, column + 1)] = constituent.nodal_factor * sin;
+        }
+        values[row] = sample.value_m;
+    }
+
+    Ok(DesignSystem { matrix, values })
+}
+
+fn prepare_year_context(
+    at: UtcDateTime,
+    constituents: &[PreparedConstituent],
+) -> Result<PreparedYearContext, CalError> {
+    let context = HarmonicYearContext::new(at);
+    let constituents = constituents
+        .iter()
+        .map(|constituent| {
+            let basis = context.annual_basis(&constituent.id)?;
+            Ok(PreparedYearConstituent {
+                argument0_degrees: basis.argument0_degrees,
+                nodal_phase_degrees: basis.nodal_phase_degrees,
+                nodal_factor: basis.nodal_factor,
+                speed_degrees_per_hour: constituent.speed.as_degrees_per_hour(),
+            })
+        })
+        .collect::<Result<Vec<_>, CalError>>()?;
+    Ok(PreparedYearContext {
+        context,
+        constituents,
+    })
+}
+
+pub(crate) fn solve_svd(
+    matrix: DMatrix<f64>,
+    values: &DVector<f64>,
+) -> Result<DVector<f64>, CalError> {
+    matrix
+        .svd(true, true)
+        .solve(values, 1.0e-10)
+        .map_err(|_| CalError::SolveFailed)
 }
 
 fn enforce_resolvable_window(

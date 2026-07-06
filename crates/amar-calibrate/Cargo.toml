@@ -19,6 +19,12 @@ thiserror.workspace = true
 
 [dev-dependencies]
 amar-data.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "m4_calibrate"
+path = "../../benches/m4_calibrate.rs"
+harness = false
 
 [lints]
 workspace = true

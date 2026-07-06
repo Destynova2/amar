@@ -16,8 +16,14 @@ thiserror.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 http-body-util.workspace = true
 tower.workspace = true
+
+[[bench]]
+name = "m4_core"
+path = "../../benches/m4_core.rs"
+harness = false
 
 [lints]
 workspace = true

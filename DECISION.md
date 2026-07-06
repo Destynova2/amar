@@ -495,3 +495,88 @@ s'applique aux seuils.
 
 M3.1 : les fenêtres de seuil sont clampées à `[from,to]` ; sans croisement, une plage active renvoie `[from,to]`.
 M3.1 : le contrat CLI/serveur est factorisé pour bornes, validations et shapes JSON.
+
+## M4 — Performance prouvée
+
+Date : 2026-07-06.
+
+Règle de décision : aucun patch de performance n'est conservé sans preuve
+d'équivalence et mesure A/B Criterion. Un gain dans le bruit ou négatif entraîne
+le retrait du patch.
+
+### Baseline Criterion
+
+Baseline mesurée après ajout du harnais Criterion, avant XRAY-001, XRAY-002 et
+XRAY-006.
+
+Commandes :
+
+```bash
+cargo bench -p amar --bench m4_core -- --save-baseline m4-baseline
+cargo bench -p amar-calibrate --bench m4_calibrate -- --save-baseline m4-baseline
+```
+
+| Benchmark | Baseline |
+|---|---:|
+| `predict_height_brest37_one_timestamp` | 0,510 µs |
+| `predict_series_brest37_72h_step6m_721_points` | 446,77 µs |
+| `tide_windows_brest37_31d_above_4m` | 6,100 ms |
+| `calibrate_ls_brest37_synthetic/assemble_matrix_only` | 61,73 ms |
+| `calibrate_ls_brest37_synthetic/svd_only` | 186,25 ms |
+
+### Résultats A/B retenus
+
+Commandes :
+
+```bash
+cargo bench -p amar --bench m4_core -- --baseline m4-baseline
+cargo bench -p amar-calibrate --bench m4_calibrate -- --baseline m4-baseline
+```
+
+| Benchmark | Baseline | Après | Verdict Criterion |
+|---|---:|---:|---|
+| `predict_height_brest37_one_timestamp` | 0,510 µs | 0,513 µs | pas de changement détecté |
+| `predict_series_brest37_72h_step6m_721_points` | 446,77 µs | 84,39 µs | gain -80,97 % |
+| `tide_windows_brest37_31d_above_4m` | 6,100 ms | 1,490 ms | gain -75,55 % |
+| `calibrate_ls_brest37_synthetic/assemble_matrix_only` | 61,73 ms | 11,891 ms | gain -80,68 % |
+| `calibrate_ls_brest37_synthetic/svd_only` | 186,25 ms | 185,09 ms | dans le bruit |
+
+XRAY-001 est retenu pour les boucles longues : le modèle annuel compilé est
+construit une fois par requête et reconstruit au franchissement d'année UTC.
+`predict_height` isolé reste sur le chemin direct, car compiler par appel n'a
+pas de gain prouvé sur le benchmark à un timestamp.
+
+XRAY-002 est retenu : l'assemblage LS pré-calcule les termes par
+`(année, constituant)` et n'appelle plus qu'un `sin_cos` par constituant et par
+échantillon. L'ordre flottant historique `V0 + speed*h + u` est conservé pour
+garder le pack Brest byte-identique.
+
+XRAY-006 est partiellement retenu : le remplissage direct de `DMatrix` dans le
+solveur est conservé. Mesuré contre la baseline intermédiaire `m4-xray002`,
+l'assemblage passe de 15,21 ms à 11,88 ms, soit -21,85 %. Les
+`Vec::with_capacity` côté `predict_series` et `sample_heights` ont été
+tentés puis retirés : `predict_series` régressait de +1,29 % et
+`tide_windows` restait dans le bruit.
+
+### Preuves d'équivalence
+
+- Test propriété old-vs-compiled sur timestamps aléatoires 2020-2030 :
+  `|Δh| <= 1e-9 m`.
+- Test déterministe old-vs-compiled sur ±60 s autour des 1ers janvier UTC
+  2020-2031 : `|Δh| <= 1e-9 m`.
+- `cargo test --workspace` : 64 tests verts, incluant golden NOAA.
+- Pack Brest régénéré byte-identique :
+  `e377e25754e9cbc6a05e732d0dcff2db2c1305b57037432312015ae45d749919`.
+- `benchmark_brest_v1` inchangé :
+  `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f`.
+
+### Gates M4
+
+| Gate | Résultat |
+|---|---|
+| `cargo fmt --all --check` | vert |
+| `cargo clippy --workspace --all-targets -- -D warnings` | vert |
+| `make m0-validate` | vert, p95 NOAA max 0,3 cm |
+| `make m1-smoke` | vert |
+| `make m2-benchmark` | vert, Brest p95 15,8 cm |
+| `make m3-check` | vert, hilo p95 max Δt 0,78 min et Δh 0,1 cm |

@@ -1,6 +1,6 @@
 use crate::{
-    Meters, TideExtremum, TideExtremumKind, TideModel, TideThresholdDirection, TideWindow,
-    UtcDateTime, predict_height,
+    HeightEvaluator, Meters, TideExtremum, TideExtremumKind, TideModel, TideThresholdDirection,
+    TideWindow, UtcDateTime,
 };
 
 const EXTREMUM_SAMPLE_STEP_SECONDS: i64 = 6 * 60;
@@ -17,7 +17,8 @@ pub fn extrema_between(model: &TideModel, from: UtcDateTime, to: UtcDateTime) ->
         return Vec::new();
     }
 
-    let samples = sample_heights(model, from, to, EXTREMUM_SAMPLE_STEP_SECONDS);
+    let mut evaluator = HeightEvaluator::new(model, from);
+    let samples = sample_heights(&mut evaluator, from, to, EXTREMUM_SAMPLE_STEP_SECONDS);
     let mut extrema = Vec::new();
     for triplet in samples.windows(3) {
         let (left_at, left_height) = triplet[0];
@@ -40,7 +41,7 @@ pub fn extrema_between(model: &TideModel, from: UtcDateTime, to: UtcDateTime) ->
         );
         extrema.push(TideExtremum {
             at,
-            height: predict_height(model, at).height,
+            height: evaluator.predict_height(at).height,
             kind,
         });
     }
@@ -81,7 +82,8 @@ pub fn tide_windows(
 
     let scan_from = from.add_seconds(-WINDOW_SCAN_MARGIN_SECONDS);
     let scan_to = to.add_seconds(WINDOW_SCAN_MARGIN_SECONDS);
-    let roots = threshold_crossings(model, scan_from, scan_to, threshold, direction);
+    let mut evaluator = HeightEvaluator::new(model, scan_from);
+    let roots = threshold_crossings(&mut evaluator, scan_from, scan_to, threshold, direction);
     let mut boundaries = Vec::with_capacity(roots.len() + 2);
     boundaries.push(scan_from);
     boundaries.extend(roots);
@@ -95,7 +97,7 @@ pub fn tide_windows(
             continue;
         }
         let middle = start.add_seconds(end.seconds_since(start) / 2);
-        if threshold_active(model, middle, threshold, direction) {
+        if threshold_active(&mut evaluator, middle, threshold, direction) {
             push_clamped_window(&mut windows, start, end, from, to);
         }
     }
@@ -103,7 +105,7 @@ pub fn tide_windows(
 }
 
 fn sample_heights(
-    model: &TideModel,
+    evaluator: &mut HeightEvaluator<'_>,
     from: UtcDateTime,
     to: UtcDateTime,
     step_seconds: i64,
@@ -111,11 +113,11 @@ fn sample_heights(
     let mut samples = Vec::new();
     let mut at = from;
     while at <= to {
-        samples.push((at, predict_height(model, at).height().as_meters()));
+        samples.push((at, evaluator.predict_height(at).height().as_meters()));
         at = at.add_seconds(step_seconds);
     }
     if samples.last().map(|(at, _)| *at) != Some(to) {
-        samples.push((to, predict_height(model, to).height().as_meters()));
+        samples.push((to, evaluator.predict_height(to).height().as_meters()));
     }
     samples
 }
@@ -159,7 +161,7 @@ fn dedup_extrema(mut extrema: Vec<TideExtremum>) -> Vec<TideExtremum> {
 }
 
 fn threshold_crossings(
-    model: &TideModel,
+    evaluator: &mut HeightEvaluator<'_>,
     from: UtcDateTime,
     to: UtcDateTime,
     threshold: Meters,
@@ -167,17 +169,17 @@ fn threshold_crossings(
 ) -> Vec<UtcDateTime> {
     let mut roots = Vec::new();
     let mut left_at = from;
-    let mut left_value = threshold_value(model, left_at, threshold, direction);
+    let mut left_value = threshold_value(evaluator, left_at, threshold, direction);
     push_root_if_new(&mut roots, left_at, left_value);
 
     while left_at < to {
         let remaining_seconds = to.seconds_since(left_at);
         let step = remaining_seconds.min(EXTREMUM_SAMPLE_STEP_SECONDS);
         let right_at = left_at.add_seconds(step);
-        let right_value = threshold_value(model, right_at, threshold, direction);
+        let right_value = threshold_value(evaluator, right_at, threshold, direction);
         if left_value * right_value < 0.0 {
             roots.push(refine_threshold_crossing(
-                model,
+                evaluator,
                 left_at,
                 left_value,
                 right_at,
@@ -210,7 +212,7 @@ fn push_root_if_new(roots: &mut Vec<UtcDateTime>, at: UtcDateTime, value: f64) {
 }
 
 fn refine_threshold_crossing(
-    model: &TideModel,
+    evaluator: &mut HeightEvaluator<'_>,
     mut left_at: UtcDateTime,
     mut left_value: f64,
     mut right_at: UtcDateTime,
@@ -226,7 +228,7 @@ fn refine_threshold_crossing(
     }
     while right_at.seconds_since(left_at) > THRESHOLD_ROOT_TOLERANCE_SECONDS {
         let middle_at = left_at.add_seconds(right_at.seconds_since(left_at) / 2);
-        let middle_value = threshold_value(model, middle_at, threshold, direction);
+        let middle_value = threshold_value(evaluator, middle_at, threshold, direction);
         if left_value * middle_value <= 0.0 {
             right_at = middle_at;
         } else {
@@ -238,12 +240,12 @@ fn refine_threshold_crossing(
 }
 
 fn threshold_value(
-    model: &TideModel,
+    evaluator: &mut HeightEvaluator<'_>,
     at: UtcDateTime,
     threshold: Meters,
     direction: TideThresholdDirection,
 ) -> f64 {
-    let delta = predict_height(model, at).height().as_meters() - threshold.as_meters();
+    let delta = evaluator.predict_height(at).height().as_meters() - threshold.as_meters();
     match direction {
         TideThresholdDirection::Above => delta,
         TideThresholdDirection::Below => -delta,
@@ -251,12 +253,12 @@ fn threshold_value(
 }
 
 fn threshold_active(
-    model: &TideModel,
+    evaluator: &mut HeightEvaluator<'_>,
     at: UtcDateTime,
     threshold: Meters,
     direction: TideThresholdDirection,
 ) -> bool {
-    threshold_value(model, at, threshold, direction) >= 0.0
+    threshold_value(evaluator, at, threshold, direction) >= 0.0
 }
 
 fn push_clamped_window(
