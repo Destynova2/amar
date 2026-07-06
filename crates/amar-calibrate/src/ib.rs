@@ -22,6 +22,8 @@ struct BrestBenchmarkSample {
 
 #[derive(Debug, Deserialize)]
 struct OpenMeteoPressure {
+    timezone: String,
+    utc_offset_seconds: i32,
     hourly: OpenMeteoHourly,
 }
 
@@ -108,6 +110,20 @@ pub(crate) fn diagnose_ib(args: DiagnoseIbArgs) -> Result<(), CalError> {
 
 fn read_pressure(path: &Path) -> Result<BTreeMap<DateTime<Utc>, f64>, CalError> {
     let response = read_json::<OpenMeteoPressure>(path)?;
+    if response.timezone != "GMT" || response.utc_offset_seconds != 0 {
+        return Err(CalError::OpenMeteoTimezone {
+            timezone: response.timezone,
+            utc_offset_seconds: response.utc_offset_seconds,
+        });
+    }
+    let time_len = response.hourly.time.len();
+    let pressure_len = response.hourly.surface_pressure.len();
+    if time_len != pressure_len {
+        return Err(CalError::OpenMeteoHourlyLength {
+            time_len,
+            pressure_len,
+        });
+    }
     let mut values = BTreeMap::new();
     for (time, pressure) in response
         .hourly
@@ -185,4 +201,84 @@ fn mean(values: &[f64]) -> f64 {
         return 0.0;
     }
     values.iter().sum::<f64>() / values.len() as f64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn must<T, E: std::fmt::Debug>(result: Result<T, E>) -> T {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("{error:?}"),
+        }
+    }
+
+    fn pressure_file(name: &str, body: &str) -> std::path::PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!(
+            "amar-open-meteo-{name}-{}-{nanos}.json",
+            std::process::id()
+        ));
+        must(fs::write(&path, body));
+        path
+    }
+
+    fn read_pressure_body(body: &str) -> Result<BTreeMap<DateTime<Utc>, f64>, CalError> {
+        let path = pressure_file("pressure", body);
+        let result = read_pressure(&path);
+        let _ = fs::remove_file(path);
+        result
+    }
+
+    #[test]
+    fn read_pressure_rejects_desynchronized_hourly_arrays() {
+        let result = read_pressure_body(
+            r#"{"timezone":"GMT","utc_offset_seconds":0,"hourly":{"time":["2026-04-01T00:00","2026-04-01T01:00"],"surface_pressure":[1013.2]}}"#,
+        );
+
+        match result {
+            Err(CalError::OpenMeteoHourlyLength {
+                time_len,
+                pressure_len,
+            }) => {
+                assert_eq!(time_len, 2);
+                assert_eq!(pressure_len, 1);
+            }
+            other => panic!("expected hourly length error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn read_pressure_requires_gmt_timezone() {
+        let result = read_pressure_body(
+            r#"{"timezone":"Europe/Paris","utc_offset_seconds":3600,"hourly":{"time":["2026-04-01T00:00"],"surface_pressure":[1013.2]}}"#,
+        );
+
+        match result {
+            Err(CalError::OpenMeteoTimezone {
+                timezone,
+                utc_offset_seconds,
+            }) => {
+                assert_eq!(timezone, "Europe/Paris");
+                assert_eq!(utc_offset_seconds, 3600);
+            }
+            other => panic!("expected timezone error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn read_pressure_parses_gmt_hourly_samples() {
+        let values = must(read_pressure_body(
+            r#"{"timezone":"GMT","utc_offset_seconds":0,"hourly":{"time":["2026-04-01T00:00","2026-04-01T01:00"],"surface_pressure":[1013.2,null]}}"#,
+        ));
+
+        let at = must(DateTime::parse_from_rfc3339("2026-04-01T00:00:00Z")).with_timezone(&Utc);
+        assert_eq!(values.len(), 1);
+        assert_eq!(values.get(&at).copied(), Some(1013.2));
+    }
 }

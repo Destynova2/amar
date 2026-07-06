@@ -5,6 +5,8 @@ use amar_core::{
 use amar_data::{LoadedStation, load_packs_from_paths};
 use std::path::{Path, PathBuf};
 
+const WINDOW_BOUNDARY_TOLERANCE_M: f64 = 0.005;
+
 fn must<T, E: std::fmt::Debug>(result: Result<T, E>) -> T {
     match result {
         Ok(value) => value,
@@ -52,15 +54,73 @@ fn brest_window_boundaries_are_threshold_crossings() {
 
     assert!(!windows.is_empty());
     for window in windows {
-        let start_height = predict_height(station.model(), window.start())
-            .height()
-            .as_meters();
-        let end_height = predict_height(station.model(), window.end())
-            .height()
-            .as_meters();
-        assert!((start_height - threshold.as_meters()).abs() < 0.005);
-        assert!((end_height - threshold.as_meters()).abs() < 0.005);
+        assert!(window.start() >= from);
+        assert!(window.end() <= to);
+        if window.start() != from {
+            let start_height = predict_height(station.model(), window.start())
+                .height()
+                .as_meters();
+            assert!((start_height - threshold.as_meters()).abs() < WINDOW_BOUNDARY_TOLERANCE_M);
+        }
+        if window.end() != to {
+            let end_height = predict_height(station.model(), window.end())
+                .height()
+                .as_meters();
+            assert!((end_height - threshold.as_meters()).abs() < WINDOW_BOUNDARY_TOLERANCE_M);
+        }
     }
+}
+
+#[test]
+fn brest_threshold_always_active_returns_full_window() {
+    let station = brest_station();
+    let from = must(UtcDateTime::parse_rfc3339("2026-08-15T00:00:00Z"));
+    let to = must(UtcDateTime::parse_rfc3339("2026-08-16T12:00:00Z"));
+    let windows = tide_windows(
+        station.model(),
+        from,
+        to,
+        must(Meters::new(-5.0)),
+        TideThresholdDirection::Above,
+    );
+
+    assert_eq!(windows.len(), 1);
+    assert_eq!(windows[0].start(), from);
+    assert_eq!(windows[0].end(), to);
+}
+
+#[test]
+fn brest_threshold_never_active_returns_no_window() {
+    let station = brest_station();
+    let from = must(UtcDateTime::parse_rfc3339("2026-08-15T00:00:00Z"));
+    let to = must(UtcDateTime::parse_rfc3339("2026-08-16T12:00:00Z"));
+    let windows = tide_windows(
+        station.model(),
+        from,
+        to,
+        must(Meters::new(-5.0)),
+        TideThresholdDirection::Below,
+    );
+
+    assert!(windows.is_empty());
+}
+
+#[test]
+fn brest_windows_are_clamped_to_requested_range() {
+    let station = brest_station();
+    let from = must(UtcDateTime::parse_rfc3339("2026-08-15T04:00:00Z"));
+    let to = must(UtcDateTime::parse_rfc3339("2026-08-15T08:00:00Z"));
+    let windows = tide_windows(
+        station.model(),
+        from,
+        to,
+        must(Meters::new(4.5)),
+        TideThresholdDirection::Above,
+    );
+
+    assert_eq!(windows.len(), 1);
+    assert_eq!(windows[0].start(), from);
+    assert_eq!(windows[0].end(), to);
 }
 
 #[test]

@@ -490,5 +490,8 @@ et Eastport pour couvrir le témoin et le plus grand marnage du pack.
 Brest n'a pas d'oracle PM/BM officiel dans M3. La couverture repose sur des
 tests d'invariants : alternance PM/BM, monotonie entre extrema adjacents et
 bornes de fenêtres vérifiant le seuil. Le disclaimer M2 reste applicable :
-les constantes Brest sont expérimentales, non SHOM, et le résidu p95 de 26,6 cm
+les constantes Brest sont expérimentales, non SHOM, et le résidu p95 de 15,8 cm
 s'applique aux seuils.
+
+M3.1 : les fenêtres de seuil sont clampées à `[from,to]` ; sans croisement, une plage active renvoie `[from,to]`.
+M3.1 : le contrat CLI/serveur est factorisé pour bornes, validations et shapes JSON.

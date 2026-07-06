@@ -146,3 +146,64 @@ fn window_returns_brest_kayak_windows() {
             .is_some_and(|windows| !windows.is_empty())
     );
 }
+
+#[test]
+fn window_above_negative_threshold_returns_full_range() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("window")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--from")
+            .arg("2026-08-15T00:00:00Z")
+            .arg("--to")
+            .arg("2026-08-16T12:00:00Z")
+            .arg("--above")
+            .arg("-5")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    let Some(windows) = body["windows"].as_array() else {
+        panic!("windows array");
+    };
+    assert_eq!(windows.len(), 1);
+    assert_eq!(windows[0]["start"], "2026-08-15T00:00:00Z");
+    assert_eq!(windows[0]["end"], "2026-08-16T12:00:00Z");
+}
+
+#[test]
+fn window_below_negative_threshold_returns_no_windows() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("window")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--from")
+            .arg("2026-08-15T00:00:00Z")
+            .arg("--to")
+            .arg("2026-08-16T12:00:00Z")
+            .arg("--below")
+            .arg("-5")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["windows"].as_array().map(Vec::len), Some(0));
+}

@@ -95,6 +95,40 @@ async fn tide_series_rejects_too_fine_step() {
 }
 
 #[tokio::test]
+async fn tide_series_rejects_zero_duration() {
+    let actual = post_json(
+        "/tide/series",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T12:00:00Z","duration_h":0,"step_min":60}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "duration_h must be between 1 and 72"
+    );
+}
+
+#[tokio::test]
+async fn tide_series_rejects_duration_above_limit() {
+    let actual = post_json(
+        "/tide/series",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T12:00:00Z","duration_h":73,"step_min":60}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "duration_h must be between 1 and 72"
+    );
+}
+
+#[tokio::test]
 async fn tide_windows_returns_threshold_crossing_windows() {
     let actual = post_json(
         "/tide/windows",
@@ -113,6 +147,68 @@ async fn tide_windows_returns_threshold_crossing_windows() {
     );
     assert!(actual.body["windows"][0]["start"].as_str().is_some());
     assert!(actual.body["windows"][0]["end"].as_str().is_some());
+}
+
+#[tokio::test]
+async fn tide_windows_above_negative_threshold_returns_full_range() {
+    let actual = post_json(
+        "/tide/windows",
+        r#"{"lat":48.383,"lon":-4.495,"from":"2026-08-15T00:00:00Z","to":"2026-08-16T12:00:00Z","above_m":-5}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    let Some(windows) = actual.body["windows"].as_array() else {
+        panic!("windows array");
+    };
+    assert_eq!(windows.len(), 1);
+    assert_eq!(windows[0]["start"], "2026-08-15T00:00:00Z");
+    assert_eq!(windows[0]["end"], "2026-08-16T12:00:00Z");
+}
+
+#[tokio::test]
+async fn tide_windows_below_negative_threshold_returns_no_windows() {
+    let actual = post_json(
+        "/tide/windows",
+        r#"{"lat":48.383,"lon":-4.495,"from":"2026-08-15T00:00:00Z","to":"2026-08-16T12:00:00Z","below_m":-5}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    assert_eq!(actual.body["windows"].as_array().map(Vec::len), Some(0));
+}
+
+#[tokio::test]
+async fn tide_windows_rejects_range_above_limit() {
+    let actual = post_json(
+        "/tide/windows",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T00:00:00Z","to":"2026-09-16T00:00:00Z","above_m":1.5}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "window range must be at most 31 days"
+    );
+}
+
+#[tokio::test]
+async fn tide_windows_rejects_to_not_after_from() {
+    let actual = post_json(
+        "/tide/windows",
+        r#"{"lat":37.806,"lon":-122.465,"from":"2026-08-15T00:00:00Z","to":"2026-08-15T00:00:00Z","above_m":1.5}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(actual.body["message"], "to must be after from");
 }
 
 #[tokio::test]

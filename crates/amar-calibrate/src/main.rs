@@ -127,6 +127,20 @@ pub(crate) enum CalError {
     Json(#[from] serde_json::Error),
     #[error("invalid timestamp {0}")]
     InvalidTimestamp(String),
+    #[error(
+        "open-meteo hourly time length {time_len} does not match surface_pressure length {pressure_len}"
+    )]
+    OpenMeteoHourlyLength {
+        time_len: usize,
+        pressure_len: usize,
+    },
+    #[error(
+        "open-meteo timezone must be GMT with utc_offset_seconds=0, got {timezone} with offset {utc_offset_seconds}"
+    )]
+    OpenMeteoTimezone {
+        timezone: String,
+        utc_offset_seconds: i32,
+    },
     #[error("invalid observation CSV line {line}: {reason}")]
     InvalidCsvLine { line: String, reason: String },
     #[error("no observations available for {0}")]
