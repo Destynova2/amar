@@ -56,14 +56,16 @@ jobs:
             os: ubuntu-latest
             builder: zig
             smoke: false
+            skip_reason: cross-built Linux ARM64 binary cannot run on the x86_64 Ubuntu runner
           - target: aarch64-apple-darwin
             os: macos-14
             builder: cargo
             smoke: true
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-14
             builder: cargo
-            smoke: true
+            smoke: false
+            skip_reason: cross-built macOS Intel binary cannot run on the ARM64 macOS runner
 
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +113,7 @@ jobs:
 
       - name: Smoke archive skipped
         if: ${{ !matrix.smoke }}
-        run: echo "Skipping aarch64 Linux smoke because this archive is cross-built on an x86_64 runner."
+        run: echo "Skipping smoke: ${{ matrix.skip_reason }}."
 
       - name: Upload archive
         uses: actions/upload-artifact@v4
