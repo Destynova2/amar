@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:847",
+  "provider_station_id": "847",
+  "station_name": "Port Ferreol",
+  "source": 4,
+  "datum": "zero_hydrographique_port_ferreol",
+  "datum_note": "zero_hydrographique; ZH = -0.334 m relative to IGN69; RAM id Port Ferréol in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/847",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/847?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "7fa8d75ddc82a1af0386a69da604c1c76b63e3619a6faea590a3d0c8e249439f",
+  "tidegauge_sha256": "379636c5b5277ac370634774454eaae42991d96dfd109b3564f63d46740dd3e4",
+  "qc": {
+    "expected": 48168,
+    "observed": 47958,
+    "coverage": 0.9956402590931739,
+    "gaps": 26,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_port_ferreol_v1",
+    "checksum_sha256": "4406967c086603acffaf169d3b68c910e86f7cffeac3ae8498fb78e35540aa6d",
+    "calibrated_rms_cm": 5.414287438064869,
+    "calibrated_mae_cm": 4.4118275705219565,
+    "calibrated_p95_cm": 10.77128117162548,
+    "calibrated_max_cm": 15.388324447449675,
+    "z0_rms_cm": 8.874006062397365,
+    "z0_mae_cm": 7.1890226413051,
+    "z0_p95_cm": 17.317518364893736,
+    "z0_max_cm": 26.782481635106265,
+    "rms_factor_vs_z0": 1.638997959363798
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.64 below 2.00"
+  }
+}

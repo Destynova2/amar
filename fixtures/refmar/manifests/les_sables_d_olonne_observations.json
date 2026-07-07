@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:62",
+  "provider_station_id": "62",
+  "station_name": "Les Sables D Olonne",
+  "source": 4,
+  "datum": "zero_hydrographique_les_sables_d_olonne",
+  "datum_note": "zero_hydrographique; ZH = -2.828 m relative to IGN69; RAM id Les Sables d'Olonne in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/62",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/62?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "5f003f02d75451d4401d3b67a1e4002541048eba832fa610023039ff43a4f99d",
+  "tidegauge_sha256": "724f6f836ad3eaf501bc5108681e275f123abdd0f96ec74749808321c7e8ac8c",
+  "qc": {
+    "expected": 48168,
+    "observed": 47232,
+    "coverage": 0.9805680119581465,
+    "gaps": 171,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_les_sables_d_olonne_v1",
+    "checksum_sha256": "69823044277e7f7eac916e195d83a8e1c1cb94a4e6c3022ee5687abd08d677ba",
+    "calibrated_rms_cm": 7.688027964307335,
+    "calibrated_mae_cm": 6.174074237878553,
+    "calibrated_p95_cm": 14.86227690002444,
+    "calibrated_max_cm": 31.554327352599632,
+    "z0_rms_cm": 116.01888999935528,
+    "z0_mae_cm": 99.58216525338356,
+    "z0_p95_cm": 204.25333596225036,
+    "z0_max_cm": 281.7466640377496,
+    "rms_factor_vs_z0": 15.090851716199264
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

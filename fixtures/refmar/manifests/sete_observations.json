@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:250",
+  "provider_station_id": "250",
+  "station_name": "Sete",
+  "source": 4,
+  "datum": "zero_hydrographique_sete",
+  "datum_note": "zero_hydrographique; ZH = -0.307 m relative to IGN69; RAM id Port de Sète in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/250",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/250?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "dd5b56b1bd06b3d756088420521717bd2e6b5b6809e55357dd32bd634fff22c4",
+  "tidegauge_sha256": "c0e0c447f854a9b32fb24c959c776076cb7ce518244c4557c4f0e14e212703cf",
+  "qc": {
+    "expected": 48168,
+    "observed": 48121,
+    "coverage": 0.9990242484637103,
+    "gaps": 3,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_sete_v1",
+    "checksum_sha256": "c5d02bba49f2c99d714e151e2ce203969ce7f79b3e9571ebe0e298106b481f5b",
+    "calibrated_rms_cm": 6.1179633853635496,
+    "calibrated_mae_cm": 4.6751113019908095,
+    "calibrated_p95_cm": 13.046759865852058,
+    "calibrated_max_cm": 24.702662086084693,
+    "z0_rms_cm": 8.380403053500306,
+    "z0_mae_cm": 6.675131839355237,
+    "z0_p95_cm": 15.870555740352321,
+    "z0_max_cm": 35.22944425964768,
+    "rms_factor_vs_z0": 1.3698027473569645
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.37 below 2.00"
+  }
+}

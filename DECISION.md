@@ -679,3 +679,94 @@ Résultat de référence :
   "unit_m": 3.05
 }
 ```
+
+## v0.7 -- France RONIM complet
+
+Date : 2026-07-07.
+
+Le pipeline `make calibrate-france` traite maintenant les stations du catalogue
+REFMAR dont `state = OK` et `reseau = RONIM`, hors Brest déjà publié dans le
+pack dédié `refmar:3`. Les stations REFMAR auxiliaires non RONIM restent hors
+pack produit v0.7. Toulon est bien présent dans le catalogue, mais avec
+`state = KO`, donc exclu avant calibration.
+
+Les règles de décision ne changent pas :
+
+- throttle HTTP par défaut 600 ms, refus sous 500 ms ;
+- produit REFMAR `sources=4`, données horaires validées ;
+- QC couverture >= 90 % et absence de saut aberrant ;
+- 37 constituants fixes `m22-rayleigh37` ;
+- inclusion si `p95 <= 40 cm` et `z0_constant / calibrated >= 2` en RMS ;
+- Brest garde son gate historique `p95 <= 19 cm`.
+
+Cherbourg et Calais n'ont toujours pas de données validées `source=4` sur la
+fenêtre globale `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z`. Les dernières
+périodes à couverture correcte ont donc été figées par station :
+
+| Port | Dernière observation source 4 vue | Fenêtre validation figée | Verdict |
+|---|---|---|---|
+| Cherbourg | `2026-03-31T22:00:00Z` | `2026-01-01T00:00:00Z/2026-04-01T00:00:00Z` | exclu : p95 41,3 cm > 40 cm |
+| Calais | `2025-11-04T05:00:00Z` | `2025-08-01T00:00:00Z/2025-11-01T00:00:00Z` | exclu : p95 44,5 cm > 40 cm |
+
+Pack France :
+`data/packs/amar-data-france-experimental.json`, SHA-256
+`e94cf45a669a246cc4aa38d1b2c0e60a580905a307b688bcaa7ce3276981b497`.
+`data_version = 2026-07-07-v0.7-france`.
+
+Résultat : 21 ports inclus. Toute la Méditerranée mesurable est exclue :
+la marée astronomique y existe, mais elle ne bat pas le niveau moyen constant
+d'un facteur 2 en RMS sur cette fenêtre. Les ports méditerranéens sans métrique
+sont exclus par QC ou état catalogue, pas repêchés.
+
+Commande de reproduction :
+
+```bash
+make calibrate-france
+make m2-benchmark
+```
+
+Table de décision du catalogue RONIM traité :
+
+| Port | Station | Validation | Couverture | RMS cm | p95 cm | RMS z0 cm | Facteur | Décision |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| Saint-Malo | `refmar:410` | 2026-04/2026-07 | 100,0 % | 14,7 | 28,5 | 277,7 | 18,83 | inclus |
+| Le Havre | `refmar:4` | 2026-04/2026-07 | 100,0 % | 19,5 | 37,4 | 197,8 | 10,14 | inclus |
+| Saint-Nazaire | `refmar:37` | 2026-04/2026-07 | 100,0 % | 9,2 | 18,4 | 131,6 | 14,25 | inclus |
+| La Rochelle-Pallice | `refmar:34` | 2026-04/2026-07 | 100,0 % | 9,5 | 18,8 | 131,0 | 13,78 | inclus |
+| Concarneau | `refmar:160` | 2026-04/2026-07 | 99,8 % | 7,3 | 14,5 | 110,1 | 15,19 | inclus |
+| Le Conquet | `refmar:152` | 2026-04/2026-07 | 100,0 % | 7,3 | 15,1 | 149,9 | 20,57 | inclus |
+| Roscoff | `refmar:54` | 2026-04/2026-07 | 99,8 % | 8,8 | 17,6 | 200,9 | 22,92 | inclus |
+| Dunkerque | `refmar:2` | 2026-04/2026-07 | 100,0 % | 16,4 | 32,9 | 162,5 | 9,91 | inclus |
+| Boulogne-sur-Mer | `refmar:111` | 2026-04/2026-07 | 100,0 % | 18,2 | 35,9 | 224,4 | 12,33 | inclus |
+| Arcachon-Eyrac | `refmar:190` | 2026-04/2026-07 | 100,0 % | 9,4 | 18,3 | 98,5 | 10,46 | inclus |
+| Boucau-Bayonne | `refmar:94` | 2026-04/2026-07 | 100,0 % | 6,8 | 13,1 | 94,4 | 13,93 | inclus |
+| Dielette | `refmar:628` | 2026-04/2026-07 | 98,7 % | 12,1 | 24,1 | 216,1 | 17,85 | inclus |
+| Dieppe | `refmar:24` | 2026-04/2026-07 | 99,7 % | 16,0 | 31,5 | 231,7 | 14,47 | inclus |
+| Herbaudière | `refmar:198` | 2026-04/2026-07 | 99,4 % | 8,2 | 16,6 | 124,8 | 15,19 | inclus |
+| Les Sables-d'Olonne | `refmar:62` | 2026-04/2026-07 | 99,8 % | 7,7 | 14,9 | 116,0 | 15,09 | inclus |
+| Le Crouesty | `refmar:185` | 2026-04/2026-07 | 100,0 % | 8,1 | 16,3 | 121,4 | 15,00 | inclus |
+| Mimizan | `refmar:6144` | 2026-04/2026-07 | 100,0 % | 15,1 | 34,0 | 91,0 | 6,01 | inclus |
+| Nouméa Numbo | `refmar:659` | 2026-04/2026-07 | 99,8 % | 7,5 | 14,3 | 33,7 | 4,51 | inclus |
+| Ouistreham | `refmar:311` | 2026-04/2026-07 | 100,0 % | 18,3 | 35,0 | 192,9 | 10,53 | inclus |
+| Pointe des Galets | `refmar:110` | 2026-04/2026-07 | 100,0 % | 5,9 | 11,3 | 16,5 | 2,78 | inclus |
+| Port-Tudy | `refmar:71` | 2026-04/2026-07 | 100,0 % | 7,2 | 14,3 | 112,1 | 15,54 | inclus |
+| Cherbourg | `refmar:13` | 2026-01/2026-04 | 100,0 % | 20,3 | 41,3 | 145,6 | 7,17 | exclu : p95 > 40 cm |
+| Ajaccio | `refmar:300` | 2026-04/2026-07 | 99,7 % | 4,8 | 9,3 | 8,5 | 1,79 | exclu : facteur < 2 |
+| Audierne | `refmar:6305` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : couverture calibration 0,890 < 0,900 |
+| Calais | `refmar:55` | 2025-08/2025-11 | 98,5 % | 23,2 | 44,5 | 187,2 | 8,07 | exclu : p95 > 40 cm |
+| Centuri | `refmar:807` | 2026-04/2026-07 | 99,6 % | 6,1 | 11,1 | 10,3 | 1,70 | exclu : facteur < 2 |
+| Ile Saint-Pierre | `refmar:115` | 2026-04/2026-07 | 0,0 % | NA | NA | NA | NA | exclu : couverture validation 0,000 < 0,900 |
+| La Figueirette | `refmar:846` | 2026-04/2026-07 | 100,0 % | 5,6 | 11,0 | 9,3 | 1,66 | exclu : facteur < 2 |
+| Marseille | `refmar:524` | 2026-04/2026-07 | 100,0 % | 6,3 | 12,0 | 10,0 | 1,59 | exclu : facteur < 2 |
+| Monaco | `refmar:22` | 2026-04/2026-07 | 100,0 % | 5,6 | 11,0 | 9,4 | 1,68 | exclu : facteur < 2 |
+| Nice | `refmar:339` | 2026-04/2026-07 | 100,0 % | 5,6 | 10,9 | 9,3 | 1,65 | exclu : facteur < 2 |
+| Pointe-à-Pitre | `refmar:125` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : couverture calibration 0,748 < 0,900 |
+| Port-la-Nouvelle | `refmar:803` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : couverture calibration 0,801 < 0,900 |
+| Port-Vendres | `refmar:75` | 2026-04/2026-07 | 100,0 % | 5,1 | 10,3 | 8,0 | 1,57 | exclu : facteur < 2 |
+| Port-de-Bouc | `refmar:720` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : couverture calibration 0,558 < 0,900 |
+| Port-Ferréol | `refmar:847` | 2026-04/2026-07 | 100,0 % | 5,4 | 10,8 | 8,9 | 1,64 | exclu : facteur < 2 |
+| Saint-Jean-de-Luz Socoa | `refmar:95` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : couverture calibration 0,758 < 0,900 |
+| Saint-Quay-Portrieux | `refmar:506` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : saut aberrant 12,828 m en calibration |
+| Sète | `refmar:250` | 2026-04/2026-07 | 100,0 % | 6,1 | 13,0 | 8,4 | 1,37 | exclu : facteur < 2 |
+| Solenzara | `refmar:710` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : saut aberrant -4,994 m en calibration |
+| Toulon | `refmar:68` | NA | NA | NA | NA | NA | NA | exclu : station catalogue `state=KO` |

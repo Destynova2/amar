@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:71",
+  "provider_station_id": "71",
+  "station_name": "Port-tudy",
+  "source": 4,
+  "datum": "zero_hydrographique_port_tudy",
+  "datum_note": "zero_hydrographique; ZH = -2.742 m relative to IGN69; RAM id Port-Tudy in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/71",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/71?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "222fb00dec951bfcdd2060fe212212c9aca0f9d459c8e44343046b51b3357598",
+  "tidegauge_sha256": "6c7cd74913c404d2e352bd334cb95cee37951886ee6b6e9e775ed23f1ed08dbb",
+  "qc": {
+    "expected": 48168,
+    "observed": 48015,
+    "coverage": 0.9968236173393124,
+    "gaps": 4,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_port_tudy_v1",
+    "checksum_sha256": "72083052f1412177bea84e8215e32d373579c8389db5ef78b98827305c32251e",
+    "calibrated_rms_cm": 7.211400515386876,
+    "calibrated_mae_cm": 5.75339078208088,
+    "calibrated_p95_cm": 14.337339130340876,
+    "calibrated_max_cm": 27.577675542216785,
+    "z0_rms_cm": 112.09437622961187,
+    "z0_mae_cm": 96.45285287340235,
+    "z0_p95_cm": 198.17782263724357,
+    "z0_max_cm": 262.22217736275644,
+    "rms_factor_vs_z0": 15.544050838729245
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

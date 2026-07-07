@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:75",
+  "provider_station_id": "75",
+  "station_name": "Port-vendres",
+  "source": 4,
+  "datum": "zero_hydrographique_port_vendres",
+  "datum_note": "zero_hydrographique; ZH = -0.392 m relative to IGN69; RAM id Port-Vendres in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/75",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/75?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "af37f73ae2857b493c32bb4543d4e7a155bdf6faf8decad5272de1bbf9fa9666",
+  "tidegauge_sha256": "84a9278d84bf0a884ebc17d490cbed44d79751d1baa67ccee0ffc678d04d39fe",
+  "qc": {
+    "expected": 48168,
+    "observed": 48128,
+    "coverage": 0.9991695731606045,
+    "gaps": 3,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_port_vendres_v1",
+    "checksum_sha256": "be4b12ae3f9e03d6fff5b33f0aec1d90b077422f47234c76b05b27286acffff6",
+    "calibrated_rms_cm": 5.084996140185626,
+    "calibrated_mae_cm": 3.9918475271295923,
+    "calibrated_p95_cm": 10.279268403754982,
+    "calibrated_max_cm": 16.026985769021767,
+    "z0_rms_cm": 7.986402146174061,
+    "z0_mae_cm": 6.614453519251683,
+    "z0_p95_cm": 15.019001641536423,
+    "z0_max_cm": 24.419001641536425,
+    "rms_factor_vs_z0": 1.5705817518835954
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.57 below 2.00"
+  }
+}

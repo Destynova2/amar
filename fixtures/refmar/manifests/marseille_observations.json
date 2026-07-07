@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:524",
+  "provider_station_id": "524",
+  "station_name": "Marseille",
+  "source": 4,
+  "datum": "zero_hydrographique_marseille",
+  "datum_note": "zero_hydrographique; ZH = -0.329 m relative to IGN69; RAM id Marseille (Corniche) in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/524",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/524?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "2807c137309a3bfbce48adffa05b77f6fa24c3fed20cb62381732634a8ef9d1b",
+  "tidegauge_sha256": "a3cdac4c0367a5145cea95b7aff76f27210849e26d47e940753cc690d1d1f303",
+  "qc": {
+    "expected": 48168,
+    "observed": 46269,
+    "coverage": 0.9605754857997011,
+    "gaps": 6,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_marseille_v1",
+    "checksum_sha256": "f2802d08c626d0341ee5687485bc8f0446c0db93121b65bf1070db1a1e7557e3",
+    "calibrated_rms_cm": 6.314375805595531,
+    "calibrated_mae_cm": 5.053139082524074,
+    "calibrated_p95_cm": 11.98944393787469,
+    "calibrated_max_cm": 16.607668193519192,
+    "z0_rms_cm": 10.037085416474985,
+    "z0_mae_cm": 8.230758647375508,
+    "z0_p95_cm": 19.516236557210576,
+    "z0_max_cm": 30.016236557210576,
+    "rms_factor_vs_z0": 1.5895609836178182
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.59 below 2.00"
+  }
+}

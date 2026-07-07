@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:13",
+  "provider_station_id": "13",
+  "station_name": "Cherbourg",
+  "source": 4,
+  "datum": "zero_hydrographique_cherbourg",
+  "datum_note": "zero_hydrographique; ZH = -3.285 m relative to IGN69; RAM id Cherbourg in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/13",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/13?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-01-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "observations_sha256": "ad7e6fb3cabd3648e73a8ec624c47f7401f9cc00219125b7d951e96950d1ea0c",
+  "tidegauge_sha256": "42e2d85371fff8ad5b10a27efd5f201ab28a8e80d1f75eaee680b8e8613a528a",
+  "qc": {
+    "expected": 45984,
+    "observed": 45491,
+    "coverage": 0.9892788796102993,
+    "gaps": 16,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_cherbourg_v1",
+    "checksum_sha256": "8fb7cca217c740d4c09cc74595bd5453a831e55e0bef0a997c20f7d7ecec6ebe",
+    "calibrated_rms_cm": 20.323487460332057,
+    "calibrated_mae_cm": 15.534905679834315,
+    "calibrated_p95_cm": 41.34125290366808,
+    "calibrated_max_cm": 96.19952237464373,
+    "z0_rms_cm": 145.6463461379923,
+    "z0_mae_cm": 124.02564702191692,
+    "z0_p95_cm": 255.7960850492802,
+    "z0_max_cm": 320.3960850492802,
+    "rms_factor_vs_z0": 7.166405196070254
+  },
+  "decision": {
+    "included": false,
+    "reason": "p95 41.3 cm exceeds 40.0 cm"
+  }
+}

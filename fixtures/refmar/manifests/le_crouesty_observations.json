@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:185",
+  "provider_station_id": "185",
+  "station_name": "Le Crouesty",
+  "source": 4,
+  "datum": "zero_hydrographique_le_crouesty",
+  "datum_note": "zero_hydrographique; ZH = -2.85 m relative to IGN69; RAM id Port du Crouesty in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/185",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/185?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "d19e0288a0c8770092a6262d9c6795c96a58df80e8789f3e90efcba73ded19c3",
+  "tidegauge_sha256": "f4dbf58a264c00e3f91147ead7099175de264241c1b94ab2d4daca6769ba359f",
+  "qc": {
+    "expected": 48168,
+    "observed": 47932,
+    "coverage": 0.9951004816475668,
+    "gaps": 65,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_le_crouesty_v1",
+    "checksum_sha256": "a948d52b12910b06e7c218a522cf0847e60929d42c50f13954abfb8dd0dcc0fc",
+    "calibrated_rms_cm": 8.091159470878225,
+    "calibrated_mae_cm": 6.419613552234284,
+    "calibrated_p95_cm": 16.268144729888334,
+    "calibrated_max_cm": 36.69460840832976,
+    "z0_rms_cm": 121.38318863567667,
+    "z0_mae_cm": 104.8428256474155,
+    "z0_p95_cm": 211.25920674904557,
+    "z0_max_cm": 294.2592067490456,
+    "rms_factor_vs_z0": 15.001952324949244
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

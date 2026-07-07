@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:846",
+  "provider_station_id": "846",
+  "station_name": "La Figueirette",
+  "source": 4,
+  "datum": "zero_hydrographique_la_figueirette",
+  "datum_note": "zero_hydrographique; ZH = -0.329 m relative to IGN69; RAM id La Figueirette in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/846",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/846?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "1040a5f156de65e60bc66d4a5d2efe5ecaf4fd9c20b03d56c187b1d605e59ef2",
+  "tidegauge_sha256": "eef02d355b260cb36fa5eea46c21963c2b0498446c50bb9edb848e81d224a4c9",
+  "qc": {
+    "expected": 48168,
+    "observed": 47210,
+    "coverage": 0.980111277196479,
+    "gaps": 19,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_la_figueirette_v1",
+    "checksum_sha256": "c6d4f0c121de5e166dbaa8cd3b51fb067cf0981635be3c8d4ea1994a70908ad3",
+    "calibrated_rms_cm": 5.6032976181728795,
+    "calibrated_mae_cm": 4.631798544940436,
+    "calibrated_p95_cm": 10.969010250794103,
+    "calibrated_max_cm": 15.16473935004161,
+    "z0_rms_cm": 9.299768556063826,
+    "z0_mae_cm": 7.549257521685271,
+    "z0_p95_cm": 18.08688007130038,
+    "z0_max_cm": 28.78688007130038,
+    "rms_factor_vs_z0": 1.6596956274288157
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.66 below 2.00"
+  }
+}

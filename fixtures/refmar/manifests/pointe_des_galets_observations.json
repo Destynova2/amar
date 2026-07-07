@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:110",
+  "provider_station_id": "110",
+  "station_name": "Pointe Des Galets",
+  "source": 4,
+  "datum": "zero_hydrographique_pointe_des_galets",
+  "datum_note": "zero_hydrographique; ZH = -0.552 m relative to IGN89; RAM id Pointe des Galets in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/110",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/110?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "d648abeeb9a18448061f94d875b4e24b11c27b762890ae6a30c46b647354fbec",
+  "tidegauge_sha256": "f22221bb347439f45f9221bbce186377cd5db9cf2c9cb6d68ce272029b86b32f",
+  "qc": {
+    "expected": 48168,
+    "observed": 48063,
+    "coverage": 0.9978201295465869,
+    "gaps": 3,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_pointe_des_galets_v1",
+    "checksum_sha256": "7d8b6dc976489e0f5f308c626bb1812ebc83b7c4e8675a4fbe0174afd56249b5",
+    "calibrated_rms_cm": 5.940852405893469,
+    "calibrated_mae_cm": 4.8761013291990585,
+    "calibrated_p95_cm": 11.320020610491788,
+    "calibrated_max_cm": 17.236832743722815,
+    "z0_rms_cm": 16.50207057717326,
+    "z0_mae_cm": 13.51936944115425,
+    "z0_p95_cm": 31.160306715167497,
+    "z0_max_cm": 49.66030671516749,
+    "rms_factor_vs_z0": 2.777727748429301
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

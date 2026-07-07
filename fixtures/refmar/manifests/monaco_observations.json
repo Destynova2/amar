@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:22",
+  "provider_station_id": "22",
+  "station_name": "Monaco",
+  "source": 4,
+  "datum": "zero_hydrographique_monaco",
+  "datum_note": "zero_hydrographique; ZH = -0.336 m relative to IGN69; RAM id Monaco in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/22",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/22?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "1c336579e8a0a89c63e0288d0aeacf4b06a655dcafbdfcbc83c244a54cae7673",
+  "tidegauge_sha256": "e370948dfcaf61a88fccaa36785aa82e9e959d7099c37d3163a76db175bcbfc4",
+  "qc": {
+    "expected": 48168,
+    "observed": 48145,
+    "coverage": 0.9995225045673476,
+    "gaps": 2,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_monaco_v1",
+    "checksum_sha256": "5d91afe16d31b667713e8a2a52c75101a23ebd9e67a4f036077c65e06b430982",
+    "calibrated_rms_cm": 5.629696232181798,
+    "calibrated_mae_cm": 4.6175436742930325,
+    "calibrated_p95_cm": 10.999947292756907,
+    "calibrated_max_cm": 15.671961358709241,
+    "z0_rms_cm": 9.449075259851568,
+    "z0_mae_cm": 7.691134841917329,
+    "z0_p95_cm": 18.316553605066087,
+    "z0_max_cm": 26.416553605066085,
+    "rms_factor_vs_z0": 1.6784343009195655
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.68 below 2.00"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:628",
+  "provider_station_id": "628",
+  "station_name": "Dielette",
+  "source": 4,
+  "datum": "zero_hydrographique_dielette",
+  "datum_note": "zero_hydrographique; ZH = -4.912 m relative to IGN69; RAM id Diélette in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/628",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/628?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "cd1f124f751583a447209d7b1199e4a45e0111eb45d154b03f3161d323638e75",
+  "tidegauge_sha256": "6b21fb6a1e8704ade71bca4e1f9f7f8170ae13413d5c32cae66f8d50bffd8fa7",
+  "qc": {
+    "expected": 48168,
+    "observed": 47453,
+    "coverage": 0.9851561202458063,
+    "gaps": 125,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_dielette_v1",
+    "checksum_sha256": "c223b4ff7d79f0f6bae971cd649e0a4f0ebc1eb70a7495acc2d39070176e88d8",
+    "calibrated_rms_cm": 12.10730515882254,
+    "calibrated_mae_cm": 9.424114000650242,
+    "calibrated_p95_cm": 24.058300572629232,
+    "calibrated_max_cm": 51.009861639465015,
+    "z0_rms_cm": 216.13954576066567,
+    "z0_mae_cm": 186.18456404500657,
+    "z0_p95_cm": 379.02200810339184,
+    "z0_max_cm": 461.3779918966082,
+    "rms_factor_vs_z0": 17.851994554144508
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:300",
+  "provider_station_id": "300",
+  "station_name": "Ajaccio",
+  "source": 4,
+  "datum": "zero_hydrographique_ajaccio",
+  "datum_note": "zero_hydrographique; ZH = -0.368 m relative to IGN78; RAM id Ajaccio in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/300",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/300?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "e4b011b3726d3f9baaa13ba39768d6d5134bb29e45c26e0a433f270b6829e8e6",
+  "tidegauge_sha256": "3d74931ef14a1aff05cfd4cdb7b7c562a50d5a1ad8c190612f8c24b4280118a4",
+  "qc": {
+    "expected": 48168,
+    "observed": 46575,
+    "coverage": 0.9669282511210763,
+    "gaps": 6,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_ajaccio_v1",
+    "checksum_sha256": "811fdd24a8229e477b31ccca1c43ff3370d813770b321e578c140f588982048c",
+    "calibrated_rms_cm": 4.759846020392,
+    "calibrated_mae_cm": 3.6592691894276275,
+    "calibrated_p95_cm": 9.278847386918077,
+    "calibrated_max_cm": 18.388317319868193,
+    "z0_rms_cm": 8.541858295991831,
+    "z0_mae_cm": 6.693133378858242,
+    "z0_p95_cm": 17.29192357324221,
+    "z0_max_cm": 27.291923573242215,
+    "rms_factor_vs_z0": 1.7945660971798332
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.79 below 2.00"
+  }
+}

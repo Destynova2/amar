@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:198",
+  "provider_station_id": "198",
+  "station_name": "Herbaudiere",
+  "source": 4,
+  "datum": "zero_hydrographique_herbaudiere",
+  "datum_note": "zero_hydrographique; ZH = -3.105 m relative to IGN69; RAM id L'Herbaudière (Île de Noirmoutier) in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/198",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/198?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "9747546f780b7fed6ea05ff0e1fbc2cb8f086378f48afbdb1b000e0d9aec33c7",
+  "tidegauge_sha256": "396698761292d3b001221edeab3272b326e236621dda21c178ff9726acc289cc",
+  "qc": {
+    "expected": 48168,
+    "observed": 47892,
+    "coverage": 0.9942700548081714,
+    "gaps": 84,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_herbaudiere_v1",
+    "checksum_sha256": "021d5c3c931094e6a161a8b32e6cf60356e94e70ab7fe8b2c391d1aa237a0e1f",
+    "calibrated_rms_cm": 8.213970291749975,
+    "calibrated_mae_cm": 6.588459213336151,
+    "calibrated_p95_cm": 16.5669556502521,
+    "calibrated_max_cm": 30.093539399880132,
+    "z0_rms_cm": 124.77356675292151,
+    "z0_mae_cm": 107.7900535378703,
+    "z0_p95_cm": 216.65767292100702,
+    "z0_max_cm": 281.05767292100705,
+    "rms_factor_vs_z0": 15.190408818283986
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

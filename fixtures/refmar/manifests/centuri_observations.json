@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:807",
+  "provider_station_id": "807",
+  "station_name": "Centuri",
+  "source": 4,
+  "datum": "zero_hydrographique_centuri",
+  "datum_note": "zero_hydrographique; ZH = -0.351 m relative to IGN78; RAM id Centuri in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/807",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/807?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "3b44a142436cf1760b8b46d9c87dba678f5c955a5898e899424946800acdf096",
+  "tidegauge_sha256": "be494368b7841759d74d9dc998cfe8cbe7e5db286bc8e340bea986e5ad472ebd",
+  "qc": {
+    "expected": 48168,
+    "observed": 47116,
+    "coverage": 0.9781597741238997,
+    "gaps": 14,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_centuri_v1",
+    "checksum_sha256": "acf8695f5502ff13b11b8fbba307c8a9088d736f9312111bfb9408e8a478a1ee",
+    "calibrated_rms_cm": 6.102642902638249,
+    "calibrated_mae_cm": 4.772135650941146,
+    "calibrated_p95_cm": 11.149531875560742,
+    "calibrated_max_cm": 21.454829750353166,
+    "z0_rms_cm": 10.344169604402135,
+    "z0_mae_cm": 8.293297990165172,
+    "z0_p95_cm": 20.58668848242587,
+    "z0_max_cm": 30.413311517574126,
+    "rms_factor_vs_z0": 1.6950311151141124
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.70 below 2.00"
+  }
+}

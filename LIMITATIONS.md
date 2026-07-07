@@ -1,4 +1,4 @@
-# Limitations v0.4
+# Limitations v0.7
 
 - Marée astronomique seule.
 - Les fenêtres de seuil sont des fenêtres de marée astronomique seule :
@@ -15,12 +15,15 @@
   astronomique prédite (météo incluse), pas une validation officielle SHOM.
 - Les stations REFMAR n'ont pas de grade A/B/C. La réponse expose le p95 du
   benchmark figé.
-- Le pack France v0.4 livré couvre 11 ports Manche/Atlantique :
-  Boulogne-sur-Mer, Concarneau, Dieppe, Dunkerque, La Rochelle-Pallice,
-  Le Conquet, Le Havre, Ouistreham, Roscoff, Saint-Malo et Saint-Nazaire.
-- Cherbourg et Calais sont exclus de ce pack : la fenêtre de validation
-  `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z` n'a aucune observation validée
-  `source=4`.
+- Le pack France v0.7 livré couvre 21 ports REFMAR RONIM : Arcachon-Eyrac,
+  Boucau-Bayonne, Boulogne-sur-Mer, Concarneau, Dielette, Dieppe, Dunkerque,
+  Herbaudière, La Rochelle-Pallice, Le Conquet, Le Crouesty, Le Havre,
+  Les Sables-d'Olonne, Mimizan, Nouméa Numbo, Ouistreham, Pointe des Galets,
+  Port-Tudy, Roscoff, Saint-Malo et Saint-Nazaire.
+- Aucune station méditerranéenne n'est incluse : quand les données sont
+  suffisantes, le modèle ne bat pas `z0_constant` d'un facteur 2 en RMS.
+- Cherbourg et Calais sont exclus après décalage sur leur dernière fenêtre à
+  couverture correcte : leur p95 dépasse le seuil France de 40 cm.
 - PM/BM, séries temporelles, fenêtres et coefficient sont disponibles pour les
   stations françaises incluses.
 - Le coefficient est expérimental : il dérive de notre calibration Brest, pas
@@ -32,7 +35,7 @@
 - L'image Docker/Podman sert la marée astronomique offline depuis les packs
   embarqués et n'émet aucune donnée sortante.
 - Couverture limitée aux 8 stations NOAA harmoniques, à Brest expérimental et
-  aux 11 ports du pack France v0.4.
+  aux 21 ports du pack France v0.7.
 - Résolution spatiale volontairement conservatrice : station la plus proche à
   20 km maximum par défaut, sinon refus utile avec station la plus proche.
 - Confiance NOAA heuristique, basée seulement sur la distance à la station :

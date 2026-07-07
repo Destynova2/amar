@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:339",
+  "provider_station_id": "339",
+  "station_name": "Nice",
+  "source": 4,
+  "datum": "zero_hydrographique_nice",
+  "datum_note": "zero_hydrographique; ZH = -0.344 m relative to IGN69; RAM id Nice in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/339",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/339?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "e491156755c23d826c39d6a94d336f475f8299599ef2584a271a4d6691acc44d",
+  "tidegauge_sha256": "506f7d71225f718842cb3f50cbb6dc9d77b5e6200df9cc921f0dcb069d71080f",
+  "qc": {
+    "expected": 48168,
+    "observed": 45409,
+    "coverage": 0.9427213087526989,
+    "gaps": 31,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_nice_v1",
+    "checksum_sha256": "2269779e251db805e74b4e5e8052138c2ae313029309edd7b30a60822bb72c8c",
+    "calibrated_rms_cm": 5.639589697588995,
+    "calibrated_mae_cm": 4.621613317555724,
+    "calibrated_p95_cm": 10.906165756643865,
+    "calibrated_max_cm": 16.428899912268697,
+    "z0_rms_cm": 9.322776193140081,
+    "z0_mae_cm": 7.722196421476984,
+    "z0_p95_cm": 17.564413380375655,
+    "z0_max_cm": 27.06441338037565,
+    "rms_factor_vs_z0": 1.6530947627494426
+  },
+  "decision": {
+    "included": false,
+    "reason": "RMS factor 1.65 below 2.00"
+  }
+}

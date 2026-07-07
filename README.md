@@ -3,8 +3,8 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.6 publie des binaires téléchargeables en plus de l'image GHCR. Le
-socle couvre NOAA, Brest expérimental et 11 ports REFMAR Manche/Atlantique,
+amar v0.7 publie des binaires téléchargeables en plus de l'image GHCR. Le
+socle couvre NOAA, Brest expérimental et 21 ports REFMAR RONIM,
 avec prochains PM/BM, séries bornées, fenêtres de seuil et coefficient de marée
 français dérivé de notre Brest calibré. On lance un serveur local, on envoie
 `lat/lon/datetime`, et la réponse donne soit une hauteur traçable, soit un
@@ -329,13 +329,17 @@ Les observations d'entrée couvrent
 `2021-01-01T00:00:00Z/2026-04-01T00:00:00Z` exclut les trois derniers mois,
 réservés à `benchmark_brest_v1`.
 
-Le pack France expérimental v0.4 contient 11 ports REFMAR :
-Boulogne-sur-Mer, Concarneau, Dieppe, Dunkerque, La Rochelle-Pallice,
-Le Conquet, Le Havre, Ouistreham, Roscoff, Saint-Malo et Saint-Nazaire.
+Le pack France expérimental v0.7 contient 21 ports REFMAR RONIM :
+Arcachon-Eyrac, Boucau-Bayonne, Boulogne-sur-Mer, Concarneau, Dielette,
+Dieppe, Dunkerque, Herbaudière, La Rochelle-Pallice, Le Conquet, Le Crouesty,
+Le Havre, Les Sables-d'Olonne, Mimizan, Nouméa Numbo, Ouistreham, Pointe des
+Galets, Port-Tudy, Roscoff, Saint-Malo et Saint-Nazaire.
 Chaque port a un benchmark figé de trois mois, un manifeste avec SHA-256 des
 observations longues d'entrée, `experimental`, `not_official` et `not_shom`.
-Cherbourg et Calais sont exclus de ce pack parce que `source=4` n'a aucune
-observation validée sur `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z`.
+Cherbourg et Calais ont été retentés sur leur dernière fenêtre à couverture
+correcte, mais restent exclus car leur p95 dépasse 40 cm. En Méditerranée, la
+marée astronomique est plus petite que le résidu météo sur ce critère : aucun
+port méditerranéen mesurable ne bat `z0_constant` d'un facteur 2 en RMS.
 
 Les fixtures, URLs d'origine et checksums sont listés dans
 [`DATA_LICENSES.md`](DATA_LICENSES.md).

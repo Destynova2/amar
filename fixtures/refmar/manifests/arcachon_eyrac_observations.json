@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:190",
+  "provider_station_id": "190",
+  "station_name": "Arcachon Eyrac",
+  "source": 4,
+  "datum": "zero_hydrographique_arcachon_eyrac",
+  "datum_note": "zero_hydrographique; ZH = -1.98 m relative to IGN69; RAM id Arcachon in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/190",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/190?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "56f1821ef1c0ebd3ab3d70277fc9f18e91f8499512ec2ed25180a212f202a672",
+  "tidegauge_sha256": "05364bce855471844e10590345eb7762154f447d73e8d6c7d69b2f84ed8fb15b",
+  "qc": {
+    "expected": 48168,
+    "observed": 48136,
+    "coverage": 0.9993356585284836,
+    "gaps": 2,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_arcachon_eyrac_v1",
+    "checksum_sha256": "aea9ab1e5686500647059a224e4e45f2c718c77db08cc7257b8af17f4389503d",
+    "calibrated_rms_cm": 9.416540459499739,
+    "calibrated_mae_cm": 7.5482306250711675,
+    "calibrated_p95_cm": 18.304579889037463,
+    "calibrated_max_cm": 28.350310922266242,
+    "z0_rms_cm": 98.52960567722918,
+    "z0_mae_cm": 84.14930986515239,
+    "z0_p95_cm": 175.54289570852424,
+    "z0_max_cm": 217.54289570852424,
+    "rms_factor_vs_z0": 10.463461193736924
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

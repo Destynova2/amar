@@ -1,7 +1,7 @@
 {
   "schema_version": "benchmark_boulogne_sur_mer_v1",
   "benchmark_id": "benchmark_boulogne_sur_mer_v1",
-  "generated_at": "2026-07-06-v0.4-france",
+  "generated_at": "2026-07-07-v0.7-france",
   "station_id": "refmar:111",
   "provider_station_id": "111",
   "station_name": "Boulogne-sur-mer",

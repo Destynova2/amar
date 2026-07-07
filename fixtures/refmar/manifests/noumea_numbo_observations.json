@@ -1,0 +1,50 @@
+{
+  "schema_version": "refmar-observation-manifest-v1",
+  "generated_at": "2026-07-07-v0.7-france",
+  "station_id": "refmar:659",
+  "provider_station_id": "659",
+  "station_name": "Noumea Numbo",
+  "source": 4,
+  "datum": "zero_hydrographique_noumea_numbo",
+  "datum_note": "zero_hydrographique; ZH = -0.838 m relative to NGNC; RAM id Nouméa - Numbo in REFMAR tide-gauge metadata",
+  "station_url": "https://services.data.shom.fr/maregraphie/service/completetidegauge/659",
+  "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/659?sources=4",
+  "input_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "calibration_period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2026-04-01T00:00:00Z"
+  },
+  "validation_period": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "observations_sha256": "b4c1628f4e1d376917ab810884e5776ac32820ead63c325821492fa0f725647b",
+  "tidegauge_sha256": "e60b3e6b66dfc22f55d2610c307fda5b105b62ad17ca44cf1ca4dbf1dd66c573",
+  "qc": {
+    "expected": 48168,
+    "observed": 45475,
+    "coverage": 0.9440915130377013,
+    "gaps": 65,
+    "jumps": 0
+  },
+  "benchmark": {
+    "benchmark_id": "benchmark_noumea_numbo_v1",
+    "checksum_sha256": "919033abe81b7caae3946a23133c99fb15a712e30dbeac61c16b033f63d5d17f",
+    "calibrated_rms_cm": 7.468914572645255,
+    "calibrated_mae_cm": 6.170300935615541,
+    "calibrated_p95_cm": 14.264969602382838,
+    "calibrated_max_cm": 20.34483355744835,
+    "z0_rms_cm": 33.703881638455485,
+    "z0_mae_cm": 27.996043575794577,
+    "z0_p95_cm": 62.184472674874684,
+    "z0_max_cm": 95.81552732512533,
+    "rms_factor_vs_z0": 4.512554175126765
+  },
+  "decision": {
+    "included": true,
+    "reason": "included"
+  }
+}

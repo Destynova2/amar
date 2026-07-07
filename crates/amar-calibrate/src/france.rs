@@ -22,7 +22,7 @@ const DEFAULT_FRANCE_PACK: &str = "data/packs/amar-data-france-experimental.json
 const DEFAULT_BENCHMARKS_DIR: &str = "fixtures/refmar/benchmarks";
 const DEFAULT_MANIFESTS_DIR: &str = "fixtures/refmar/manifests";
 const DEFAULT_CACHE_DIR: &str = "target/refmar-cache";
-const DEFAULT_GENERATED_AT: &str = "2026-07-06-v0.4-france";
+const DEFAULT_GENERATED_AT: &str = "2026-07-07-v0.7-france";
 const DEFAULT_START: &str = "2021-01-01T00:00:00Z";
 const DEFAULT_VALIDATION_START: &str = "2026-04-01T00:00:00Z";
 const DEFAULT_END: &str = "2026-07-01T00:00:00Z";
@@ -30,10 +30,13 @@ const MIN_THROTTLE_MS: u64 = 500;
 const DEFAULT_THROTTLE_MS: u64 = 600;
 const DEFAULT_P95_LIMIT_CM: f64 = 40.0;
 const DEFAULT_MIN_RMS_FACTOR: f64 = 2.0;
-const FRANCE_MIN_LAT: f64 = 41.0;
-const FRANCE_MAX_LAT: f64 = 52.0;
-const FRANCE_MIN_LON: f64 = -6.0;
-const FRANCE_MAX_LON: f64 = 10.0;
+const ELIGIBLE_NETWORK: &str = "RONIM";
+const CHERBOURG_SHOM_ID: &str = "13";
+const CALAIS_SHOM_ID: &str = "55";
+const CHERBOURG_VALIDATION_START: &str = "2026-01-01T00:00:00Z";
+const CHERBOURG_END: &str = "2026-04-01T00:00:00Z";
+const CALAIS_VALIDATION_START: &str = "2025-08-01T00:00:00Z";
+const CALAIS_END: &str = "2025-11-01T00:00:00Z";
 
 const PRIORITY_STATIONS: [&str; 10] =
     ["410", "4", "13", "37", "34", "160", "152", "54", "2", "111"];
@@ -204,6 +207,13 @@ struct PoliteClient {
     throttle: StdDuration,
 }
 
+#[derive(Clone)]
+struct StationPeriod {
+    start: DateTime<Utc>,
+    validation_start: DateTime<Utc>,
+    end: DateTime<Utc>,
+}
+
 impl PoliteClient {
     fn new(throttle_ms: u64) -> Result<Self, CalError> {
         if throttle_ms < MIN_THROTTLE_MS {
@@ -250,10 +260,14 @@ impl PoliteClient {
 }
 
 pub(crate) fn calibrate_france(args: CalibrateFranceArgs) -> Result<(), CalError> {
-    let start = parse_rfc3339(&args.start)?;
-    let validation_start = parse_rfc3339(&args.validation_start)?;
-    let end = parse_rfc3339(&args.end)?;
-    if !(start < validation_start && validation_start < end) {
+    let default_period = StationPeriod {
+        start: parse_rfc3339(&args.start)?,
+        validation_start: parse_rfc3339(&args.validation_start)?,
+        end: parse_rfc3339(&args.end)?,
+    };
+    if !(default_period.start < default_period.validation_start
+        && default_period.validation_start < default_period.end)
+    {
         return Err(CalError::InvalidTimestamp(
             "start < validation_start < end is required".to_string(),
         ));
@@ -273,7 +287,7 @@ pub(crate) fn calibrate_france(args: CalibrateFranceArgs) -> Result<(), CalError
         .map(|station| StationExclusion {
             shom_id: station.clone(),
             name: station.clone(),
-            reason: "station not found in eligible REFMAR mainland catalog".to_string(),
+            reason: "station not found in eligible REFMAR RONIM catalog".to_string(),
             metrics: None,
             manifest: None,
         })
@@ -287,7 +301,15 @@ pub(crate) fn calibrate_france(args: CalibrateFranceArgs) -> Result<(), CalError
             station.shom_id,
             title_case_station(&station.name)
         );
-        match calibrate_station(&client, &args, &station, start, validation_start, end) {
+        let period = station_period(&args, &default_period, &station.shom_id)?;
+        match calibrate_station(
+            &client,
+            &args,
+            &station,
+            period.start,
+            period.validation_start,
+            period.end,
+        ) {
             Ok(artifact) => {
                 write_station_artifacts(&args, &artifact)?;
                 eprintln!(
@@ -361,7 +383,7 @@ fn select_stations(catalog: &[CatalogStation], args: &CalibrateFranceArgs) -> Ve
             if !requested.is_empty() {
                 return requested.contains(station.shom_id.as_str());
             }
-            station.state == "OK" && is_mainland_france(station)
+            station.state == "OK" && station.reseau.as_deref() == Some(ELIGIBLE_NETWORK)
         })
         .filter(|station| args.include_brest || station.shom_id != crate::common::BREST_SHOM_ID)
         .cloned()
@@ -371,6 +393,8 @@ fn select_stations(catalog: &[CatalogStation], args: &CalibrateFranceArgs) -> Ve
         priority_rank(&left.shom_id)
             .cmp(&priority_rank(&right.shom_id))
             .then_with(|| left.name.cmp(&right.name))
+            .then_with(|| left.latitude.total_cmp(&right.latitude))
+            .then_with(|| left.longitude.total_cmp(&right.longitude))
     });
     if let Some(limit) = args.limit {
         stations.truncate(limit);
@@ -385,9 +409,28 @@ fn priority_rank(shom_id: &str) -> usize {
         .unwrap_or(usize::MAX)
 }
 
-fn is_mainland_france(station: &CatalogStation) -> bool {
-    (FRANCE_MIN_LAT..=FRANCE_MAX_LAT).contains(&station.latitude)
-        && (FRANCE_MIN_LON..=FRANCE_MAX_LON).contains(&station.longitude)
+fn station_period(
+    args: &CalibrateFranceArgs,
+    default_period: &StationPeriod,
+    shom_id: &str,
+) -> Result<StationPeriod, CalError> {
+    if args.validation_start == DEFAULT_VALIDATION_START && args.end == DEFAULT_END {
+        if shom_id == CHERBOURG_SHOM_ID {
+            return Ok(StationPeriod {
+                start: default_period.start,
+                validation_start: parse_rfc3339(CHERBOURG_VALIDATION_START)?,
+                end: parse_rfc3339(CHERBOURG_END)?,
+            });
+        }
+        if shom_id == CALAIS_SHOM_ID {
+            return Ok(StationPeriod {
+                start: default_period.start,
+                validation_start: parse_rfc3339(CALAIS_VALIDATION_START)?,
+                end: parse_rfc3339(CALAIS_END)?,
+            });
+        }
+    }
+    Ok(default_period.clone())
 }
 
 fn calibrate_station(
