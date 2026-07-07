@@ -119,6 +119,43 @@ fn tide_returns_brest_experimental_confidence() {
 }
 
 #[test]
+fn tide_loads_default_packs_from_extracted_archive() {
+    let root = workspace_root();
+    let archive = unique_temp_dir("archive-default-packs");
+    let packs = archive.join("packs");
+    must(fs::create_dir_all(&packs));
+    for file in [
+        "noaa_m0.json",
+        "amar-data-brest-experimental.json",
+        "amar-data-france-experimental.json",
+    ] {
+        must(fs::copy(
+            root.join("data/packs").join(file),
+            packs.join(file),
+        ));
+    }
+
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .current_dir(&archive)
+            .arg("tide")
+            .arg("--lat")
+            .arg("37.806")
+            .arg("--lon")
+            .arg("-122.465")
+            .arg("--at")
+            .arg("2026-08-15T12:00:00Z")
+            .output(),
+    );
+    let _ = fs::remove_dir_all(&archive);
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["source"]["id"], "noaa:9414290");
+    assert!(body["height_m"].is_number());
+}
+
+#[test]
 fn coef_returns_brest_derived_coefficient() {
     let root = workspace_root();
     let output = must(

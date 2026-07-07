@@ -1,0 +1,161 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "SemVer tag to release, for example v0.6.0"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: prepare release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          set -eu
+          tag="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "release tags must use semver vX.Y.Z, got $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  tarball:
+    name: tarball (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    needs: prepare
+    timeout-minutes: 45
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            builder: zig
+            smoke: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            builder: zig
+            smoke: false
+          - target: aarch64-apple-darwin
+            os: macos-14
+            builder: cargo
+            smoke: true
+          - target: x86_64-apple-darwin
+            os: macos-13
+            builder: cargo
+            smoke: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - uses: goto-bus-stop/setup-zig@v2
+        if: matrix.builder == 'zig'
+
+      - name: Install cargo-zigbuild
+        if: matrix.builder == 'zig'
+        run: cargo install cargo-zigbuild --locked
+
+      - name: Build archive
+        shell: bash
+        run: |
+          set -eu
+          if [ "${{ matrix.builder }}" = "zig" ]; then
+            make dist-tarball TARGET="${{ matrix.target }}" TAG="$RELEASE_TAG" CARGO_BUILD="cargo zigbuild"
+          else
+            make dist-tarball TARGET="${{ matrix.target }}" TAG="$RELEASE_TAG"
+          fi
+
+      - name: Smoke archive
+        if: matrix.smoke
+        shell: bash
+        run: |
+          set -eu
+          archive="dist/amar-${RELEASE_TAG}-${{ matrix.target }}.tar.gz"
+          smoke_dir="dist/smoke-${{ matrix.target }}"
+          mkdir -p "$smoke_dir"
+          tar -xzf "$archive" -C "$smoke_dir"
+          cd "$smoke_dir/amar-${RELEASE_TAG}-${{ matrix.target }}"
+          ./amar tide --pack packs/noaa_m0.json --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z > tide.json
+          grep -q '"height_m"' tide.json
+          grep -q '"id": "noaa:9414290"' tide.json
+
+      - name: Smoke archive skipped
+        if: ${{ !matrix.smoke }}
+        run: echo "Skipping aarch64 Linux smoke because this archive is cross-built on an x86_64 runner."
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: amar-${{ needs.prepare.outputs.tag }}-${{ matrix.target }}.tar.gz
+          path: dist/amar-${{ needs.prepare.outputs.tag }}-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: publish release
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - tarball
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+
+    steps:
+      - name: Download archives
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: amar-*.tar.gz
+          merge-multiple: true
+
+      - name: Create checksums
+        shell: bash
+        run: |
+          set -eu
+          cd dist
+          sha256sum *.tar.gz > SHA256SUMS
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -eu
+          gh release create "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --generate-notes \
+            dist/*.tar.gz \
+            dist/SHA256SUMS

@@ -3,29 +3,51 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.4 ajoute un premier pack France expérimental au socle NOAA et à Brest :
-11 ports REFMAR Manche/Atlantique, les prochains PM/BM, les séries bornées, les
-fenêtres de seuil et le coefficient de marée français dérivé de notre Brest
-calibré. On lance un serveur local, on envoie `lat/lon/datetime`, et la réponse
-donne soit une hauteur traçable, soit un refus utile.
+amar v0.6 publie des binaires téléchargeables en plus de l'image GHCR. Le
+socle couvre NOAA, Brest expérimental et 11 ports REFMAR Manche/Atlantique,
+avec prochains PM/BM, séries bornées, fenêtres de seuil et coefficient de marée
+français dérivé de notre Brest calibré. On lance un serveur local, on envoie
+`lat/lon/datetime`, et la réponse donne soit une hauteur traçable, soit un
+refus utile.
 
 ## Installation
 
-Depuis un clone du dépôt :
+### 1. Binaire GitHub Release
+
+Choisir le `target` adapté à la plateforme :
+
+| Plateforme | Target |
+|---|---|
+| Linux x86_64 statique | `x86_64-unknown-linux-musl` |
+| Linux ARM64 statique | `aarch64-unknown-linux-musl` |
+| macOS Apple Silicon | `aarch64-apple-darwin` |
+| macOS Intel | `x86_64-apple-darwin` |
+
+Télécharger et extraire la dernière release, par exemple Linux x86_64 :
 
 ```bash
-make release && mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 755 dist/amar ~/.local/bin/amar && cp dist/packs/*.json ~/.local/share/amar/packs/
+target=x86_64-unknown-linux-musl; tag=$(curl -fsSL https://api.github.com/repos/Destynova2/amar/releases/latest | sed -n 's/.*"tag_name": "\(v[0-9][^"]*\)".*/\1/p'); curl -fsSL "https://github.com/Destynova2/amar/releases/latest/download/amar-${tag}-${target}.tar.gz" | tar -xz
 ```
 
-Lancer le serveur :
+Lancer le serveur depuis le répertoire extrait :
 
 ```bash
-amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --pack ~/.local/share/amar/packs/amar-data-france-experimental.json --addr 127.0.0.1:3000
+cd "amar-${tag}-${target}"
+./amar serve
 ```
 
-Le serveur charge le pack au démarrage, puis fonctionne offline.
+L'archive contient `amar`, `packs/`, `install.md`, `LICENSE` et
+`LIMITATIONS.md`. Le binaire charge automatiquement les packs présents dans
+`packs/`, donc aucun Cargo ni Docker n'est nécessaire.
 
-## Docker
+Vérifier le checksum après téléchargement manuel :
+
+```bash
+curl -fsSLO https://github.com/Destynova2/amar/releases/latest/download/SHA256SUMS
+shasum -a 256 -c SHA256SUMS --ignore-missing
+```
+
+### 2. Docker/Podman
 
 L'image GHCR embarque le binaire et les trois packs versionnés :
 
@@ -51,6 +73,21 @@ Le même lancement fonctionne avec Podman rootless :
 
 ```bash
 podman run --rm -p 3000:3000 ghcr.io/destynova2/amar
+```
+
+### 3. Cargo depuis le dépôt
+
+Depuis un clone du dépôt :
+
+```bash
+make release
+./dist/amar serve
+```
+
+Produire localement la même forme d'archive qu'en release :
+
+```bash
+make dist-tarball TARGET=x86_64-unknown-linux-musl
 ```
 
 ## Trois curls

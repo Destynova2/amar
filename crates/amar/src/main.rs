@@ -25,8 +25,10 @@ use std::process::ExitCode;
 use thiserror::Error;
 
 const DEFAULT_NOAA_PACK: &str = "data/packs/noaa_m0.json";
-const DEFAULT_BREST_PACK: &str = "data/packs/amar-data-brest-experimental.json";
-const DEFAULT_FRANCE_PACK: &str = "data/packs/amar-data-france-experimental.json";
+const DEFAULT_NOAA_PACK_FILE: &str = "noaa_m0.json";
+const DEFAULT_BREST_PACK_FILE: &str = "amar-data-brest-experimental.json";
+const DEFAULT_FRANCE_PACK_FILE: &str = "amar-data-france-experimental.json";
+const DEFAULT_ARCHIVE_PACK_DIR: &str = "packs";
 const DEFAULT_BREST_BENCHMARK: &str = "fixtures/refmar/benchmark_brest_v1.json";
 const DEFAULT_REFMAR_BENCHMARKS_DIR: &str = "fixtures/refmar/benchmarks";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
@@ -688,12 +690,31 @@ fn effective_pack_paths(paths: &[PathBuf]) -> Vec<PathBuf> {
     if !paths.is_empty() {
         return paths.to_vec();
     }
-    let mut defaults = vec![PathBuf::from(DEFAULT_NOAA_PACK)];
-    let brest = PathBuf::from(DEFAULT_BREST_PACK);
+    if Path::new(DEFAULT_NOAA_PACK).exists() {
+        return default_pack_paths_in(Path::new("data/packs"));
+    }
+    let archive_pack_dir = Path::new(DEFAULT_ARCHIVE_PACK_DIR);
+    if archive_pack_dir.join(DEFAULT_NOAA_PACK_FILE).exists() {
+        return default_pack_paths_in(archive_pack_dir);
+    }
+    if let Ok(current_exe) = std::env::current_exe()
+        && let Some(exe_dir) = current_exe.parent()
+    {
+        let exe_pack_dir = exe_dir.join(DEFAULT_ARCHIVE_PACK_DIR);
+        if exe_pack_dir.join(DEFAULT_NOAA_PACK_FILE).exists() {
+            return default_pack_paths_in(&exe_pack_dir);
+        }
+    }
+    vec![PathBuf::from(DEFAULT_NOAA_PACK)]
+}
+
+fn default_pack_paths_in(dir: &Path) -> Vec<PathBuf> {
+    let mut defaults = vec![dir.join(DEFAULT_NOAA_PACK_FILE)];
+    let brest = dir.join(DEFAULT_BREST_PACK_FILE);
     if brest.exists() {
         defaults.push(brest);
     }
-    let france = PathBuf::from(DEFAULT_FRANCE_PACK);
+    let france = dir.join(DEFAULT_FRANCE_PACK_FILE);
     if france.exists() {
         defaults.push(france);
     }

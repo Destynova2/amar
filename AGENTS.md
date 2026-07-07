@@ -26,6 +26,8 @@ Les seuils de gates ne changent pas en itération de durcissement.
 - Seattle `9447130` est la station témoin et ne sert jamais au réglage.
 - Les commits sont conventionnels, en anglais, sans mention d'IA ni
   `Co-authored-by`.
+- Les releases publiées utilisent des tags semver `vX.Y.Z` à partir de
+  `v0.6.0`; les tags jalons historiques restent possibles hors release.
 - Le périmètre du brief est strict : pas de scope creep.
 - Les documents de plan ne se modifient jamais : `PLAN.md`, `MVP.md`,
   `DATA.md`, `PREMORTEM.md`, `prompt.md`.

@@ -11,12 +11,24 @@ STATION_COUNT := $(shell expr $(NOAA_STATION_COUNT) + $(BREST_STATION_COUNT) + $
 CONTAINER_ENGINE ?= $(shell if command -v docker >/dev/null 2>&1; then printf docker; elif command -v podman >/dev/null 2>&1; then printf podman; fi)
 CONTAINER_IMAGE ?= amar:local
 CONTAINER_PORT ?= 3000
+HOST_TARGET := $(shell rustc -vV | awk '/^host:/ { print $$2 }')
+TARGET ?=
+RELEASE_TARGET := $(if $(TARGET),$(TARGET),$(HOST_TARGET))
+TAG ?= $(shell git describe --tags --exact-match 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || printf v0.0.0-dev)
+DIST_DIR ?= dist
+DIST_ROOT ?= dist
+DIST_NAME := amar-$(TAG)-$(TARGET)
+DIST_STAGE := $(DIST_ROOT)/$(DIST_NAME)
+DIST_TARBALL := $(DIST_ROOT)/$(DIST_NAME).tar.gz
+CARGO_BUILD ?= cargo build
+TARGET_ARG := $(if $(TARGET),--target $(TARGET),)
+RELEASE_BIN := $(if $(TARGET),target/$(TARGET)/release/amar,target/release/amar)
 YEARS = 2026 2031 2036
 HILO_YEARS = 2026
 HILO_DRIFT_YEARS = 2031
 HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france m0-validate m2-benchmark m3-check release m1-smoke container container-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france m0-validate m2-benchmark m3-check release dist-tarball m1-smoke container container-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -98,28 +110,48 @@ m3-check: test m0-validate m2-benchmark
 	cargo run -p amar -- validate-hilo --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
 
 release:
-	cargo build --release -p amar
-	mkdir -p dist/packs
-	install -m 755 target/release/amar dist/amar
-	cp data/packs/noaa_m0.json dist/packs/noaa_m0.json
-	cp data/packs/amar-data-brest-experimental.json dist/packs/amar-data-brest-experimental.json
-	if [ -f data/packs/amar-data-france-experimental.json ]; then cp data/packs/amar-data-france-experimental.json dist/packs/amar-data-france-experimental.json; fi
+	CARGO_PROFILE_RELEASE_STRIP=symbols $(CARGO_BUILD) --release --locked -p amar $(TARGET_ARG)
+	install -d "$(DIST_DIR)/packs"
+	install -m 755 "$(RELEASE_BIN)" "$(DIST_DIR)/amar"
+	cp data/packs/noaa_m0.json "$(DIST_DIR)/packs/noaa_m0.json"
+	cp data/packs/amar-data-brest-experimental.json "$(DIST_DIR)/packs/amar-data-brest-experimental.json"
+	cp data/packs/amar-data-france-experimental.json "$(DIST_DIR)/packs/amar-data-france-experimental.json"
+	cp LICENSE "$(DIST_DIR)/LICENSE"
+	cp LIMITATIONS.md "$(DIST_DIR)/LIMITATIONS.md"
 	printf '%s\n' \
 		'# Installation' \
 		'' \
-		'Depuis la racine du dépôt :' \
+		'Cette archive contient le binaire amar et les trois packs JSON versionnés :' \
+		'' \
+		'- packs/noaa_m0.json' \
+		'- packs/amar-data-brest-experimental.json' \
+		'- packs/amar-data-france-experimental.json' \
+		'' \
+		'Depuis ce répertoire extrait :' \
 		'' \
 		'```bash' \
-		'make release' \
-		'mkdir -p ~/.local/bin ~/.local/share/amar/packs && install -m 755 dist/amar ~/.local/bin/amar && cp dist/packs/*.json ~/.local/share/amar/packs/' \
+		'./amar serve' \
 		'```' \
 		'' \
-		'Puis lancer le serveur :' \
+		'Commande explicite équivalente :' \
 		'' \
 		'```bash' \
-		'amar serve --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json --pack ~/.local/share/amar/packs/amar-data-france-experimental.json --addr 127.0.0.1:3000' \
+		'./amar serve --pack packs/noaa_m0.json --pack packs/amar-data-brest-experimental.json --pack packs/amar-data-france-experimental.json --addr 127.0.0.1:3000' \
 		'```' \
-		> dist/install.md
+		'' \
+		'Smoke CLI :' \
+		'' \
+		'```bash' \
+		'./amar tide --pack packs/noaa_m0.json --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z' \
+		'```' \
+		> "$(DIST_DIR)/install.md"
+
+dist-tarball:
+	@test -n "$(TARGET)" || { echo "TARGET is required: make dist-tarball TARGET=<triple>"; exit 1; }
+	rm -rf "$(DIST_STAGE)"
+	$(MAKE) release TARGET="$(TARGET)" TAG="$(TAG)" DIST_DIR="$(DIST_STAGE)" CARGO_BUILD="$(CARGO_BUILD)"
+	tar -C "$(DIST_ROOT)" -czf "$(DIST_TARBALL)" "$(DIST_NAME)"
+	@printf '%s\n' "$(DIST_TARBALL)"
 
 m1-smoke:
 	cargo build -p amar
