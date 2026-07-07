@@ -113,7 +113,8 @@ jobs:
 
       - name: Smoke archive skipped
         if: ${{ !matrix.smoke }}
-        run: echo "Skipping smoke: ${{ matrix.skip_reason }}."
+        run: |
+          echo "Skipping smoke: ${{ matrix.skip_reason }}."
 
       - name: Upload archive
         uses: actions/upload-artifact@v4
