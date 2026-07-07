@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Re-fetch NOAA fixtures and diff committed data
         run: |
           set -eu

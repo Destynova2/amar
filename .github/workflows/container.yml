@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: docker/setup-qemu-action@v3
 
@@ -89,7 +89,7 @@ jobs:
             sleep 1
           done
           test "$ready" = "1" || fail
-          grep -q '"station_count":20' "$health" || fail
+          grep -q '"station_count":30' "$health" || fail
 
           code="$(curl -sS -o "$tide" -w '%{http_code}' \
             -H 'content-type: application/json' \
