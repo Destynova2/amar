@@ -22,7 +22,7 @@ env:
 jobs:
   image:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v6
 
