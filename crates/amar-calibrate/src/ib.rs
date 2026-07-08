@@ -207,12 +207,15 @@ mod tests {
     }
 
     fn pressure_file(name: &str, body: &str) -> std::path::PathBuf {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let seq = SEQ.fetch_add(1, Ordering::Relaxed);
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_nanos())
             .unwrap_or(0);
         let path = std::env::temp_dir().join(format!(
-            "amar-open-meteo-{name}-{}-{nanos}.json",
+            "amar-open-meteo-{name}-{}-{nanos}-{seq}.json",
             std::process::id()
         ));
         must(fs::write(&path, body));
