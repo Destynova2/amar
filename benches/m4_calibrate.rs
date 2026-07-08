@@ -31,8 +31,10 @@ fn synthetic_samples() -> Vec<Observation> {
 
 fn bench_calibrate(c: &mut Criterion) {
     let samples = synthetic_samples();
-    let constituents = solve::prepare_constituents(ConstituentSet::M22Rayleigh37.specs())
-        .expect("constituents must prepare");
+    let specs = ConstituentSet::M22Rayleigh37
+        .specs()
+        .expect("constituents must load");
+    let constituents = solve::prepare_constituents(&specs).expect("constituents must prepare");
 
     let mut group = c.benchmark_group("calibrate_ls_brest37_synthetic");
     group.sample_size(10);

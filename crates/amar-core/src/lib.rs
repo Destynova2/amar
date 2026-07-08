@@ -13,6 +13,10 @@ use chrono::{Datelike, TimeZone, Utc};
 use constituents::constituent_definition;
 use nodal::{NodalTerms, nodal_terms};
 
+pub use constituents::{
+    constituent_speed_degrees_per_hour, port_selection_constituent_names,
+    supported_constituent_names,
+};
 pub use extrema::{extrema_between, next_extrema_after, tide_windows};
 pub use types::{
     ConstituentId, CoreError, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, Meters,
@@ -399,61 +403,23 @@ mod tests {
         ))
     }
 
-    fn brest37_like_model() -> TideModel {
-        let specs = [
-            ("M2", 28.984_104),
-            ("S2", 30.0),
-            ("N2", 28.439_73),
-            ("K2", 30.082_138),
-            ("K1", 15.041_069),
-            ("O1", 13.943_035),
-            ("P1", 14.958_931),
-            ("Q1", 13.398_661),
-            ("M4", 57.968_21),
-            ("MS4", 58.984_104),
-            ("MN4", 57.423_832),
-            ("M6", 86.952_32),
-            ("MF", 1.098_033_1),
-            ("MM", 0.544_374_7),
-            ("SA", 0.041_068_6),
-            ("SSA", 0.082_137_3),
-            ("L2", 29.528_479),
-            ("NU2", 28.512_583),
-            ("MU2", 27.968_208),
-            ("2N2", 27.895_355),
-            ("LAM2", 29.455_626),
-            ("T2", 29.958_933),
-            ("R2", 30.041_067),
-            ("J1", 15.585_443_5),
-            ("OO1", 16.139_101),
-            ("RHO", 13.471_515),
-            ("2Q1", 12.854_286),
-            ("M1", 14.496_694),
-            ("S1", 15.0),
-            ("MK3", 44.025_173),
-            ("2MK3", 42.927_14),
-            ("M3", 43.476_16),
-            ("S4", 60.0),
-            ("S6", 90.0),
-            ("M8", 115.936_42),
-            ("MSF", 1.015_895_8),
-            ("2SM2", 31.015_896),
-        ];
-        let constituents = specs
-            .into_iter()
+    fn extended_catalog_model() -> TideModel {
+        let constituents = supported_constituent_names()
+            .iter()
             .enumerate()
-            .map(|(index, (name, speed))| {
+            .map(|(index, name)| {
+                let speed = must_some(constituent_speed_degrees_per_hour(name));
                 HarmonicConstituent::new(
-                    must(ConstituentId::new(name)),
-                    must(Meters::new(0.01 + index as f64 * 0.004)),
-                    must(Degrees::new((index as f64 * 37.0).rem_euclid(360.0))),
+                    must(ConstituentId::new(*name)),
+                    must(Meters::new(0.01 + index as f64 * 0.002)),
+                    must(Degrees::new((index as f64 * 29.0).rem_euclid(360.0))),
                     must(DegreesPerHour::new(speed)),
                 )
             })
             .collect::<Vec<_>>();
         must(TideModel::new(
-            must(DatumId::new("zero_hydrographique_brest")),
-            must(Meters::new(4.287)),
+            must(DatumId::new("zero_hydrographique_synthetic")),
+            must(Meters::new(2.0)),
             constituents,
             PredictionMethod::StationHarmonicsV0,
         ))
@@ -501,6 +467,53 @@ mod tests {
         }
     }
 
+    #[test]
+    fn supported_catalog_has_definitions_and_speeds() {
+        assert!(supported_constituent_names().len() >= 68);
+        assert_eq!(port_selection_constituent_names().len(), 68);
+
+        for name in supported_constituent_names() {
+            assert!(constituent_definition(name).is_some(), "{name}");
+            assert!(
+                must_some(constituent_speed_degrees_per_hour(name)).is_finite(),
+                "{name}"
+            );
+        }
+        for name in port_selection_constituent_names() {
+            assert!(supported_constituent_names().contains(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn shallow_constituents_follow_documented_combinations() {
+        let cases = [
+            ("M4", &[(2, "M2")][..]),
+            ("M6", &[(3, "M2")][..]),
+            ("M8", &[(4, "M2")][..]),
+            ("MS4", &[(1, "M2"), (1, "S2")][..]),
+            ("MN4", &[(1, "M2"), (1, "N2")][..]),
+            ("2MS6", &[(2, "M2"), (1, "S2")][..]),
+            ("2MN6", &[(2, "M2"), (1, "N2")][..]),
+            ("MSN2", &[(1, "M2"), (1, "S2"), (-1, "N2")][..]),
+            ("MK3", &[(1, "M2"), (1, "K1")][..]),
+            ("2MK3", &[(2, "M2"), (-1, "K1")][..]),
+        ];
+
+        for (name, terms) in cases {
+            let terms = terms
+                .iter()
+                .map(|(coefficient, term_name)| {
+                    crate::constituents::CompoundTerm::new(*coefficient, term_name)
+                })
+                .collect::<Vec<_>>();
+            let actual = must_some(constituent_definition(name));
+            let expected = must_some(crate::constituents::compound_definition(&terms));
+            assert_eq!(actual.coefficients, expected.coefficients, "{name}");
+            assert_eq!(actual.u_coefficients, expected.u_coefficients, "{name}");
+            assert_eq!(actual.factor_terms, expected.factor_terms, "{name}");
+        }
+    }
+
     proptest! {
         #[test]
         fn harmonic_height_is_continuous(seconds in 1_609_459_200_i64..1_893_456_000_i64) {
@@ -514,7 +527,7 @@ mod tests {
         #[test]
         fn compiled_model_matches_direct_model_random_2020_2030(seconds in 1_577_836_800_i64..1_924_992_000_i64) {
             let at = UtcDateTime::from_utc(must_some(Utc.timestamp_opt(seconds, 0).single()));
-            let model = brest37_like_model();
+            let model = extended_catalog_model();
             let compiled = must(CompiledTideModel::for_year(&model, at.as_chrono().year()));
             let direct = predict_height_direct(&model, at).height().as_meters();
             let compiled = must(compiled.predict_height(at)).height().as_meters();
@@ -524,7 +537,7 @@ mod tests {
 
     #[test]
     fn compiled_model_matches_direct_model_around_year_boundaries() {
-        let model = brest37_like_model();
+        let model = extended_catalog_model();
         for year in 2020..=2031 {
             let boundary = must_some(Utc.with_ymd_and_hms(year, 1, 1, 0, 0, 0).single());
             for offset_seconds in -60..=60 {

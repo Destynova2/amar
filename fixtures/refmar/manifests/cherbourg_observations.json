@@ -1,6 +1,6 @@
 {
   "schema_version": "refmar-observation-manifest-v1",
-  "generated_at": "2026-07-07-v0.7-france",
+  "generated_at": "2026-07-08-v0.10-france",
   "station_id": "refmar:13",
   "provider_station_id": "13",
   "station_name": "Cherbourg",
@@ -11,40 +11,46 @@
   "observations_url": "https://services.data.shom.fr/maregraphie/observation/json/13?sources=4",
   "input_period": {
     "start": "2021-01-01T00:00:00Z",
-    "end": "2026-04-01T00:00:00Z"
+    "end": "2025-07-01T00:00:00Z"
   },
   "calibration_period": {
     "start": "2021-01-01T00:00:00Z",
-    "end": "2026-01-01T00:00:00Z"
+    "end": "2025-04-01T00:00:00Z"
   },
   "validation_period": {
-    "start": "2026-01-01T00:00:00Z",
-    "end": "2026-04-01T00:00:00Z"
+    "start": "2025-04-01T00:00:00Z",
+    "end": "2025-07-01T00:00:00Z"
   },
-  "observations_sha256": "ad7e6fb3cabd3648e73a8ec624c47f7401f9cc00219125b7d951e96950d1ea0c",
+  "observations_sha256": "0615b76e8af24b60a328b32820c9de1b3621093fbae5622d774bbd0556d2597e",
   "tidegauge_sha256": "42e2d85371fff8ad5b10a27efd5f201ab28a8e80d1f75eaee680b8e8613a528a",
   "qc": {
-    "expected": 45984,
-    "observed": 45491,
-    "coverage": 0.9892788796102993,
+    "expected": 39408,
+    "observed": 38916,
+    "coverage": 0.9875152253349574,
     "gaps": 16,
     "jumps": 0
   },
   "benchmark": {
     "benchmark_id": "benchmark_cherbourg_v1",
-    "checksum_sha256": "8fb7cca217c740d4c09cc74595bd5453a831e55e0bef0a997c20f7d7ecec6ebe",
-    "calibrated_rms_cm": 20.323487460332057,
-    "calibrated_mae_cm": 15.534905679834315,
-    "calibrated_p95_cm": 41.34125290366808,
-    "calibrated_max_cm": 96.19952237464373,
-    "z0_rms_cm": 145.6463461379923,
-    "z0_mae_cm": 124.02564702191692,
-    "z0_p95_cm": 255.7960850492802,
-    "z0_max_cm": 320.3960850492802,
-    "rms_factor_vs_z0": 7.166405196070254
+    "checksum_sha256": "a318bf95f32ed98bbbfd0a7d0e08a2cbd3da92ec2091805748e128e82a733818",
+    "calibrated_rms_cm": 9.569517124527563,
+    "calibrated_mae_cm": 7.647383720094283,
+    "calibrated_p95_cm": 18.988487939435927,
+    "calibrated_max_cm": 40.1469464284018,
+    "z0_rms_cm": 142.17537495067734,
+    "z0_mae_cm": 123.1014200276363,
+    "z0_p95_cm": 240.73766754467084,
+    "z0_max_cm": 335.23766754467084,
+    "rms_factor_vs_z0": 14.857110667190158
+  },
+  "constituent_selection": {
+    "method": "rayleigh_plus_snr2_port_selection",
+    "rayleigh_count": 68,
+    "significant_count": 62,
+    "snr_min": 2.0
   },
   "decision": {
-    "included": false,
-    "reason": "p95 41.3 cm exceeds 40.0 cm"
+    "included": true,
+    "reason": "included"
   }
 }

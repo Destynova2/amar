@@ -1,7 +1,8 @@
 use crate::common::{CalError, Observation};
 use amar_core::{
     ConstituentId, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, HarmonicYearContext,
-    Meters, PredictionMethod, TideModel, UtcDateTime,
+    Meters, PredictionMethod, TideModel, UtcDateTime, constituent_speed_degrees_per_hour,
+    port_selection_constituent_names,
 };
 use amar_pack::{ConstituentPack, DegreesPerHourValue, DegreesValue, MetersValue};
 use chrono::{DateTime, Datelike, Utc};
@@ -10,6 +11,8 @@ use nalgebra::{DMatrix, DVector};
 use std::collections::BTreeMap;
 
 const MIN_ANNUAL_WINDOW_DAYS: i64 = 365;
+const RAYLEIGH_MIN: f64 = 1.0;
+const SNR_MIN: f64 = 2.0;
 
 pub(crate) const M2_BASE16: [ConstituentSpec; 16] = [
     ConstituentSpec::new("M2", 28.984_104),
@@ -29,6 +32,13 @@ pub(crate) const M2_BASE16: [ConstituentSpec; 16] = [
     ConstituentSpec::new("SA", 0.041_068_6),
     ConstituentSpec::new("SSA", 0.082_137_3),
 ];
+
+pub(crate) fn port_selection_catalog() -> Result<Vec<ConstituentSpec>, CalError> {
+    port_selection_constituent_names()
+        .iter()
+        .map(|name| ConstituentSpec::from_core(name))
+        .collect()
+}
 
 pub(crate) const M22_RAYLEIGH37: [ConstituentSpec; 37] = [
     ConstituentSpec::new("M2", 28.984_104),
@@ -74,13 +84,15 @@ pub(crate) const M22_RAYLEIGH37: [ConstituentSpec; 37] = [
 pub(crate) enum ConstituentSet {
     M2Base16,
     M22Rayleigh37,
+    PortSelectionCatalog,
 }
 
 impl ConstituentSet {
-    pub(crate) fn specs(self) -> &'static [ConstituentSpec] {
+    pub(crate) fn specs(self) -> Result<Vec<ConstituentSpec>, CalError> {
         match self {
-            Self::M2Base16 => &M2_BASE16,
-            Self::M22Rayleigh37 => &M22_RAYLEIGH37,
+            Self::M2Base16 => Ok(M2_BASE16.to_vec()),
+            Self::M22Rayleigh37 => Ok(M22_RAYLEIGH37.to_vec()),
+            Self::PortSelectionCatalog => port_selection_catalog(),
         }
     }
 }
@@ -98,6 +110,12 @@ impl ConstituentSpec {
             speed_deg_per_hour,
         }
     }
+
+    fn from_core(name: &'static str) -> Result<Self, CalError> {
+        let speed = constituent_speed_degrees_per_hour(name)
+            .ok_or_else(|| CalError::QualityGate(format!("missing core speed for {name}")))?;
+        Ok(Self::new(name, speed))
+    }
 }
 
 #[derive(Debug)]
@@ -105,6 +123,12 @@ pub(crate) struct CalibrationResult {
     pub(crate) z0_m: f64,
     pub(crate) constituents: Vec<ConstituentPack>,
     pub(crate) model: TideModel,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ConstituentSelection {
+    pub(crate) rayleigh_count: usize,
+    pub(crate) significant_count: usize,
 }
 
 #[derive(Clone)]
@@ -117,6 +141,12 @@ pub(crate) struct PreparedConstituent {
 pub(crate) struct DesignSystem {
     pub(crate) matrix: DMatrix<f64>,
     pub(crate) values: DVector<f64>,
+}
+
+struct FitResult {
+    prepared_constituents: Vec<PreparedConstituent>,
+    solution: DVector<f64>,
+    covariance: DMatrix<f64>,
 }
 
 struct PreparedYearContext {
@@ -137,22 +167,61 @@ pub(crate) fn calibrate(
     calibration_end: DateTime<Utc>,
     constituent_set: ConstituentSet,
 ) -> Result<CalibrationResult, CalError> {
+    let constituent_specs = constituent_set.specs()?;
+    calibrate_specs(
+        samples,
+        calibration_start,
+        calibration_end,
+        &constituent_specs,
+    )
+}
+
+pub(crate) fn calibrate_with_port_selection(
+    samples: &[Observation],
+    calibration_start: DateTime<Utc>,
+    calibration_end: DateTime<Utc>,
+) -> Result<(CalibrationResult, ConstituentSelection), CalError> {
+    let catalog = port_selection_catalog()?;
+    let rayleigh = rayleigh_select(calibration_start, calibration_end, &catalog)?;
+    let first_pass = fit_coefficients(samples, calibration_start, calibration_end, &rayleigh)?;
+    let significant = significant_select(&rayleigh, &first_pass, SNR_MIN);
+    if significant.is_empty() {
+        return Err(CalError::QualityGate(
+            "constituent selection retained no significant constituents".to_string(),
+        ));
+    }
+    let selection = ConstituentSelection {
+        rayleigh_count: rayleigh.len(),
+        significant_count: significant.len(),
+    };
+    let calibration = calibrate_specs(samples, calibration_start, calibration_end, &significant)?;
+    Ok((calibration, selection))
+}
+
+pub(crate) fn calibrate_specs(
+    samples: &[Observation],
+    calibration_start: DateTime<Utc>,
+    calibration_end: DateTime<Utc>,
+    constituent_specs: &[ConstituentSpec],
+) -> Result<CalibrationResult, CalError> {
     if samples.is_empty() {
         return Err(CalError::EmptyObservations("calibration".to_string()));
     }
-    let constituent_specs = constituent_set.specs();
     enforce_resolvable_window(calibration_start, calibration_end, constituent_specs)?;
 
-    let prepared_constituents = prepare_constituents(constituent_specs)?;
-    let design_system = assemble_design_system(samples, &prepared_constituents)?;
-    let solution = solve_svd(design_system.matrix, &design_system.values)?;
+    let fit = fit_coefficients(
+        samples,
+        calibration_start,
+        calibration_end,
+        constituent_specs,
+    )?;
 
-    let z0_m = solution[0];
+    let z0_m = fit.solution[0];
     let mut pack_constituents = Vec::with_capacity(constituent_specs.len());
     let mut model_constituents = Vec::with_capacity(constituent_specs.len());
-    for (index, constituent) in prepared_constituents.iter().enumerate() {
-        let cos_coefficient = solution[1 + index * 2];
-        let sin_coefficient = solution[1 + index * 2 + 1];
+    for (index, constituent) in fit.prepared_constituents.iter().enumerate() {
+        let cos_coefficient = fit.solution[1 + index * 2];
+        let sin_coefficient = fit.solution[1 + index * 2 + 1];
         let amplitude_m = cos_coefficient.hypot(sin_coefficient);
         let phase_gmt_deg = sin_coefficient
             .atan2(cos_coefficient)
@@ -183,6 +252,99 @@ pub(crate) fn calibrate(
         constituents: pack_constituents,
         model,
     })
+}
+
+fn fit_coefficients(
+    samples: &[Observation],
+    calibration_start: DateTime<Utc>,
+    calibration_end: DateTime<Utc>,
+    constituent_specs: &[ConstituentSpec],
+) -> Result<FitResult, CalError> {
+    enforce_resolvable_window(calibration_start, calibration_end, constituent_specs)?;
+    let prepared_constituents = prepare_constituents(constituent_specs)?;
+    let design_system = assemble_design_system(samples, &prepared_constituents)?;
+    let matrix = design_system.matrix;
+    let values = design_system.values;
+    let solution = solve_svd(matrix.clone(), &values)?;
+    let residuals = &matrix * &solution - values;
+    let degrees_of_freedom = matrix.nrows().saturating_sub(matrix.ncols());
+    if degrees_of_freedom == 0 {
+        return Err(CalError::QualityGate(format!(
+            "not enough samples for {} selected constituents",
+            constituent_specs.len()
+        )));
+    }
+    let residual_variance =
+        residuals.iter().map(|value| value * value).sum::<f64>() / degrees_of_freedom as f64;
+    let xtx = matrix.transpose() * matrix;
+    let covariance = xtx.try_inverse().ok_or(CalError::SolveFailed)? * residual_variance;
+    Ok(FitResult {
+        prepared_constituents,
+        solution,
+        covariance,
+    })
+}
+
+fn rayleigh_select(
+    calibration_start: DateTime<Utc>,
+    calibration_end: DateTime<Utc>,
+    catalog: &[ConstituentSpec],
+) -> Result<Vec<ConstituentSpec>, CalError> {
+    let days = (calibration_end - calibration_start).num_seconds() as f64 / 86_400.0;
+    if days <= 0.0 {
+        return Err(CalError::InvalidTimestamp(
+            "calibration_start must be before calibration_end".to_string(),
+        ));
+    }
+    let min_separation_cpd = RAYLEIGH_MIN / days;
+    let mut selected = Vec::new();
+    for spec in catalog {
+        let cpd = cycles_per_day(spec.speed_deg_per_hour);
+        let separable = selected.iter().all(|selected_spec: &ConstituentSpec| {
+            (cycles_per_day(selected_spec.speed_deg_per_hour) - cpd).abs() > min_separation_cpd
+        });
+        if separable {
+            selected.push(*spec);
+        }
+    }
+    Ok(selected)
+}
+
+fn significant_select(
+    specs: &[ConstituentSpec],
+    fit: &FitResult,
+    min_snr: f64,
+) -> Vec<ConstituentSpec> {
+    specs
+        .iter()
+        .enumerate()
+        .filter_map(|(index, spec)| {
+            let cos_index = 1 + index * 2;
+            let sin_index = cos_index + 1;
+            let cos_coefficient = fit.solution[cos_index];
+            let sin_coefficient = fit.solution[sin_index];
+            let amplitude_squared =
+                cos_coefficient * cos_coefficient + sin_coefficient * sin_coefficient;
+            if amplitude_squared == 0.0 {
+                return None;
+            }
+            let variance = (cos_coefficient
+                * cos_coefficient
+                * fit.covariance[(cos_index, cos_index)]
+                + sin_coefficient * sin_coefficient * fit.covariance[(sin_index, sin_index)]
+                + 2.0 * cos_coefficient * sin_coefficient * fit.covariance[(cos_index, sin_index)])
+                / amplitude_squared;
+            if variance <= 0.0 {
+                return Some(*spec);
+            }
+            let snr = amplitude_squared / variance;
+            (snr >= min_snr).then_some(*spec)
+        })
+        .collect()
+}
+
+fn cycles_per_day(speed_deg_per_hour: f64) -> f64 {
+    speed_deg_per_hour * 24.0 / 360.0
 }
 
 pub(crate) fn prepare_constituents(

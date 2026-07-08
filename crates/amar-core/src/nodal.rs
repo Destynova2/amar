@@ -1,6 +1,6 @@
 use crate::astro::AstronomicalTerms;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct FactorTerm {
     pub(crate) formula: NodalFactorFormula,
     pub(crate) power: u8,
@@ -19,7 +19,7 @@ impl FactorTerm {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum NodalFactorFormula {
     Unity,
     Mm,

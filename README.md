@@ -3,8 +3,8 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.7 publie des binaires téléchargeables en plus de l'image GHCR. Le
-socle couvre NOAA, Brest expérimental et 21 ports REFMAR RONIM,
+amar v0.10 publie des binaires téléchargeables en plus de l'image GHCR. Le
+socle couvre NOAA, Brest expérimental et 23 ports REFMAR RONIM,
 avec prochains PM/BM, séries bornées, fenêtres de seuil et coefficient de marée
 français dérivé de notre Brest calibré. On lance un serveur local, on envoie
 `lat/lon/datetime`, et la réponse donne soit une hauteur traçable, soit un
@@ -334,15 +334,19 @@ Les observations d'entrée couvrent
 `2021-01-01T00:00:00Z/2026-04-01T00:00:00Z` exclut les trois derniers mois,
 réservés à `benchmark_brest_v1`.
 
-Le pack France expérimental v0.7 contient 21 ports REFMAR RONIM :
-Arcachon-Eyrac, Boucau-Bayonne, Boulogne-sur-Mer, Concarneau, Dielette,
-Dieppe, Dunkerque, Herbaudière, La Rochelle-Pallice, Le Conquet, Le Crouesty,
-Le Havre, Les Sables-d'Olonne, Mimizan, Nouméa Numbo, Ouistreham, Pointe des
-Galets, Port-Tudy, Roscoff, Saint-Malo et Saint-Nazaire.
+Le pack France expérimental v0.10 contient 23 ports REFMAR RONIM :
+Arcachon-Eyrac, Boucau-Bayonne, Boulogne-sur-Mer, Calais, Cherbourg,
+Concarneau, Dielette, Dieppe, Dunkerque, Herbaudière, La Rochelle-Pallice,
+Le Conquet, Le Crouesty, Le Havre, Les Sables-d'Olonne, Mimizan,
+Nouméa Numbo, Ouistreham, Pointe des Galets, Port-Tudy, Roscoff,
+Saint-Malo et Saint-Nazaire.
 Chaque port a un benchmark figé de trois mois, un manifeste avec SHA-256 des
 observations longues d'entrée, `experimental`, `not_official` et `not_shom`.
-Cherbourg et Calais ont été retentés sur leur dernière fenêtre à couverture
-correcte, mais restent exclus car leur p95 dépasse 40 cm. En Méditerranée, la
+Le Havre utilise depuis v0.10 une sélection de constituants par port qui abaisse
+son p95 de validation à 27,9 cm sur `2026-04/2026-07`. Cherbourg et Calais sont
+inclus sur leur fenêtre saison calme `2025-04/2025-07`; leur résidu
+toutes-saisons reste une caractérisation météo, pas une précision hivernale.
+En Méditerranée, la
 marée astronomique est plus petite que le résidu météo sur ce critère : aucun
 port méditerranéen mesurable ne bat `z0_constant` d'un facteur 2 en RMS.
 

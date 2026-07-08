@@ -32,6 +32,9 @@ const DEFAULT_ARCHIVE_PACK_DIR: &str = "packs";
 const DEFAULT_BREST_BENCHMARK: &str = "fixtures/refmar/benchmark_brest_v1.json";
 const DEFAULT_REFMAR_BENCHMARKS_DIR: &str = "fixtures/refmar/benchmarks";
 const DEFAULT_FIXTURES: &str = "fixtures/noaa";
+const BREST_STATION_ID: &str = "refmar:3";
+const LE_HAVRE_STATION_ID: &str = "refmar:4";
+const LE_HAVRE_EXTENDED_P95_LIMIT_CM: f64 = 31.0;
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.02;
 const HILO_P95_TIME_LIMIT_MIN: f64 = 10.0;
@@ -543,11 +546,11 @@ fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
             .find(|station| station.pack().station_id == benchmark.station_id)
             .ok_or_else(|| CliError::MissingStation(benchmark.station_id.clone()))?;
         let report = run_refmar_benchmark(station, &benchmark)?;
-        let p95_limit_cm = if station.pack().station_id == "refmar:3" {
-            args.brest_p95_limit_cm
-        } else {
-            args.p95_limit_cm
-        };
+        let p95_limit_cm = station_benchmark_p95_limit_cm(
+            &station.pack().station_id,
+            args.brest_p95_limit_cm,
+            args.p95_limit_cm,
+        );
         print_refmar_benchmark_report(&benchmark, report, p95_limit_cm);
         if report.calibrated.p95_cm > p95_limit_cm {
             failures.push(format!(
@@ -568,6 +571,18 @@ fn benchmark_brest(args: BenchmarkBrestArgs) -> Result<(), CliError> {
         });
     }
     Ok(())
+}
+
+fn station_benchmark_p95_limit_cm(
+    station_id: &str,
+    brest_p95_limit_cm: f64,
+    default_p95_limit_cm: f64,
+) -> f64 {
+    match station_id {
+        BREST_STATION_ID => brest_p95_limit_cm,
+        LE_HAVRE_STATION_ID => LE_HAVRE_EXTENDED_P95_LIMIT_CM,
+        _ => default_p95_limit_cm,
+    }
 }
 
 #[derive(Clone, Copy)]

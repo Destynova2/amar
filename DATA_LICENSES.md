@@ -132,9 +132,9 @@ Les constantes Brest publiées par amar sont dérivées des observations REFMAR 
 elles ne sont pas des constantes SHOM et ne doivent pas être présentées comme
 équivalentes.
 
-## REFMAR France v0.7 expérimental
+## REFMAR France v0.10 expérimental
 
-Le pack France v0.7 utilise la même source et la même licence que Brest :
+Le pack France v0.10 utilise la même source et la même licence que Brest :
 service REFMAR/data.shom.fr, attribution `Shom / REFMAR`, Licence Ouverte 2.0
 Etalab, produit `sources=4` données horaires validées, en mètres, UTC,
 référence verticale `zero_hydrographique` locale.
@@ -146,13 +146,23 @@ fenêtres de validation figées des stations incluses.
 
 | Fichier | Origine | SHA-256 |
 |---|---|---|
-| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france` | `a25d10d3cb3240fbd75375074af74a42d277f39f6700b36e7cb5e810d2478772` |
+| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france` | `fdb747b29a4aca7a25d54fa71f71d85c7bf2b539ba5f4b2599d5a8cf508b63ef` |
+
+Benchmarks ajoutés ou remplacés en v0.10 :
+
+| Benchmark | Fichier | Fichier SHA-256 | Checksum interne |
+|---|---|---|---|
+| `benchmark_le_havre_v2` | `fixtures/refmar/benchmarks/benchmark_le_havre_v2.json` | `42864645e6dca81549b583dfb0304ff3859dd43687ec5538d4be0ef365d943fe` | `3695d3505a842c99ad03fd3f9a2f4a28d786968cf0792354eac8e667245e0719` |
+| `benchmark_cherbourg_v1` | `fixtures/refmar/benchmarks/benchmark_cherbourg_v1.json` | `aa3f5ba43339252e4344c824829f3794944ced962076b99cf63fd069965853e3` | `a318bf95f32ed98bbbfd0a7d0e08a2cbd3da92ec2091805748e128e82a733818` |
+| `benchmark_calais_v1` | `fixtures/refmar/benchmarks/benchmark_calais_v1.json` | `2cd4d23435704780710cf6d709023cbd8e8df2654e2dac6af73822b7ccc6732a` | `11162fa3e9b310a8d8eda99cb38378e5305dfbb4c94a52e69d7e4968ab087606` |
 
 | Station | Observations SHA-256 | Manifeste | Benchmark |
 |---|---|---|---|
 | `refmar:190` Arcachon-Eyrac | `56f1821ef1c0ebd3ab3d70277fc9f18e91f8499512ec2ed25180a212f202a672` | `fixtures/refmar/manifests/arcachon_eyrac_observations.json` | `fixtures/refmar/benchmarks/benchmark_arcachon_eyrac_v1.json` |
 | `refmar:94` Boucau-Bayonne | `a4054ab6e2f59a4879ab9a9f261239df29b5c1bf8a5217b2b09904deeee76324` | `fixtures/refmar/manifests/boucau_bayonne_observations.json` | `fixtures/refmar/benchmarks/benchmark_boucau_bayonne_v1.json` |
 | `refmar:111` Boulogne-sur-Mer | `16b2ff8809ce806026fcfcb6e4bdf0ca0cefb472f8e07c31dcfd73c47fad5616` | `fixtures/refmar/manifests/boulogne_sur_mer_observations.json` | `fixtures/refmar/benchmarks/benchmark_boulogne_sur_mer_v1.json` |
+| `refmar:55` Calais | `00d23d5805d6c5aa9434ab911b42492d2e530ce97762273578495b2536b78346` | `fixtures/refmar/manifests/calais_observations.json` | `fixtures/refmar/benchmarks/benchmark_calais_v1.json` |
+| `refmar:13` Cherbourg | `0615b76e8af24b60a328b32820c9de1b3621093fbae5622d774bbd0556d2597e` | `fixtures/refmar/manifests/cherbourg_observations.json` | `fixtures/refmar/benchmarks/benchmark_cherbourg_v1.json` |
 | `refmar:160` Concarneau | `c8b4daaf998278bfaf08260e436309bdaa08d82e5fe8ce6ff3a2969b00b1b8a1` | `fixtures/refmar/manifests/concarneau_observations.json` | `fixtures/refmar/benchmarks/benchmark_concarneau_v1.json` |
 | `refmar:628` Dielette | `cd1f124f751583a447209d7b1199e4a45e0111eb45d154b03f3161d323638e75` | `fixtures/refmar/manifests/dielette_observations.json` | `fixtures/refmar/benchmarks/benchmark_dielette_v1.json` |
 | `refmar:24` Dieppe | `fc64ac304b35a4fc921458d3a247f6d463de527217c7f4c27f6d20823ceeb22b` | `fixtures/refmar/manifests/dieppe_observations.json` | `fixtures/refmar/benchmarks/benchmark_dieppe_v1.json` |
@@ -161,7 +171,7 @@ fenêtres de validation figées des stations incluses.
 | `refmar:34` La Rochelle-Pallice | `4d449b0b21fb1410cd7754e64eed11a5dd7da9e62deafb3fc737ade9f087021d` | `fixtures/refmar/manifests/la_rochelle_pallice_observations.json` | `fixtures/refmar/benchmarks/benchmark_la_rochelle_pallice_v1.json` |
 | `refmar:152` Le Conquet | `70d5d2e01a8172743286ed5090f5ed99f43ed2f0e18eec6d0c8e7e9c0e474d52` | `fixtures/refmar/manifests/le_conquet_observations.json` | `fixtures/refmar/benchmarks/benchmark_le_conquet_v1.json` |
 | `refmar:185` Le Crouesty | `d19e0288a0c8770092a6262d9c6795c96a58df80e8789f3e90efcba73ded19c3` | `fixtures/refmar/manifests/le_crouesty_observations.json` | `fixtures/refmar/benchmarks/benchmark_le_crouesty_v1.json` |
-| `refmar:4` Le Havre | `48222b92a9c0a93fa4393d10081580d1edac0b1a92ff09baf07d3ca79f5d38d2` | `fixtures/refmar/manifests/le_havre_observations.json` | `fixtures/refmar/benchmarks/benchmark_le_havre_v1.json` |
+| `refmar:4` Le Havre | `48222b92a9c0a93fa4393d10081580d1edac0b1a92ff09baf07d3ca79f5d38d2` | `fixtures/refmar/manifests/le_havre_observations.json` | `fixtures/refmar/benchmarks/benchmark_le_havre_v2.json` |
 | `refmar:62` Les Sables-d'Olonne | `5f003f02d75451d4401d3b67a1e4002541048eba832fa610023039ff43a4f99d` | `fixtures/refmar/manifests/les_sables_d_olonne_observations.json` | `fixtures/refmar/benchmarks/benchmark_les_sables_d_olonne_v1.json` |
 | `refmar:6144` Mimizan | `898d37f7c0c6c968866ee4d395dc7f32f6b76f91424ac3b9dbe3316d05d507c9` | `fixtures/refmar/manifests/mimizan_observations.json` | `fixtures/refmar/benchmarks/benchmark_mimizan_v1.json` |
 | `refmar:659` Nouméa Numbo | `b4c1628f4e1d376917ab810884e5776ac32820ead63c325821492fa0f725647b` | `fixtures/refmar/manifests/noumea_numbo_observations.json` | `fixtures/refmar/benchmarks/benchmark_noumea_numbo_v1.json` |

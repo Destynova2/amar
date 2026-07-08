@@ -6,7 +6,7 @@ use crate::pack_out::{
     title_case_station,
 };
 use crate::qc::{self, QcReport, ResidualStats};
-use crate::solve::{self, ConstituentSet};
+use crate::solve::{self, ConstituentSelection, ConstituentSet};
 use amar_core::{UtcDateTime, predict_height};
 use amar_pack::{PeriodInfo, SCHEMA_VERSION, StationPack, TideBenchmark, TidePack};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -22,7 +22,7 @@ const DEFAULT_FRANCE_PACK: &str = "data/packs/amar-data-france-experimental.json
 const DEFAULT_BENCHMARKS_DIR: &str = "fixtures/refmar/benchmarks";
 const DEFAULT_MANIFESTS_DIR: &str = "fixtures/refmar/manifests";
 const DEFAULT_CACHE_DIR: &str = "target/refmar-cache";
-const DEFAULT_GENERATED_AT: &str = "2026-07-07-v0.7-france";
+const DEFAULT_GENERATED_AT: &str = "2026-07-08-v0.10-france";
 const DEFAULT_START: &str = "2021-01-01T00:00:00Z";
 const DEFAULT_VALIDATION_START: &str = "2026-04-01T00:00:00Z";
 const DEFAULT_END: &str = "2026-07-01T00:00:00Z";
@@ -31,12 +31,13 @@ const DEFAULT_THROTTLE_MS: u64 = 600;
 const DEFAULT_P95_LIMIT_CM: f64 = 40.0;
 const DEFAULT_MIN_RMS_FACTOR: f64 = 2.0;
 const ELIGIBLE_NETWORK: &str = "RONIM";
+const LE_HAVRE_SHOM_ID: &str = "4";
 const CHERBOURG_SHOM_ID: &str = "13";
 const CALAIS_SHOM_ID: &str = "55";
-const CHERBOURG_VALIDATION_START: &str = "2026-01-01T00:00:00Z";
-const CHERBOURG_END: &str = "2026-04-01T00:00:00Z";
-const CALAIS_VALIDATION_START: &str = "2025-08-01T00:00:00Z";
-const CALAIS_END: &str = "2025-11-01T00:00:00Z";
+const CHERBOURG_VALIDATION_START: &str = "2025-04-01T00:00:00Z";
+const CHERBOURG_END: &str = "2025-07-01T00:00:00Z";
+const CALAIS_VALIDATION_START: &str = "2025-04-01T00:00:00Z";
+const CALAIS_END: &str = "2025-07-01T00:00:00Z";
 
 const PRIORITY_STATIONS: [&str; 10] =
     ["410", "4", "13", "37", "34", "160", "152", "54", "2", "111"];
@@ -73,6 +74,8 @@ pub(crate) struct CalibrateFranceArgs {
     min_rms_factor: f64,
     #[arg(long)]
     include_brest: bool,
+    #[arg(long)]
+    select_by_port: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -169,6 +172,7 @@ struct CalibrationManifest {
     tidegauge_sha256: String,
     qc: ManifestQc,
     benchmark: Option<ManifestBenchmark>,
+    constituent_selection: Option<ManifestConstituentSelection>,
     decision: ManifestDecision,
 }
 
@@ -194,6 +198,14 @@ struct ManifestBenchmark {
     z0_p95_cm: f64,
     z0_max_cm: f64,
     rms_factor_vs_z0: f64,
+}
+
+#[derive(Debug, Serialize)]
+struct ManifestConstituentSelection {
+    method: &'static str,
+    rayleigh_count: usize,
+    significant_count: usize,
+    snr_min: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -515,12 +527,22 @@ fn calibrate_station_inner(
     qc::enforce_qc("calibration", &calibration_qc)?;
     qc::enforce_qc("validation", &validation_qc)?;
 
-    let calibration = solve::calibrate(
-        &calibration_samples,
-        start,
-        validation_start,
-        ConstituentSet::M22Rayleigh37,
-    )?;
+    let use_port_selection = args.select_by_port || published_port_selection(&tidegauge.shom_id);
+    let (calibration, selection) = if use_port_selection {
+        let (calibration, selection) =
+            solve::calibrate_with_port_selection(&calibration_samples, start, validation_start)?;
+        (calibration, Some(selection))
+    } else {
+        (
+            solve::calibrate(
+                &calibration_samples,
+                start,
+                validation_start,
+                ConstituentSet::M22Rayleigh37,
+            )?,
+            None,
+        )
+    };
     let residuals = validation_samples
         .iter()
         .map(|observation| {
@@ -552,7 +574,7 @@ fn calibrate_station_inner(
         rms_factor,
     };
 
-    let benchmark_id = format!("benchmark_{slug}_v1");
+    let benchmark_id = benchmark_id_for_station(&slug, &tidegauge.shom_id, use_port_selection);
     let benchmark = pack_out::build_station_benchmark(BenchmarkBuildInput {
         validation_samples: &validation_samples,
         validation_start,
@@ -598,6 +620,7 @@ fn calibrate_station_inner(
         calibrated_stats,
         baseline_stats,
         rms_factor,
+        selection,
         included,
         reason: &reason,
     });
@@ -672,6 +695,7 @@ struct ManifestForStation<'a> {
     calibrated_stats: ResidualStats,
     baseline_stats: ResidualStats,
     rms_factor: f64,
+    selection: Option<ConstituentSelection>,
     included: bool,
     reason: &'a str,
 }
@@ -728,10 +752,33 @@ fn manifest_for_station(input: ManifestForStation<'_>) -> CalibrationManifest {
             z0_max_cm: input.baseline_stats.max_cm,
             rms_factor_vs_z0: input.rms_factor,
         }),
+        constituent_selection: input
+            .selection
+            .map(|selection| ManifestConstituentSelection {
+                method: "rayleigh_plus_snr2_port_selection",
+                rayleigh_count: selection.rayleigh_count,
+                significant_count: selection.significant_count,
+                snr_min: 2.0,
+            }),
         decision: ManifestDecision {
             included: input.included,
             reason: input.reason.to_string(),
         },
+    }
+}
+
+fn published_port_selection(shom_id: &str) -> bool {
+    matches!(
+        shom_id,
+        LE_HAVRE_SHOM_ID | CHERBOURG_SHOM_ID | CALAIS_SHOM_ID
+    )
+}
+
+fn benchmark_id_for_station(slug: &str, shom_id: &str, use_port_selection: bool) -> String {
+    if shom_id == LE_HAVRE_SHOM_ID && use_port_selection {
+        format!("benchmark_{slug}_v2")
+    } else {
+        format!("benchmark_{slug}_v1")
     }
 }
 
@@ -824,7 +871,7 @@ fn write_station_artifacts(
     pack_out::write_json(
         &args
             .benchmarks_dir
-            .join(format!("benchmark_{slug}_v1.json")),
+            .join(format!("{}.json", artifact.benchmark.benchmark_id)),
         &artifact.benchmark,
     )?;
     pack_out::write_json(

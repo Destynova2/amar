@@ -1,6 +1,6 @@
 {
   "schema_version": "refmar-observation-manifest-v1",
-  "generated_at": "2026-07-07-v0.7-france",
+  "generated_at": "2026-07-08-v0.10-france",
   "station_id": "refmar:4",
   "provider_station_id": "4",
   "station_name": "Le Havre",
@@ -31,17 +31,23 @@
     "jumps": 0
   },
   "benchmark": {
-    "benchmark_id": "benchmark_le_havre_v1",
+    "benchmark_id": "benchmark_le_havre_v2",
     "checksum_sha256": "3695d3505a842c99ad03fd3f9a2f4a28d786968cf0792354eac8e667245e0719",
-    "calibrated_rms_cm": 19.502313219778724,
-    "calibrated_mae_cm": 15.672624708235915,
-    "calibrated_p95_cm": 37.36289865445519,
-    "calibrated_max_cm": 79.01670271334069,
-    "z0_rms_cm": 197.83263974214788,
-    "z0_mae_cm": 176.21587910070235,
-    "z0_p95_cm": 321.003020514836,
-    "z0_max_cm": 408.603020514836,
-    "rms_factor_vs_z0": 10.144060220585079
+    "calibrated_rms_cm": 13.740478271027456,
+    "calibrated_mae_cm": 10.725848365684412,
+    "calibrated_p95_cm": 27.921928179111323,
+    "calibrated_max_cm": 57.71135458683325,
+    "z0_rms_cm": 197.83280493526044,
+    "z0_mae_cm": 176.2157877064994,
+    "z0_p95_cm": 321.0074541491635,
+    "z0_max_cm": 408.6074541491636,
+    "rms_factor_vs_z0": 14.397810689923483
+  },
+  "constituent_selection": {
+    "method": "rayleigh_plus_snr2_port_selection",
+    "rayleigh_count": 68,
+    "significant_count": 61,
+    "snr_min": 2.0
   },
   "decision": {
     "included": true,

@@ -1231,3 +1231,68 @@ exclusion v0.7 était une conséquence d'une fenêtre hiver/automne plus exposé
 que la fenêtre printemps-été des 21 inclus. La bonne correction n'est pas un
 relâchement du seuil, mais une méthode de comparaison homogène et, pour les
 ports déformés comme Le Havre, une future sélection de constituants par port.
+
+## v0.10 -- catalogue et selection par port
+
+Date : 2026-07-08.
+
+Objectif : transformer l'investigation Manche v0.9 en gain publié sans
+réécrire silencieusement les données existantes. Le catalogue harmonique étendu
+est porté dans `amar-core` de façon additive : les 37 constituants historiques
+conservent leurs paramètres, les constituants petit-fond et composés sont
+dérivés par combinaison documentée, et les inconnus restent refusés au
+chargement.
+
+Méthode publiée pour les ports concernés :
+
+- départ du catalogue de sélection par port porté par `amar-core` ;
+- filtrage Rayleigh sur la fenêtre de calibration du port ;
+- ajustement moindres carrés, puis conservation des constituants
+  significatifs `SNR >= 2` ;
+- validation uniquement sur fenêtre réservée ;
+- format pack inchangé, `station_harmonics_v0`.
+
+Le pack France devient `2026-07-08-v0.10-france` :
+`data/packs/amar-data-france-experimental.json`, SHA-256
+`fdb747b29a4aca7a25d54fa71f71d85c7bf2b539ba5f4b2599d5a8cf508b63ef`.
+
+Table des décisions v0.10 :
+
+| Port | Station | Fenêtre validation | Sélection | RMS cm | p95 cm | Facteur | Décision |
+|---|---|---|---:|---:|---:|---:|---|
+| Le Havre | `refmar:4` | 2026-04/2026-07 | 68 -> 61 | 13,7 | 27,9 | 14,40 | remplace le modèle 37 dans le pack v0.10 |
+| Cherbourg | `refmar:13` | 2025-04/2025-07 | 68 -> 62 | 9,6 | 19,0 | 14,86 | inclus |
+| Calais | `refmar:55` | 2025-04/2025-07 | 68 -> 61 | 15,0 | 29,0 | 12,68 | inclus |
+
+Avant/après Le Havre : le modèle v0.7 à 37 constituants faisait RMS 19,5 cm,
+p95 37,4 cm et facteur 10,14 sur `2026-04/2026-07`. La sélection v0.10
+ramène RMS à 13,7 cm et p95 à 27,9 cm sur la même validation réservée. C'est le
+gain harmonique attendu de l'investigation v0.9.
+
+Cherbourg et Calais gardent le critère France inchangé : `p95 <= 40 cm` et
+facteur RMS `>= 2`. Ils sont inclus sur leur fenêtre saison calme comparable
+`2025-04-01T00:00:00Z/2025-07-01T00:00:00Z`.
+
+Note météo : le résidu toutes-saisons reste dominé par la surcote météo
+(Cherbourg r² baromètre ≈ 70 %). Cherbourg et Calais sont inclus sur fenêtre
+saison calme comparable ; le skew surge annuel est une caractérisation météo.
+Les fenêtres hiver/automne peuvent dépasser le seuil et ne sont pas
+dissimulées par cette inclusion.
+
+Benchmarks additifs publiés :
+
+| Benchmark | Fichier SHA-256 | Checksum interne |
+|---|---|---|
+| `benchmark_le_havre_v2` | `42864645e6dca81549b583dfb0304ff3859dd43687ec5538d4be0ef365d943fe` | `3695d3505a842c99ad03fd3f9a2f4a28d786968cf0792354eac8e667245e0719` |
+| `benchmark_cherbourg_v1` | `aa3f5ba43339252e4344c824829f3794944ced962076b99cf63fd069965853e3` | `a318bf95f32ed98bbbfd0a7d0e08a2cbd3da92ec2091805748e128e82a733818` |
+| `benchmark_calais_v1` | `2cd4d23435704780710cf6d709023cbd8e8df2654e2dac6af73822b7ccc6732a` | `11162fa3e9b310a8d8eda99cb38378e5305dfbb4c94a52e69d7e4968ab087606` |
+
+Garde-fous :
+
+- `benchmark_brest_v1` reste byte-identique :
+  `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f`.
+- Le pack Brest régénéré reste byte-identique :
+  `e377e25754e9cbc6a05e732d0dcff2db2c1305b57037432312015ae45d749919`.
+- Concarneau rejoué avec la sélection par port donne RMS 7,3 cm et p95
+  14,4 cm contre RMS 7,3 cm et p95 14,5 cm dans le pack courant : pas de
+  publication, pas de gain artificiel.
