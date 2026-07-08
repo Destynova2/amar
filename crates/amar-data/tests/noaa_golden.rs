@@ -54,6 +54,7 @@ fn load_pack_rejects_unknown_constituents() {
             "datum": "MLLW",
             "z0_m": 1.0,
             "method": "station_harmonics_v0",
+            "data_version": "2026-07-06",
             "constituents": [{
                 "name": "ZZ9",
                 "amplitude_m": 0.5,

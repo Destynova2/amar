@@ -166,7 +166,8 @@ curl -i -H 'content-type: application/json' \
     "id": "refmar:3",
     "name": "Brest",
     "distance_km": 0.011,
-    "data_version": "2026-07-06-m2.2"
+    "data_version": "2026-07-06-m2.2",
+    "valid_until": "2031-04-01T00:00:00Z"
   },
   "confidence": {
     "method": "calibrated_station_experimental",
@@ -233,6 +234,10 @@ Pour Brest, `confidence.method` vaut `calibrated_station_experimental` et
 Pour les stations françaises, `next_high.coefficient` est un entier 20–120
 calculé depuis notre Brest calibré (`U = 3,05 m`) et porte le warning
 `coefficient_experimental`. Ce coefficient n'est pas l'annuaire officiel SHOM.
+Les stations REFMAR calibrées publient un horizon de recalibration
+`source.valid_until`; hors période, `/tide` ajoute
+`outside_validity_period`, et `--strict-validity` transforme ce warning en
+refus.
 
 Les réponses `/tide/series` et `/tide/windows` gardent la même forme de
 `datum`, `source`, `confidence` et `warnings` que `/tide`.
@@ -354,6 +359,7 @@ make m0-validate
 make m1-smoke
 make fetch-refmar
 make build-brest-pack
+make validate-history
 make m2-benchmark
 make fetch-noaa-hilo
 make m3-check

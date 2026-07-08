@@ -1,4 +1,4 @@
-use amar::server::app;
+use amar::server::{app, app_with_options};
 use amar_data::load_packs_from_paths;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
@@ -50,6 +50,47 @@ async fn tide_brest_experimental_response_matches_snapshot() {
         include_str!("snapshots/tide_brest_experimental.json"),
     )
     .await;
+}
+
+#[tokio::test]
+async fn tide_after_validity_period_warns_and_exposes_valid_until() {
+    let actual = post_tide(
+        r#"{"lat":48.383,"lon":-4.495,"datetime":"2032-04-02T00:00:00Z"}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    assert_eq!(actual.body["source"]["id"], "refmar:3");
+    assert_eq!(actual.body["source"]["valid_until"], "2031-04-01T00:00:00Z");
+    assert!(
+        actual.body["warnings"]
+            .to_string()
+            .contains("outside_validity_period")
+    );
+}
+
+#[tokio::test]
+async fn tide_strict_validity_rejects_after_validity_period() {
+    let service = app_with_options(must(load_packs_from_paths(&pack_paths())), 20.0, true);
+    let actual = request_json(
+        service,
+        must(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/tide")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"lat":48.383,"lon":-4.495,"datetime":"2032-04-02T00:00:00Z"}"#,
+                )),
+        ),
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(actual.body["error"], "outside_validity_period");
+    assert_eq!(actual.body["valid_until"], "2031-04-01T00:00:00Z");
+    assert_eq!(actual.body["nearest_source"]["id"], "refmar:3");
 }
 
 #[tokio::test]

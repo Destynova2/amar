@@ -28,7 +28,7 @@ HILO_YEARS = 2026
 HILO_DRIFT_YEARS = 2031
 HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france m0-validate m2-benchmark m3-check release dist-tarball m1-smoke container container-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france validate-history m0-validate m2-benchmark m3-check release dist-tarball m1-smoke container container-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -99,6 +99,9 @@ build-brest-pack:
 
 calibrate-france:
 	cargo run -p amar-calibrate -- calibrate-france
+
+validate-history:
+	cargo run -p amar-calibrate -- validate-history
 
 m0-validate:
 	cargo run -p amar -- validate --pack data/packs/noaa_m0.json --fixtures fixtures/noaa

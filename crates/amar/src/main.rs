@@ -69,6 +69,15 @@ enum CliError {
     BenchmarkThreshold { failures: String },
     #[error("hilo validation p95 exceeded:\n{failures}")]
     HiloThreshold { failures: String },
+    #[error(
+        "outside_validity_period station={station_id} at={at} valid_from={valid_from} valid_until={valid_until}"
+    )]
+    OutsideValidityPeriod {
+        station_id: String,
+        at: String,
+        valid_from: String,
+        valid_until: String,
+    },
     #[error("{0}")]
     InvalidArgument(String),
 }
@@ -109,6 +118,8 @@ struct TideArgs {
     duration_h: Option<u32>,
     #[arg(long = "step-min")]
     step_min: Option<u32>,
+    #[arg(long = "strict-validity")]
+    strict_validity: bool,
 }
 
 #[derive(Debug, Args)]
@@ -139,6 +150,8 @@ struct ServeArgs {
     pack: Vec<PathBuf>,
     #[arg(long, default_value_t = DEFAULT_MAX_DISTANCE_KM)]
     max_distance_km: f64,
+    #[arg(long = "strict-validity")]
+    strict_validity: bool,
 }
 
 #[derive(Debug, Args)]
@@ -217,6 +230,7 @@ async fn serve(args: ServeArgs) -> Result<(), CliError> {
         &args.addr,
         &effective_pack_paths(&args.pack),
         args.max_distance_km,
+        args.strict_validity,
     )
     .await?;
     Ok(())
@@ -232,6 +246,16 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
     )?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
+    if args.strict_validity
+        && let Some(violation) = contract::validity_period_violation(station, at)
+    {
+        return Err(CliError::OutsideValidityPeriod {
+            station_id: station.station_id.clone(),
+            at: contract::format_utc(at),
+            valid_from: violation.valid_from,
+            valid_until: violation.valid_until,
+        });
+    }
     let confidence = contract::confidence_for_station(&station_match).ok_or_else(|| {
         CliError::UnsupportedStationConfidence {
             station_id: station.station_id.clone(),
@@ -250,7 +274,7 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             "datum": station.datum,
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": contract::warnings_for_station(station),
+            "warnings": contract::warnings_for_station_at(station, at),
         })
     } else {
         if args.step_min.is_some() {
@@ -274,7 +298,11 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             "datum": station.datum,
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": contract::warnings_for_station_with_coefficient(station, next_high_coefficient.is_some()),
+            "warnings": contract::warnings_for_station_at_with_coefficient(
+                station,
+                Some(at),
+                next_high_coefficient.is_some()
+            ),
         })
     };
     println!("{}", serde_json::to_string_pretty(&output)?);

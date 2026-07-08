@@ -108,14 +108,76 @@ fn tide_returns_brest_experimental_confidence() {
     );
     assert_eq!(body["confidence"]["residual_benchmark_cm"], 15.8);
     assert!(body["confidence"]["grade"].is_null());
+    assert_eq!(body["source"]["valid_until"], "2031-04-01T00:00:00Z");
     assert_eq!(body["next_high"]["coefficient"], 101);
     assert!(body["warnings"].to_string().contains("experimental"));
     assert!(body["warnings"].to_string().contains("not_shom"));
+    assert!(
+        !body["warnings"]
+            .to_string()
+            .contains("outside_validity_period")
+    );
     assert!(
         body["warnings"]
             .to_string()
             .contains("coefficient_experimental")
     );
+}
+
+#[test]
+fn tide_warns_after_station_validity_period() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("tide")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--at")
+            .arg("2032-04-02T00:00:00Z")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["source"]["id"], "refmar:3");
+    assert_eq!(body["source"]["valid_until"], "2031-04-01T00:00:00Z");
+    assert!(
+        body["warnings"]
+            .to_string()
+            .contains("outside_validity_period")
+    );
+}
+
+#[test]
+fn tide_strict_validity_rejects_after_station_validity_period() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("tide")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--at")
+            .arg("2032-04-02T00:00:00Z")
+            .arg("--strict-validity")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("outside_validity_period"));
+    assert!(stderr.contains("valid_until=2031-04-01T00:00:00Z"));
 }
 
 #[test]

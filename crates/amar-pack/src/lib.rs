@@ -25,6 +25,13 @@ pub enum PackError {
     MissingExperimentalResidual { station_id: String },
     #[error("experimental station {station_id} must define validation_period")]
     MissingExperimentalValidationPeriod { station_id: String },
+    #[error("station {station_id} must define data_version")]
+    MissingStationDataVersion { station_id: String },
+    #[error("experimental station {station_id} must define {field}")]
+    MissingExperimentalValidity {
+        station_id: String,
+        field: &'static str,
+    },
     #[error("{field} must be finite")]
     NonFinite { field: &'static str },
     #[error("{field} must be between {min} and {max}, got {value}")]
@@ -78,6 +85,12 @@ pub struct StationPack {
     pub constituents: Vec<ConstituentPack>,
     pub source: SourceInfo,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub valid_from: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub valid_until: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub experimental: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_official: Option<bool>,
@@ -109,6 +122,15 @@ impl StationPack {
                 station_id: self.station_id.clone(),
             });
         }
+        if self
+            .data_version
+            .as_ref()
+            .is_none_or(|value| value.trim().is_empty())
+        {
+            return Err(PackError::MissingStationDataVersion {
+                station_id: self.station_id.clone(),
+            });
+        }
         let mut names = BTreeSet::new();
         for constituent in &self.constituents {
             constituent.amplitude_m.ensure_finite("amplitude_m")?;
@@ -135,6 +157,26 @@ impl StationPack {
             if self.validation_period.is_none() {
                 return Err(PackError::MissingExperimentalValidationPeriod {
                     station_id: self.station_id.clone(),
+                });
+            }
+            if self
+                .valid_from
+                .as_ref()
+                .is_none_or(|value| value.trim().is_empty())
+            {
+                return Err(PackError::MissingExperimentalValidity {
+                    station_id: self.station_id.clone(),
+                    field: "valid_from",
+                });
+            }
+            if self
+                .valid_until
+                .as_ref()
+                .is_none_or(|value| value.trim().is_empty())
+            {
+                return Err(PackError::MissingExperimentalValidity {
+                    station_id: self.station_id.clone(),
+                    field: "valid_until",
                 });
             }
         }
@@ -370,6 +412,9 @@ mod tests {
                 observations_checksum_sha256: None,
                 tidegauge_checksum_sha256: None,
             },
+            data_version: Some("2026-07-06".to_string()),
+            valid_from: None,
+            valid_until: None,
             experimental: None,
             not_official: None,
             not_shom: None,

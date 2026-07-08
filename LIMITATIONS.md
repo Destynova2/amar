@@ -1,4 +1,4 @@
-# Limitations v0.7
+# Limitations v0.8
 
 - Marée astronomique seule.
 - Les fenêtres de seuil sont des fenêtres de marée astronomique seule :
@@ -29,6 +29,9 @@
 - Le coefficient est expérimental : il dérive de notre calibration Brest, pas
   de l'annuaire officiel. Il est borné à 20..120 et publié avec
   `coefficient_experimental`.
+- Les stations REFMAR calibrées portent un horizon de recalibration
+  `valid_until`. Hors période, la prédiction astronomique reste disponible
+  avec le warning `outside_validity_period`, sauf en mode strict.
 - Pas de pression, pas de surcote météo.
 - Pas de grille.
 - Pas d'OpenAPI, pas de page démo.

@@ -101,7 +101,7 @@ datum `MLLW`, unités métriques, fuseau `gmt`. Les fenêtres 2031 sont limitée
 
 | Fichier | Origine | SHA-256 |
 |---|---|---|
-| `data/packs/noaa_m0.json` | `cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at 2026-07-06 --station 8410140 --station 8443970 --station 9414290 --station 8729840 --station 9447130 --station 1612340 --station 8724580 --station 8771450` | `8965539b65cd8bc75ef96f24adfd056a1d5147c1fdae9e67ff40a0eb1f214594` |
+| `data/packs/noaa_m0.json` | `cargo run -p amar -- pack-noaa --fixtures fixtures/noaa --out data/packs/noaa_m0.json --extracted-at 2026-07-06 --station 8410140 --station 8443970 --station 9414290 --station 8729840 --station 9447130 --station 1612340 --station 8724580 --station 8771450` | `4ceb3f4a0b7a343ca46abf007f8ef69521be4d5ec517967e5b3b853bba99a2a8` |
 
 ## REFMAR Brest expérimental
 
@@ -121,7 +121,8 @@ ZH = -3.635 m par rapport à `IGN69`.
 | `fixtures/refmar/brest_validated_hourly_2025-01-01_2026-07-01.csv` | `https://services.data.shom.fr/maregraphie/observation/json/3?sources=4`, fenêtres de 31 jours | `e3c63f5cea16eeb0a55ac24ca2c68aca6221b2908e9e5236c455b64911e9373d` |
 | `fixtures/refmar/brest_validated_hourly_2021-01-01_2026-07-01.csv` | `https://services.data.shom.fr/maregraphie/observation/json/3?sources=4`, fenêtres de 31 jours | `17951bab11dc99220b8462da118df6ba4412a2492eb36a8c01b5935b6cd5a8e2` |
 | `fixtures/refmar/benchmark_brest_v1.json` | Fenêtre hors calibration `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z` | `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f` |
-| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` | `e377e25754e9cbc6a05e732d0dcff2db2c1305b57037432312015ae45d749919` |
+| `fixtures/refmar/benchmark_brest_decennial_v1.json` | Fenêtre historique `2016-01-01T00:00:00Z/2026-07-01T00:00:00Z`, générée par `cargo run -p amar-calibrate -- validate-history` | `d371be7da00d4324ce92fd016d3601c5669c3d452dd4373a5b3347f5ed80b5e5` |
+| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` | `613e9b6374431256f003e54865930a87b7d9f148ce90437c96272854df2568c3` |
 
 Le checksum interne `benchmark_brest_v1.checksum_sha256` couvre le masque
 horaire et les observations de la fenêtre de validation :
@@ -145,7 +146,7 @@ fenêtres de validation figées des stations incluses.
 
 | Fichier | Origine | SHA-256 |
 |---|---|---|
-| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france` | `e94cf45a669a246cc4aa38d1b2c0e60a580905a307b688bcaa7ce3276981b497` |
+| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france` | `a25d10d3cb3240fbd75375074af74a42d277f39f6700b36e7cb5e810d2478772` |
 
 | Station | Observations SHA-256 | Manifeste | Benchmark |
 |---|---|---|---|

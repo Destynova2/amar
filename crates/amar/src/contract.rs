@@ -22,6 +22,8 @@ pub const DEFAULT_WARNINGS: [&str; 3] = [
     "no_weather_surge",
 ];
 
+pub const OUTSIDE_VALIDITY_PERIOD_WARNING: &str = "outside_validity_period";
+
 /// Distance confidence scale shared by the CLI and HTTP API.
 pub const CONFIDENCE_GRADES: [ConfidenceGrade; 3] = [
     ConfidenceGrade::new(2.0, "A", 8),
@@ -200,6 +202,8 @@ pub struct SourceResponse {
     pub(crate) name: String,
     pub(crate) distance_km: f64,
     pub(crate) data_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) valid_until: Option<String>,
 }
 
 impl From<&StationMatch<'_>> for SourceResponse {
@@ -210,8 +214,36 @@ impl From<&StationMatch<'_>> for SourceResponse {
             id: station.station_id.clone(),
             name: station.name.clone(),
             distance_km: round3(station_match.distance_km),
-            data_version: station.source.extracted_at.clone(),
+            data_version: station
+                .data_version
+                .clone()
+                .unwrap_or_else(|| station.source.extracted_at.clone()),
+            valid_until: station.valid_until.clone(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ValidityPeriodViolation {
+    pub valid_from: String,
+    pub valid_until: String,
+}
+
+pub fn validity_period_violation(
+    station: &StationPack,
+    at: UtcDateTime,
+) -> Option<ValidityPeriodViolation> {
+    let valid_from = station.valid_from.as_ref()?;
+    let valid_until = station.valid_until.as_ref()?;
+    let from = UtcDateTime::parse_rfc3339(valid_from).ok()?;
+    let until = UtcDateTime::parse_rfc3339(valid_until).ok()?;
+    if at < from || at > until {
+        Some(ValidityPeriodViolation {
+            valid_from: valid_from.clone(),
+            valid_until: valid_until.clone(),
+        })
+    } else {
+        None
     }
 }
 
@@ -270,12 +302,27 @@ pub fn warnings_for_station_with_coefficient(
     station: &StationPack,
     has_coefficient: bool,
 ) -> Vec<&'static str> {
+    warnings_for_station_at_with_coefficient(station, None, has_coefficient)
+}
+
+pub fn warnings_for_station_at(station: &StationPack, at: UtcDateTime) -> Vec<&'static str> {
+    warnings_for_station_at_with_coefficient(station, Some(at), false)
+}
+
+pub fn warnings_for_station_at_with_coefficient(
+    station: &StationPack,
+    at: Option<UtcDateTime>,
+    has_coefficient: bool,
+) -> Vec<&'static str> {
     let mut warnings = DEFAULT_WARNINGS.to_vec();
     if station.experimental == Some(true) {
         warnings.push("experimental");
     }
     if station.not_shom == Some(true) {
         warnings.push("not_shom");
+    }
+    if at.is_some_and(|at| validity_period_violation(station, at).is_some()) {
+        warnings.push(OUTSIDE_VALIDITY_PERIOD_WARNING);
     }
     if has_coefficient {
         warnings.push(crate::coefficient::COEFFICIENT_EXPERIMENTAL_WARNING);

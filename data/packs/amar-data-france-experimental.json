@@ -249,6 +249,9 @@
         "observations_checksum_sha256": "d648abeeb9a18448061f94d875b4e24b11c27b762890ae6a30c46b647354fbec",
         "tidegauge_checksum_sha256": "f22221bb347439f45f9221bbce186377cd5db9cf2c9cb6d68ce272029b86b32f"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -511,6 +514,9 @@
         "observations_checksum_sha256": "16b2ff8809ce806026fcfcb6e4bdf0ca0cefb472f8e07c31dcfd73c47fad5616",
         "tidegauge_checksum_sha256": "e78a1fe16dc79307d5918de309b658db54262cf2d0cb268ab6c0fcfa8caf92bd"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -773,6 +779,9 @@
         "observations_checksum_sha256": "70d5d2e01a8172743286ed5090f5ed99f43ed2f0e18eec6d0c8e7e9c0e474d52",
         "tidegauge_checksum_sha256": "d83970821cca91b0de023a5ae94e59504134febdc5910fb42226484e65aebced"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -1035,6 +1044,9 @@
         "observations_checksum_sha256": "c8b4daaf998278bfaf08260e436309bdaa08d82e5fe8ce6ff3a2969b00b1b8a1",
         "tidegauge_checksum_sha256": "5aa3870ef512f431cce02363fb350abad73084d444fb4dd7acdf9d2834bfc5bf"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -1297,6 +1309,9 @@
         "observations_checksum_sha256": "d19e0288a0c8770092a6262d9c6795c96a58df80e8789f3e90efcba73ded19c3",
         "tidegauge_checksum_sha256": "f4dbf58a264c00e3f91147ead7099175de264241c1b94ab2d4daca6769ba359f"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -1559,6 +1574,9 @@
         "observations_checksum_sha256": "56f1821ef1c0ebd3ab3d70277fc9f18e91f8499512ec2ed25180a212f202a672",
         "tidegauge_checksum_sha256": "05364bce855471844e10590345eb7762154f447d73e8d6c7d69b2f84ed8fb15b"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -1821,6 +1839,9 @@
         "observations_checksum_sha256": "9747546f780b7fed6ea05ff0e1fbc2cb8f086378f48afbdb1b000e0d9aec33c7",
         "tidegauge_checksum_sha256": "396698761292d3b001221edeab3272b326e236621dda21c178ff9726acc289cc"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -2083,6 +2104,9 @@
         "observations_checksum_sha256": "f8bb2eef957a1371fa1ffa89f1a2f58fedf7743b7aa86f620d13ad88e0d7d870",
         "tidegauge_checksum_sha256": "547d3752bbc74b431a7cfb557b7f6b024031efae2f3bfe818dce32a307ca1aa9"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -2345,6 +2369,9 @@
         "observations_checksum_sha256": "fc64ac304b35a4fc921458d3a247f6d463de527217c7f4c27f6d20823ceeb22b",
         "tidegauge_checksum_sha256": "bb48b8214a16887740e50de90897e3ca155f0a033e4ef495c5c44b0118d7834c"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -2607,6 +2634,9 @@
         "observations_checksum_sha256": "c733522556ae7c3fab0d46a9250b5de25190cb863981f854032ccd000d3ae109",
         "tidegauge_checksum_sha256": "7fe619a98747d2343bb2d200873c7560f5d29d0cf9956d528ab2dc47b66d90c7"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -2869,6 +2899,9 @@
         "observations_checksum_sha256": "4d449b0b21fb1410cd7754e64eed11a5dd7da9e62deafb3fc737ade9f087021d",
         "tidegauge_checksum_sha256": "20a750e5af64c879c61521528c0805a3f206cc2113671c99ccf34afac3e312a3"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -3131,6 +3164,9 @@
         "observations_checksum_sha256": "2ccbb3b36fb174aff5222fddc7107b4eca66cf286ba29c388c97bdeec19f747d",
         "tidegauge_checksum_sha256": "8bcac14755248148ad058505c3ab5396cfdf19ecdc5a802b430e439d392c9895"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -3393,6 +3429,9 @@
         "observations_checksum_sha256": "48222b92a9c0a93fa4393d10081580d1edac0b1a92ff09baf07d3ca79f5d38d2",
         "tidegauge_checksum_sha256": "21eec7dac98433dfbf264b7d65628c044b5a5cc294c14aa9c83f162c8ebc1813"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -3655,6 +3694,9 @@
         "observations_checksum_sha256": "e124beecbd91efbc2e9a68835986fb87d4d981e304d2f9e2a537d5f226b6fe94",
         "tidegauge_checksum_sha256": "b57618e3548cc67d9d16506dde78c612d6888fe4eb9e1086e8057514098947fa"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -3917,6 +3959,9 @@
         "observations_checksum_sha256": "232e848b1c58234c59d60f847c8a3f1ba0c073f87c5273af3933447522c7d339",
         "tidegauge_checksum_sha256": "2a1917cbb5a6f4ac9f892a407a29a98fa477010b742f6126b4cfb8db34930b69"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -4179,6 +4224,9 @@
         "observations_checksum_sha256": "898d37f7c0c6c968866ee4d395dc7f32f6b76f91424ac3b9dbe3316d05d507c9",
         "tidegauge_checksum_sha256": "183e1c1f6cc000364557ad24bcc958fc7ad5ccab30cff9c442cb9eb46afd7364"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -4441,6 +4489,9 @@
         "observations_checksum_sha256": "5f003f02d75451d4401d3b67a1e4002541048eba832fa610023039ff43a4f99d",
         "tidegauge_checksum_sha256": "724f6f836ad3eaf501bc5108681e275f123abdd0f96ec74749808321c7e8ac8c"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -4703,6 +4754,9 @@
         "observations_checksum_sha256": "cd1f124f751583a447209d7b1199e4a45e0111eb45d154b03f3161d323638e75",
         "tidegauge_checksum_sha256": "6b21fb6a1e8704ade71bca4e1f9f7f8170ae13413d5c32cae66f8d50bffd8fa7"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -4965,6 +5019,9 @@
         "observations_checksum_sha256": "b4c1628f4e1d376917ab810884e5776ac32820ead63c325821492fa0f725647b",
         "tidegauge_checksum_sha256": "e60b3e6b66dfc22f55d2610c307fda5b105b62ad17ca44cf1ca4dbf1dd66c573"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -5227,6 +5284,9 @@
         "observations_checksum_sha256": "222fb00dec951bfcdd2060fe212212c9aca0f9d459c8e44343046b51b3357598",
         "tidegauge_checksum_sha256": "6c7cd74913c404d2e352bd334cb95cee37951886ee6b6e9e775ed23f1ed08dbb"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,
@@ -5489,6 +5549,9 @@
         "observations_checksum_sha256": "a4054ab6e2f59a4879ab9a9f261239df29b5c1bf8a5217b2b09904deeee76324",
         "tidegauge_checksum_sha256": "223876753462434c708c3014eb5cf38da29766628c32a05aae36004b42589cef"
       },
+      "data_version": "2026-07-07-v0.7-france",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,

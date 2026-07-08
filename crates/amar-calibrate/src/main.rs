@@ -2,6 +2,7 @@ mod common;
 mod diagnose;
 mod fetch;
 mod france;
+mod history;
 mod ib;
 mod pack_out;
 mod qc;
@@ -39,6 +40,7 @@ enum Command {
     FetchRefmar(FetchRefmarArgs),
     BuildBrestPack(BuildBrestPackArgs),
     CalibrateFrance(france::CalibrateFranceArgs),
+    ValidateHistory(history::ValidateHistoryArgs),
     Diagnose(DiagnoseArgs),
     DiagnoseIb(DiagnoseIbArgs),
 }
@@ -124,6 +126,7 @@ fn run() -> Result<(), CalError> {
         Command::FetchRefmar(args) => fetch::fetch_refmar(args),
         Command::BuildBrestPack(args) => build_brest_pack(args),
         Command::CalibrateFrance(args) => france::calibrate_france(args),
+        Command::ValidateHistory(args) => history::validate_history(args),
         Command::Diagnose(args) => diagnose::diagnose(args),
         Command::DiagnoseIb(args) => ib::diagnose_ib(args),
     }

@@ -8,7 +8,7 @@ use amar_pack::{
     LatitudeDegValue, LongitudeDegValue, MetersValue, PeriodInfo, SCHEMA_VERSION, SourceInfo,
     StationPack, TideBenchmark, TideBenchmarkSample, TidePack,
 };
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -244,6 +244,9 @@ pub(crate) fn build_station_pack(
             observations_checksum_sha256: Some(input.observations_sha256.to_string()),
             tidegauge_checksum_sha256: Some(input.tidegauge_sha256.to_string()),
         },
+        data_version: Some(input.generated_at.to_string()),
+        valid_from: Some(format_rfc3339(input.calibration_start)),
+        valid_until: Some(format_rfc3339(valid_until(input.validation_start))),
         experimental: Some(true),
         not_official: Some(true),
         not_shom: Some(true),
@@ -269,6 +272,23 @@ pub(crate) fn build_station_pack(
     }
     .validate()?;
     Ok(station)
+}
+
+fn valid_until(calibration_end: DateTime<Utc>) -> DateTime<Utc> {
+    match Utc
+        .with_ymd_and_hms(
+            calibration_end.year() + 5,
+            calibration_end.month(),
+            calibration_end.day(),
+            calibration_end.hour(),
+            calibration_end.minute(),
+            calibration_end.second(),
+        )
+        .single()
+    {
+        Some(value) => value,
+        None => unreachable!("calibration boundary must remain a valid UTC timestamp"),
+    }
 }
 
 pub(crate) fn build_benchmark(

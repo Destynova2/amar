@@ -36,10 +36,15 @@ pub enum ServerError {
 struct AppState {
     data: Arc<DataSet>,
     max_distance_km: f64,
+    strict_validity: bool,
 }
 
 /// Build the M1 API router from an already loaded station pack.
 pub fn app(data: DataSet, max_distance_km: f64) -> Router {
+    app_with_options(data, max_distance_km, false)
+}
+
+pub fn app_with_options(data: DataSet, max_distance_km: f64, strict_validity: bool) -> Router {
     let max_distance_km = max_distance_km.min(contract::MAX_CONFIDENCE_DISTANCE_KM);
     Router::new()
         .route("/tide", post(post_tide))
@@ -50,6 +55,7 @@ pub fn app(data: DataSet, max_distance_km: f64) -> Router {
         .with_state(AppState {
             data: Arc::new(data),
             max_distance_km,
+            strict_validity,
         })
 }
 
@@ -58,6 +64,7 @@ pub async fn serve(
     addr: &str,
     pack_paths: &[std::path::PathBuf],
     max_distance_km: f64,
+    strict_validity: bool,
 ) -> Result<(), ServerError> {
     let data = load_packs_from_paths(pack_paths)?;
     let listener = TcpListener::bind(addr)
@@ -68,10 +75,13 @@ pub async fn serve(
         })?;
     let local_addr = listener.local_addr().map_err(ServerError::LocalAddr)?;
     eprintln!("amar serve listening on http://{local_addr}");
-    axum::serve(listener, app(data, max_distance_km))
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .map_err(ServerError::Serve)
+    axum::serve(
+        listener,
+        app_with_options(data, max_distance_km, strict_validity),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .map_err(ServerError::Serve)
 }
 
 async fn shutdown_signal() {
@@ -97,6 +107,15 @@ async fn post_tide(
     let station_match = supported_station(&state, request.lat, request.lon)?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
+    if state.strict_validity
+        && let Some(violation) = contract::validity_period_violation(station, at)
+    {
+        return Err(ApiError::outside_validity_period(
+            &station_match,
+            at,
+            violation,
+        ));
+    }
     let Some(confidence) = contract::confidence_for_station(&station_match) else {
         return Err(ApiError::unsupported_station_confidence(station));
     };
@@ -118,8 +137,9 @@ async fn post_tide(
         datum: station.datum.clone(),
         source: SourceResponse::from(&station_match),
         confidence,
-        warnings: contract::warnings_for_station_with_coefficient(
+        warnings: contract::warnings_for_station_at_with_coefficient(
             station,
+            Some(at),
             next_high_coefficient.is_some(),
         ),
     }))
@@ -384,6 +404,8 @@ impl ApiError {
                 message: message.into(),
                 max_distance_km: None,
                 nearest_source: None,
+                valid_from: None,
+                valid_until: None,
             }),
         }
     }
@@ -405,6 +427,8 @@ impl ApiError {
                 message,
                 max_distance_km: Some(max_distance_km),
                 nearest_source,
+                valid_from: None,
+                valid_until: None,
             }),
         }
     }
@@ -420,6 +444,29 @@ impl ApiError {
                 ),
                 max_distance_km: None,
                 nearest_source: None,
+                valid_from: None,
+                valid_until: None,
+            }),
+        }
+    }
+
+    fn outside_validity_period(
+        station_match: &StationMatch<'_>,
+        at: UtcDateTime,
+        violation: contract::ValidityPeriodViolation,
+    ) -> Self {
+        Self {
+            status: StatusCode::UNPROCESSABLE_ENTITY,
+            body: Box::new(ErrorResponse {
+                error: "outside_validity_period",
+                message: format!(
+                    "datetime {} is outside station validity period",
+                    contract::format_utc(at)
+                ),
+                max_distance_km: None,
+                nearest_source: Some(SourceResponse::from(station_match)),
+                valid_from: Some(violation.valid_from),
+                valid_until: Some(violation.valid_until),
             }),
         }
     }
@@ -439,4 +486,8 @@ struct ErrorResponse {
     max_distance_km: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     nearest_source: Option<SourceResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    valid_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    valid_until: Option<String>,
 }

@@ -99,6 +99,11 @@ Le calibrateur ne fait aucune selection automatique, aucun critere de Rayleigh
 dynamique et aucune ponderation robuste : c'est volontairement un compilateur
 borne pour Brest, pas un clone UTide.
 
+Les stations REFMAR calibrées publient
+`valid_until = fin de calibration + 5 ans` : la validation historique v0.8
+mesure une dérive du biais de niveau moyen qui justifie une recalibration
+périodique plutôt qu'un horizon ouvert.
+
 Pour Brest, le vocabulaire impose est : résidu = niveau d'eau observé − marée
 astronomique prédite (météo incluse). Ce résidu n'est pas une validation
 officielle.

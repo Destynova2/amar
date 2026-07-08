@@ -15,7 +15,8 @@
     "id": "refmar:3",
     "name": "Brest",
     "distance_km": 0.011,
-    "data_version": "2026-07-06-m2.2"
+    "data_version": "2026-07-06-m2.2",
+    "valid_until": "2031-04-01T00:00:00Z"
   },
   "confidence": {
     "method": "calibrated_station_experimental",

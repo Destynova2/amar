@@ -770,3 +770,315 @@ Table de décision du catalogue RONIM traité :
 | Sète | `refmar:250` | 2026-04/2026-07 | 100,0 % | 6,1 | 13,0 | 8,4 | 1,37 | exclu : facteur < 2 |
 | Solenzara | `refmar:710` | 2026-04/2026-07 | NA | NA | NA | NA | NA | exclu : saut aberrant -4,994 m en calibration |
 | Toulon | `refmar:68` | NA | NA | NA | NA | NA | NA | exclu : station catalogue `state=KO` |
+
+## v0.8 -- validation décennale et validité temporelle
+
+Date : 2026-07-08.
+
+### Validation historique REFMAR
+
+Commande :
+
+```bash
+cargo run -p amar-calibrate -- validate-history --report-out target/refmar-cache/history_decennial_v1.csv
+```
+
+Le fetch utilise REFMAR source 4, des tranches de 31 jours, le cache
+`target/refmar-cache` et le throttle par défaut 600 ms, refusé sous 500 ms.
+Aucun recalage n'est fait : les packs publics Brest M2.2 et France v0.7 sont
+évalués tels quels sur
+`2016-01-01T00:00:00Z/2026-07-01T00:00:00Z`.
+
+Artefacts :
+
+| Artefact | SHA-256 | Role |
+|---|---|---|
+| `fixtures/refmar/benchmark_brest_decennial_v1.json` | `d371be7da00d4324ce92fd016d3601c5669c3d452dd4373a5b3347f5ed80b5e5` | benchmark Brest historique additif |
+| `fixtures/refmar/benchmark_brest_v1.json` | `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f` | benchmark M2.2, reste byte-identique |
+| `target/refmar-cache/history_decennial_v1.csv` | `9b1ca9c49eba28d53fc4eb028929b1c9bf04e81fbe3ecf50fdeea5c7daf699b8` | rapport reproductible non commité |
+
+Lecture Brest : le RMS annuel sur vraie mer entière ne reste pas au niveau du
+benchmark 3 mois de 7,9 cm ; il reste dans une bande 13,5--16,6 cm, dominée
+par la basse fréquence météorologique et par le choix d'années complètes. Il
+n'y a pas de croissance monotone du RMS en remontant vers 2016, donc pas de
+signature claire de dérive nodale/phase.
+
+Le biais Brest mesure le niveau moyen relatif au Z0 figé 2021--2026 :
+moyenne 2016--2020 = -5,3 cm, moyenne 2021--2026 = +0,3 cm, pente linéaire
+2016--2026 = +1,18 cm/an, soit +11,8 cm/décennie. Cette valeur est une mesure
+empirique brute de vraie mer, donc elle mélange montée lente du niveau moyen,
+météo basse fréquence et distribution incomplète de certaines années ; elle
+est supérieure à l'ordre de grandeur eustatique seul attendu.
+
+L'alerte 2x RMS benchmark est conservée comme signal non bloquant par défaut :
+17 couples station/année la déclenchent. Elle peut être rendue bloquante par
+`--fail-on-alert`. Les gates publiés restent inchangés.
+
+### Table annuelle historique
+
+| Port | Station | Année | N | Couverture | RMS cm | Biais cm | p95 cm | Alerte 2x |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| Pointe Des Galets | `refmar:110` | 2016 | 8629 | 98.2 % | 8.5 | -4.9 | 15.6 | - |
+| Pointe Des Galets | `refmar:110` | 2017 | 8754 | 99.9 % | 7.0 | 3.5 | 13.4 | - |
+| Pointe Des Galets | `refmar:110` | 2018 | 8751 | 99.9 % | 9.2 | 6.3 | 17.2 | - |
+| Pointe Des Galets | `refmar:110` | 2019 | 8760 | 100.0 % | 10.0 | 7.5 | 18.2 | - |
+| Pointe Des Galets | `refmar:110` | 2020 | 8518 | 97.0 % | 6.6 | -0.6 | 12.3 | - |
+| Pointe Des Galets | `refmar:110` | 2021 | 8760 | 100.0 % | 6.4 | -2.6 | 12.2 | - |
+| Pointe Des Galets | `refmar:110` | 2022 | 8660 | 98.9 % | 5.5 | 0.7 | 10.8 | - |
+| Pointe Des Galets | `refmar:110` | 2023 | 8759 | 100.0 % | 7.2 | 2.7 | 14.6 | - |
+| Pointe Des Galets | `refmar:110` | 2024 | 8784 | 100.0 % | 7.9 | 3.0 | 14.3 | - |
+| Pointe Des Galets | `refmar:110` | 2025 | 8757 | 100.0 % | 7.4 | -1.9 | 13.3 | - |
+| Pointe Des Galets | `refmar:110` | 2026 | 4343 | 100.0 % | 8.1 | -5.1 | 16.5 | - |
+| Boulogne-sur-mer | `refmar:111` | 2016 | 8764 | 99.8 % | 23.6 | -7.8 | 46.9 | - |
+| Boulogne-sur-mer | `refmar:111` | 2017 | 8755 | 99.9 % | 23.2 | -7.0 | 46.9 | - |
+| Boulogne-sur-mer | `refmar:111` | 2018 | 8714 | 99.5 % | 23.6 | -7.0 | 48.2 | - |
+| Boulogne-sur-mer | `refmar:111` | 2019 | 8749 | 99.9 % | 23.1 | -3.1 | 45.9 | - |
+| Boulogne-sur-mer | `refmar:111` | 2020 | 8784 | 100.0 % | 23.9 | -1.5 | 47.0 | - |
+| Boulogne-sur-mer | `refmar:111` | 2021 | 8740 | 99.8 % | 22.2 | -4.5 | 44.1 | - |
+| Boulogne-sur-mer | `refmar:111` | 2022 | 8760 | 100.0 % | 22.6 | -3.1 | 45.8 | - |
+| Boulogne-sur-mer | `refmar:111` | 2023 | 8756 | 100.0 % | 25.3 | 2.6 | 51.9 | - |
+| Boulogne-sur-mer | `refmar:111` | 2024 | 8784 | 100.0 % | 24.3 | 3.3 | 49.1 | - |
+| Boulogne-sur-mer | `refmar:111` | 2025 | 8760 | 100.0 % | 22.2 | 0.2 | 44.2 | - |
+| Boulogne-sur-mer | `refmar:111` | 2026 | 4343 | 100.0 % | 21.3 | 2.5 | 42.3 | - |
+| Le Conquet | `refmar:152` | 2016 | 8765 | 99.8 % | 14.6 | -6.3 | 28.0 | - |
+| Le Conquet | `refmar:152` | 2017 | 8747 | 99.9 % | 15.6 | -8.6 | 29.6 | oui |
+| Le Conquet | `refmar:152` | 2018 | 7948 | 90.7 % | 14.9 | -5.3 | 29.0 | oui |
+| Le Conquet | `refmar:152` | 2019 | 8760 | 100.0 % | 15.0 | -3.8 | 30.0 | oui |
+| Le Conquet | `refmar:152` | 2020 | 8760 | 99.7 % | 13.0 | -1.7 | 25.5 | - |
+| Le Conquet | `refmar:152` | 2021 | 8285 | 94.6 % | 13.3 | -3.9 | 25.3 | - |
+| Le Conquet | `refmar:152` | 2022 | 8757 | 100.0 % | 13.1 | -3.6 | 26.4 | - |
+| Le Conquet | `refmar:152` | 2023 | 8760 | 100.0 % | 15.8 | 0.7 | 31.9 | - |
+| Le Conquet | `refmar:152` | 2024 | 8461 | 96.3 % | 14.9 | 2.0 | 31.4 | - |
+| Le Conquet | `refmar:152` | 2025 | 8727 | 99.6 % | 13.0 | 2.5 | 25.6 | - |
+| Le Conquet | `refmar:152` | 2026 | 4343 | 100.0 % | 16.2 | 4.2 | 37.3 | - |
+| Concarneau | `refmar:160` | 2016 | 8784 | 100.0 % | 14.6 | -6.8 | 27.9 | oui |
+| Concarneau | `refmar:160` | 2017 | 8760 | 100.0 % | 16.4 | -10.0 | 30.7 | oui |
+| Concarneau | `refmar:160` | 2018 | 8760 | 100.0 % | 15.0 | -5.7 | 29.5 | oui |
+| Concarneau | `refmar:160` | 2019 | 8760 | 100.0 % | 15.3 | -5.0 | 31.0 | oui |
+| Concarneau | `refmar:160` | 2020 | 8784 | 100.0 % | 12.6 | -1.9 | 24.9 | - |
+| Concarneau | `refmar:160` | 2021 | 8616 | 98.4 % | 13.6 | -4.3 | 25.5 | - |
+| Concarneau | `refmar:160` | 2022 | 8760 | 100.0 % | 12.8 | -4.1 | 24.9 | - |
+| Concarneau | `refmar:160` | 2023 | 8760 | 100.0 % | 15.7 | 0.1 | 31.3 | - |
+| Concarneau | `refmar:160` | 2024 | 8784 | 100.0 % | 14.8 | 2.4 | 32.0 | - |
+| Concarneau | `refmar:160` | 2025 | 8760 | 100.0 % | 13.5 | 3.4 | 26.9 | - |
+| Concarneau | `refmar:160` | 2026 | 4339 | 99.9 % | 16.8 | 4.8 | 38.8 | - |
+| Le Crouesty | `refmar:185` | 2016 | 8784 | 100.0 % | 15.4 | -6.3 | 29.3 | - |
+| Le Crouesty | `refmar:185` | 2017 | 8760 | 100.0 % | 16.9 | -9.2 | 32.2 | oui |
+| Le Crouesty | `refmar:185` | 2018 | 8721 | 99.6 % | 15.7 | -5.2 | 31.0 | - |
+| Le Crouesty | `refmar:185` | 2019 | 8757 | 100.0 % | 16.1 | -3.5 | 32.2 | - |
+| Le Crouesty | `refmar:185` | 2020 | 8784 | 100.0 % | 13.6 | -0.6 | 27.3 | - |
+| Le Crouesty | `refmar:185` | 2021 | 8740 | 99.8 % | 14.5 | -4.0 | 27.6 | - |
+| Le Crouesty | `refmar:185` | 2022 | 8760 | 100.0 % | 13.5 | -4.0 | 26.3 | - |
+| Le Crouesty | `refmar:185` | 2023 | 8760 | 100.0 % | 17.0 | 0.4 | 34.4 | - |
+| Le Crouesty | `refmar:185` | 2024 | 8784 | 100.0 % | 16.0 | 2.5 | 34.8 | - |
+| Le Crouesty | `refmar:185` | 2025 | 8604 | 98.2 % | 14.4 | 2.9 | 27.6 | - |
+| Le Crouesty | `refmar:185` | 2026 | 4284 | 98.6 % | 17.3 | 4.4 | 39.4 | - |
+| Arcachon Eyrac | `refmar:190` | 2016 | 3168 | 36.1 % | 20.8 | -4.5 | 40.0 | oui |
+| Arcachon Eyrac | `refmar:190` | 2017 | 8753 | 99.9 % | 18.3 | -7.9 | 35.9 | - |
+| Arcachon Eyrac | `refmar:190` | 2018 | 8650 | 98.7 % | 15.5 | -3.5 | 31.3 | - |
+| Arcachon Eyrac | `refmar:190` | 2019 | 8285 | 94.6 % | 18.7 | -1.8 | 37.2 | - |
+| Arcachon Eyrac | `refmar:190` | 2020 | 8784 | 100.0 % | 16.4 | 0.4 | 32.6 | - |
+| Arcachon Eyrac | `refmar:190` | 2021 | 8756 | 100.0 % | 15.7 | -3.6 | 29.9 | - |
+| Arcachon Eyrac | `refmar:190` | 2022 | 8760 | 100.0 % | 14.8 | -3.8 | 29.4 | - |
+| Arcachon Eyrac | `refmar:190` | 2023 | 8760 | 100.0 % | 19.9 | 1.8 | 40.0 | - |
+| Arcachon Eyrac | `refmar:190` | 2024 | 8757 | 99.7 % | 16.7 | 1.5 | 33.5 | - |
+| Arcachon Eyrac | `refmar:190` | 2025 | 8760 | 100.0 % | 15.3 | 1.4 | 29.6 | - |
+| Arcachon Eyrac | `refmar:190` | 2026 | 4343 | 100.0 % | 19.0 | 6.5 | 43.5 | - |
+| Herbaudiere | `refmar:198` | 2016 | 8762 | 99.7 % | 15.4 | -6.6 | 29.2 | - |
+| Herbaudiere | `refmar:198` | 2017 | 8760 | 100.0 % | 16.8 | -9.4 | 32.2 | oui |
+| Herbaudiere | `refmar:198` | 2018 | 5226 | 59.7 % | 15.3 | -3.4 | 29.9 | - |
+| Herbaudiere | `refmar:198` | 2019 | 8690 | 99.2 % | 15.6 | -3.5 | 31.7 | - |
+| Herbaudiere | `refmar:198` | 2020 | 8703 | 99.1 % | 13.5 | -1.0 | 26.8 | - |
+| Herbaudiere | `refmar:198` | 2021 | 8717 | 99.5 % | 14.1 | -4.2 | 27.2 | - |
+| Herbaudiere | `refmar:198` | 2022 | 8751 | 99.9 % | 13.2 | -4.4 | 26.2 | - |
+| Herbaudiere | `refmar:198` | 2023 | 8757 | 100.0 % | 16.8 | 1.1 | 35.0 | - |
+| Herbaudiere | `refmar:198` | 2024 | 8755 | 99.7 % | 15.3 | 2.8 | 31.7 | - |
+| Herbaudiere | `refmar:198` | 2025 | 8633 | 98.6 % | 13.8 | 2.4 | 26.8 | - |
+| Herbaudiere | `refmar:198` | 2026 | 4279 | 98.5 % | 16.1 | 4.6 | 37.1 | - |
+| Dunkerque | `refmar:2` | 2016 | 8784 | 100.0 % | 21.4 | -3.5 | 43.3 | - |
+| Dunkerque | `refmar:2` | 2017 | 8736 | 99.7 % | 22.0 | -0.6 | 43.9 | - |
+| Dunkerque | `refmar:2` | 2018 | 8760 | 100.0 % | 22.3 | -4.3 | 46.3 | - |
+| Dunkerque | `refmar:2` | 2019 | 8760 | 100.0 % | 22.1 | -1.4 | 44.1 | - |
+| Dunkerque | `refmar:2` | 2020 | 8781 | 100.0 % | 23.2 | -0.9 | 45.9 | - |
+| Dunkerque | `refmar:2` | 2021 | 8631 | 98.5 % | 21.3 | -3.3 | 42.6 | - |
+| Dunkerque | `refmar:2` | 2022 | 8760 | 100.0 % | 21.9 | -2.0 | 43.9 | - |
+| Dunkerque | `refmar:2` | 2023 | 8760 | 100.0 % | 23.0 | 2.8 | 46.4 | - |
+| Dunkerque | `refmar:2` | 2024 | 8711 | 99.2 % | 23.3 | 2.8 | 46.9 | - |
+| Dunkerque | `refmar:2` | 2025 | 8760 | 100.0 % | 20.9 | -1.2 | 41.8 | - |
+| Dunkerque | `refmar:2` | 2026 | 4343 | 100.0 % | 21.5 | 2.2 | 44.3 | - |
+| Dieppe | `refmar:24` | 2016 | 8779 | 99.9 % | 21.2 | -6.2 | 42.0 | - |
+| Dieppe | `refmar:24` | 2017 | 8688 | 99.2 % | 21.0 | -6.7 | 41.6 | - |
+| Dieppe | `refmar:24` | 2018 | 8760 | 100.0 % | 21.4 | -6.7 | 43.6 | - |
+| Dieppe | `refmar:24` | 2019 | 8760 | 100.0 % | 21.2 | -3.7 | 42.2 | - |
+| Dieppe | `refmar:24` | 2020 | 8784 | 100.0 % | 21.4 | -1.6 | 42.6 | - |
+| Dieppe | `refmar:24` | 2021 | 8437 | 96.3 % | 20.3 | -4.0 | 39.9 | - |
+| Dieppe | `refmar:24` | 2022 | 8699 | 99.3 % | 20.3 | -3.6 | 40.6 | - |
+| Dieppe | `refmar:24` | 2023 | 8760 | 100.0 % | 22.7 | 1.8 | 45.8 | - |
+| Dieppe | `refmar:24` | 2024 | 8780 | 100.0 % | 22.2 | 3.1 | 44.0 | - |
+| Dieppe | `refmar:24` | 2025 | 8760 | 100.0 % | 20.1 | 0.9 | 40.2 | - |
+| Dieppe | `refmar:24` | 2026 | 4337 | 99.8 % | 19.6 | 2.9 | 38.2 | - |
+| Brest | `refmar:3` | 2016 | 8659 | 98.6 % | 15.3 | -6.8 | 29.8 | - |
+| Brest | `refmar:3` | 2017 | 8730 | 99.7 % | 16.4 | -9.3 | 31.4 | oui |
+| Brest | `refmar:3` | 2018 | 8750 | 99.9 % | 14.9 | -5.0 | 29.0 | - |
+| Brest | `refmar:3` | 2019 | 8496 | 97.0 % | 15.3 | -3.8 | 30.8 | - |
+| Brest | `refmar:3` | 2020 | 8699 | 99.0 % | 13.6 | -1.5 | 26.8 | - |
+| Brest | `refmar:3` | 2021 | 8669 | 99.0 % | 13.8 | -4.0 | 26.1 | - |
+| Brest | `refmar:3` | 2022 | 8756 | 100.0 % | 13.7 | -4.0 | 27.4 | - |
+| Brest | `refmar:3` | 2023 | 8760 | 100.0 % | 16.5 | 1.1 | 32.4 | - |
+| Brest | `refmar:3` | 2024 | 8262 | 94.1 % | 15.3 | 2.8 | 32.3 | - |
+| Brest | `refmar:3` | 2025 | 8760 | 100.0 % | 13.5 | 2.2 | 26.5 | - |
+| Brest | `refmar:3` | 2026 | 4343 | 100.0 % | 16.6 | 3.8 | 37.8 | - |
+| Ouistreham | `refmar:311` | 2016 | 1787 | 20.3 % | 25.2 | -12.6 | 50.0 | - |
+| Ouistreham | `refmar:311` | 2017 | 8718 | 99.5 % | 22.2 | -3.6 | 44.2 | - |
+| Ouistreham | `refmar:311` | 2018 | 8219 | 93.8 % | 22.3 | -2.0 | 44.0 | - |
+| Ouistreham | `refmar:311` | 2019 | 8760 | 100.0 % | 22.3 | 0.1 | 44.7 | - |
+| Ouistreham | `refmar:311` | 2020 | 8784 | 100.0 % | 22.3 | 1.5 | 43.8 | - |
+| Ouistreham | `refmar:311` | 2021 | 8731 | 99.7 % | 21.7 | -0.4 | 42.6 | - |
+| Ouistreham | `refmar:311` | 2022 | 8752 | 99.9 % | 22.1 | -3.9 | 43.1 | - |
+| Ouistreham | `refmar:311` | 2023 | 8760 | 100.0 % | 23.4 | 0.7 | 46.6 | - |
+| Ouistreham | `refmar:311` | 2024 | 8637 | 98.3 % | 23.0 | 2.2 | 46.1 | - |
+| Ouistreham | `refmar:311` | 2025 | 8725 | 99.6 % | 21.8 | -0.1 | 42.4 | - |
+| Ouistreham | `refmar:311` | 2026 | 4343 | 100.0 % | 21.9 | 1.8 | 43.2 | - |
+| La Rochelle-pallice | `refmar:34` | 2016 | 8784 | 100.0 % | 16.0 | -6.2 | 30.5 | - |
+| La Rochelle-pallice | `refmar:34` | 2017 | 8676 | 99.0 % | 17.6 | -9.0 | 33.9 | - |
+| La Rochelle-pallice | `refmar:34` | 2018 | 8165 | 93.2 % | 15.8 | -5.0 | 30.9 | - |
+| La Rochelle-pallice | `refmar:34` | 2019 | 8760 | 100.0 % | 16.9 | -2.9 | 33.9 | - |
+| La Rochelle-pallice | `refmar:34` | 2020 | 8772 | 99.9 % | 14.6 | -0.5 | 29.5 | - |
+| La Rochelle-pallice | `refmar:34` | 2021 | 8630 | 98.5 % | 14.9 | -3.6 | 28.8 | - |
+| La Rochelle-pallice | `refmar:34` | 2022 | 8716 | 99.5 % | 14.2 | -3.4 | 28.0 | - |
+| La Rochelle-pallice | `refmar:34` | 2023 | 8077 | 92.2 % | 14.8 | -2.1 | 31.0 | - |
+| La Rochelle-pallice | `refmar:34` | 2024 | 7078 | 80.6 % | 14.5 | 3.2 | 29.1 | - |
+| La Rochelle-pallice | `refmar:34` | 2025 | 8760 | 100.0 % | 15.2 | 3.6 | 30.0 | - |
+| La Rochelle-pallice | `refmar:34` | 2026 | 4343 | 100.0 % | 17.6 | 5.6 | 39.5 | - |
+| Saint-nazaire | `refmar:37` | 2016 | 8749 | 99.6 % | 17.5 | -6.2 | 33.7 | - |
+| Saint-nazaire | `refmar:37` | 2017 | 8760 | 100.0 % | 18.7 | -9.9 | 36.1 | oui |
+| Saint-nazaire | `refmar:37` | 2018 | 8760 | 100.0 % | 17.2 | -5.5 | 34.1 | - |
+| Saint-nazaire | `refmar:37` | 2019 | 8760 | 100.0 % | 17.8 | -3.5 | 36.0 | - |
+| Saint-nazaire | `refmar:37` | 2020 | 8784 | 100.0 % | 15.9 | -0.9 | 31.3 | - |
+| Saint-nazaire | `refmar:37` | 2021 | 8756 | 100.0 % | 16.4 | -4.1 | 31.7 | - |
+| Saint-nazaire | `refmar:37` | 2022 | 8760 | 100.0 % | 15.1 | -4.9 | 29.2 | - |
+| Saint-nazaire | `refmar:37` | 2023 | 8760 | 100.0 % | 19.6 | 1.0 | 39.6 | - |
+| Saint-nazaire | `refmar:37` | 2024 | 8766 | 99.8 % | 18.1 | 3.9 | 37.4 | - |
+| Saint-nazaire | `refmar:37` | 2025 | 8760 | 100.0 % | 15.5 | 1.5 | 29.6 | - |
+| Saint-nazaire | `refmar:37` | 2026 | 4343 | 100.0 % | 18.0 | 4.3 | 40.9 | - |
+| Le Havre | `refmar:4` | 2016 | 8773 | 99.9 % | 24.6 | -5.6 | 49.2 | - |
+| Le Havre | `refmar:4` | 2017 | 8756 | 100.0 % | 24.8 | -5.3 | 49.3 | - |
+| Le Havre | `refmar:4` | 2018 | 8754 | 99.9 % | 24.7 | -5.4 | 48.8 | - |
+| Le Havre | `refmar:4` | 2019 | 8736 | 99.7 % | 25.0 | -2.4 | 49.4 | - |
+| Le Havre | `refmar:4` | 2020 | 8700 | 99.0 % | 25.1 | -0.9 | 49.9 | - |
+| Le Havre | `refmar:4` | 2021 | 8676 | 99.0 % | 24.2 | -3.8 | 47.6 | - |
+| Le Havre | `refmar:4` | 2022 | 8467 | 96.7 % | 24.0 | -3.5 | 47.2 | - |
+| Le Havre | `refmar:4` | 2023 | 8705 | 99.4 % | 25.9 | 1.7 | 52.0 | - |
+| Le Havre | `refmar:4` | 2024 | 8751 | 99.6 % | 25.1 | 3.1 | 50.3 | - |
+| Le Havre | `refmar:4` | 2025 | 8694 | 99.2 % | 23.5 | 0.4 | 47.0 | - |
+| Le Havre | `refmar:4` | 2026 | 4343 | 100.0 % | 23.9 | 3.1 | 46.5 | - |
+| Saint-malo | `refmar:410` | 2016 | 8784 | 100.0 % | 20.3 | -5.4 | 40.4 | - |
+| Saint-malo | `refmar:410` | 2017 | 8760 | 100.0 % | 19.7 | -5.6 | 39.5 | - |
+| Saint-malo | `refmar:410` | 2018 | 8760 | 100.0 % | 19.6 | -3.4 | 38.3 | - |
+| Saint-malo | `refmar:410` | 2019 | 8760 | 100.0 % | 21.2 | -2.3 | 42.7 | - |
+| Saint-malo | `refmar:410` | 2020 | 7070 | 80.5 % | 21.0 | 0.6 | 41.8 | - |
+| Saint-malo | `refmar:410` | 2021 | 8755 | 99.9 % | 19.6 | -2.9 | 38.1 | - |
+| Saint-malo | `refmar:410` | 2022 | 8760 | 100.0 % | 19.3 | -3.8 | 38.2 | - |
+| Saint-malo | `refmar:410` | 2023 | 8760 | 100.0 % | 22.6 | 1.2 | 45.3 | - |
+| Saint-malo | `refmar:410` | 2024 | 8784 | 100.0 % | 21.4 | 2.0 | 42.4 | - |
+| Saint-malo | `refmar:410` | 2025 | 8760 | 100.0 % | 19.6 | 1.3 | 39.5 | - |
+| Saint-malo | `refmar:410` | 2026 | 4343 | 100.0 % | 19.9 | 4.1 | 41.2 | - |
+| Roscoff | `refmar:54` | 2016 | 8767 | 99.8 % | 15.5 | -6.2 | 30.5 | - |
+| Roscoff | `refmar:54` | 2017 | 8692 | 99.2 % | 15.7 | -7.0 | 30.8 | - |
+| Roscoff | `refmar:54` | 2018 | 8682 | 99.1 % | 15.1 | -4.2 | 29.9 | - |
+| Roscoff | `refmar:54` | 2019 | 8710 | 99.4 % | 15.6 | -3.0 | 31.2 | - |
+| Roscoff | `refmar:54` | 2020 | 8779 | 99.9 % | 14.5 | -1.2 | 28.8 | - |
+| Roscoff | `refmar:54` | 2021 | 8698 | 99.3 % | 14.2 | -4.0 | 27.2 | - |
+| Roscoff | `refmar:54` | 2022 | 8757 | 100.0 % | 14.3 | -4.1 | 28.4 | - |
+| Roscoff | `refmar:54` | 2023 | 8750 | 99.9 % | 17.2 | -0.1 | 33.9 | - |
+| Roscoff | `refmar:54` | 2024 | 8731 | 99.4 % | 16.0 | 2.5 | 32.6 | - |
+| Roscoff | `refmar:54` | 2025 | 8490 | 96.9 % | 14.4 | 3.4 | 28.5 | - |
+| Roscoff | `refmar:54` | 2026 | 4259 | 98.0 % | 16.8 | 5.2 | 39.1 | - |
+| Mimizan | `refmar:6144` | 2016 | 8784 | 100.0 % | 19.2 | -1.1 | 36.5 | - |
+| Mimizan | `refmar:6144` | 2017 | 7662 | 87.5 % | 22.8 | 0.5 | 48.4 | - |
+| Mimizan | `refmar:6144` | 2018 | 7099 | 81.0 % | 21.6 | 3.3 | 43.8 | - |
+| Mimizan | `refmar:6144` | 2019 | 8715 | 99.5 % | 21.8 | 3.1 | 44.7 | - |
+| Mimizan | `refmar:6144` | 2020 | 8707 | 99.1 % | 19.9 | 1.9 | 39.7 | - |
+| Mimizan | `refmar:6144` | 2021 | 8666 | 98.9 % | 21.4 | -5.6 | 41.6 | - |
+| Mimizan | `refmar:6144` | 2022 | 8172 | 93.3 % | 17.0 | -6.3 | 33.5 | - |
+| Mimizan | `refmar:6144` | 2023 | 8760 | 100.0 % | 22.3 | 3.4 | 44.5 | - |
+| Mimizan | `refmar:6144` | 2024 | 8784 | 100.0 % | 18.0 | -0.2 | 36.3 | - |
+| Mimizan | `refmar:6144` | 2025 | 8760 | 100.0 % | 26.3 | 6.0 | 56.1 | - |
+| Mimizan | `refmar:6144` | 2026 | 4343 | 100.0 % | 20.0 | 2.2 | 41.5 | - |
+| Les Sables D Olonne | `refmar:62` | 2016 | 8784 | 100.0 % | 15.0 | -6.7 | 28.4 | - |
+| Les Sables D Olonne | `refmar:62` | 2017 | 8760 | 100.0 % | 16.9 | -9.6 | 32.2 | oui |
+| Les Sables D Olonne | `refmar:62` | 2018 | 8710 | 99.4 % | 14.9 | -5.4 | 29.2 | - |
+| Les Sables D Olonne | `refmar:62` | 2019 | 8722 | 99.6 % | 15.5 | -3.6 | 31.8 | oui |
+| Les Sables D Olonne | `refmar:62` | 2020 | 8772 | 99.9 % | 13.1 | -1.0 | 26.3 | - |
+| Les Sables D Olonne | `refmar:62` | 2021 | 8694 | 99.2 % | 13.9 | -4.0 | 26.5 | - |
+| Les Sables D Olonne | `refmar:62` | 2022 | 8751 | 99.9 % | 12.8 | -4.4 | 25.4 | - |
+| Les Sables D Olonne | `refmar:62` | 2023 | 8741 | 99.8 % | 16.4 | 0.7 | 35.0 | - |
+| Les Sables D Olonne | `refmar:62` | 2024 | 8474 | 96.5 % | 15.4 | 3.3 | 33.4 | - |
+| Les Sables D Olonne | `refmar:62` | 2025 | 8235 | 94.0 % | 14.0 | 2.4 | 27.0 | - |
+| Les Sables D Olonne | `refmar:62` | 2026 | 4337 | 99.8 % | 16.0 | 4.1 | 37.0 | - |
+| Dielette | `refmar:628` | 2016 | 7361 | 83.8 % | 19.8 | -7.2 | 37.9 | - |
+| Dielette | `refmar:628` | 2017 | 8197 | 93.6 % | 19.9 | -7.2 | 38.3 | - |
+| Dielette | `refmar:628` | 2018 | 7748 | 88.4 % | 19.4 | -5.0 | 38.0 | - |
+| Dielette | `refmar:628` | 2019 | 8760 | 100.0 % | 19.3 | -2.2 | 38.2 | - |
+| Dielette | `refmar:628` | 2020 | 7378 | 84.0 % | 19.0 | -3.2 | 37.2 | - |
+| Dielette | `refmar:628` | 2021 | 8414 | 96.1 % | 18.2 | -4.6 | 34.9 | - |
+| Dielette | `refmar:628` | 2022 | 8629 | 98.5 % | 17.5 | -3.6 | 35.0 | - |
+| Dielette | `refmar:628` | 2023 | 8760 | 100.0 % | 21.5 | 2.6 | 42.2 | - |
+| Dielette | `refmar:628` | 2024 | 8779 | 99.9 % | 19.3 | 2.0 | 39.3 | - |
+| Dielette | `refmar:628` | 2025 | 8649 | 98.7 % | 17.9 | 1.1 | 35.5 | - |
+| Dielette | `refmar:628` | 2026 | 4222 | 97.2 % | 18.2 | 5.2 | 38.0 | - |
+| Noumea Numbo | `refmar:659` | 2016 | 8277 | 94.2 % | 7.8 | -5.3 | 15.1 | - |
+| Noumea Numbo | `refmar:659` | 2017 | 7873 | 89.9 % | 6.6 | -3.8 | 13.2 | - |
+| Noumea Numbo | `refmar:659` | 2018 | 8448 | 96.4 % | 7.7 | -5.0 | 14.4 | - |
+| Noumea Numbo | `refmar:659` | 2019 | 8735 | 99.7 % | 8.4 | -6.2 | 15.3 | - |
+| Noumea Numbo | `refmar:659` | 2020 | 8505 | 96.8 % | 7.2 | -4.1 | 12.9 | - |
+| Noumea Numbo | `refmar:659` | 2021 | 7949 | 90.7 % | 6.3 | -3.3 | 12.5 | - |
+| Noumea Numbo | `refmar:659` | 2022 | 7307 | 83.4 % | 6.5 | 0.5 | 12.4 | - |
+| Noumea Numbo | `refmar:659` | 2023 | 8482 | 96.8 % | 5.9 | 0.2 | 10.6 | - |
+| Noumea Numbo | `refmar:659` | 2024 | 8644 | 98.4 % | 5.4 | 1.0 | 10.8 | - |
+| Noumea Numbo | `refmar:659` | 2025 | 8753 | 99.9 % | 6.1 | 1.2 | 12.3 | - |
+| Noumea Numbo | `refmar:659` | 2026 | 4340 | 99.9 % | 7.0 | -1.5 | 13.7 | - |
+| Port-tudy | `refmar:71` | 2016 | 8784 | 100.0 % | 13.6 | -5.3 | 26.1 | - |
+| Port-tudy | `refmar:71` | 2017 | 8760 | 100.0 % | 15.0 | -7.8 | 28.6 | oui |
+| Port-tudy | `refmar:71` | 2018 | 8701 | 99.3 % | 14.1 | -4.2 | 28.0 | - |
+| Port-tudy | `refmar:71` | 2019 | 8760 | 100.0 % | 14.4 | -3.3 | 29.3 | - |
+| Port-tudy | `refmar:71` | 2020 | 6914 | 78.7 % | 12.3 | -2.0 | 24.4 | - |
+| Port-tudy | `refmar:71` | 2021 | 8608 | 98.3 % | 14.0 | -6.0 | 26.6 | - |
+| Port-tudy | `refmar:71` | 2022 | 8760 | 100.0 % | 13.5 | -5.1 | 26.6 | - |
+| Port-tudy | `refmar:71` | 2023 | 8760 | 100.0 % | 15.4 | 2.0 | 31.2 | - |
+| Port-tudy | `refmar:71` | 2024 | 8784 | 100.0 % | 14.6 | 3.5 | 31.7 | - |
+| Port-tudy | `refmar:71` | 2025 | 8760 | 100.0 % | 13.0 | 3.4 | 25.7 | - |
+| Port-tudy | `refmar:71` | 2026 | 4343 | 100.0 % | 15.7 | 4.0 | 36.9 | - |
+| Boucau-bayonne | `refmar:94` | 2016 | 0 | 0.0 % | NA | NA | NA | - |
+| Boucau-bayonne | `refmar:94` | 2017 | 5830 | 66.6 % | 12.8 | -5.0 | 26.7 | - |
+| Boucau-bayonne | `refmar:94` | 2018 | 8760 | 100.0 % | 13.4 | 0.7 | 27.8 | - |
+| Boucau-bayonne | `refmar:94` | 2019 | 8750 | 99.9 % | 16.1 | 0.6 | 35.3 | oui |
+| Boucau-bayonne | `refmar:94` | 2020 | 8753 | 99.6 % | 13.8 | 1.8 | 28.1 | oui |
+| Boucau-bayonne | `refmar:94` | 2021 | 8259 | 94.3 % | 12.9 | -2.2 | 24.5 | - |
+| Boucau-bayonne | `refmar:94` | 2022 | 8760 | 100.0 % | 11.8 | -6.0 | 23.4 | - |
+| Boucau-bayonne | `refmar:94` | 2023 | 8760 | 100.0 % | 15.7 | 1.2 | 33.3 | - |
+| Boucau-bayonne | `refmar:94` | 2024 | 7956 | 90.6 % | 13.9 | 4.9 | 30.4 | - |
+| Boucau-bayonne | `refmar:94` | 2025 | 8760 | 100.0 % | 11.1 | -0.1 | 22.3 | - |
+| Boucau-bayonne | `refmar:94` | 2026 | 4343 | 100.0 % | 15.4 | 4.8 | 36.7 | - |
+
+
+### Horizon de validité par station
+
+Les packs réémis ajoutent par station `data_version`, `valid_from` et
+`valid_until`. Pour les stations REFMAR calibrées,
+`valid_from = 2021-01-01T00:00:00Z` et
+`valid_until = 2031-04-01T00:00:00Z`, soit fin de calibration 2026-04-01
+plus 5 ans. Les SHA des packs réémis sont :
+
+| Pack | SHA-256 | Diff attendu |
+|---|---|---|
+| `data/packs/noaa_m0.json` | `4ceb3f4a0b7a343ca46abf007f8ef69521be4d5ec517967e5b3b853bba99a2a8` | ajout `data_version` par station NOAA |
+| `data/packs/amar-data-brest-experimental.json` | `613e9b6374431256f003e54865930a87b7d9f148ce90437c96272854df2568c3` | ajout `data_version`, `valid_from`, `valid_until` |
+| `data/packs/amar-data-france-experimental.json` | `a25d10d3cb3240fbd75375074af74a42d277f39f6700b36e7cb5e810d2478772` | ajout `data_version`, `valid_from`, `valid_until` |
+
+Choix API/CLI : hors `[valid_from, valid_until]`, la réponse conserve la
+prédiction astronomique et ajoute le warning `outside_validity_period` avec
+`source.valid_until`. C'est un avertissement, pas un refus 422 par défaut :
+la courbe astronomique reste utile hors horizon, c'est surtout le niveau
+absolu qui dérive. Le mode strict `--strict-validity` transforme ce warning
+en refus `outside_validity_period` pour les usages qui veulent une borne dure.

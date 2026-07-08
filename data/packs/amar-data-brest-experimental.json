@@ -249,6 +249,9 @@
         "observations_checksum_sha256": "17951bab11dc99220b8462da118df6ba4412a2492eb36a8c01b5935b6cd5a8e2",
         "tidegauge_checksum_sha256": "5327d51c4e210f656b1ee2b3ff0d6e1b5bbd0a8a8cddfcb1c13c556d43e994cf"
       },
+      "data_version": "2026-07-06-m2.2",
+      "valid_from": "2021-01-01T00:00:00Z",
+      "valid_until": "2031-04-01T00:00:00Z",
       "experimental": true,
       "not_official": true,
       "not_shom": true,

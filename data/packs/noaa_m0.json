@@ -243,7 +243,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1612340/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1612340/harcon.json?units=metric",
         "checksum_sha256": "26d9c8960e25f5fe4093b358c3b543d5c73ca83e2aa192698bc711f917cc58d7"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:8410140",
@@ -486,7 +487,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8410140/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8410140/harcon.json?units=metric",
         "checksum_sha256": "2f1ed04e7768c15f0e7c62ec4dad0eab7d75de82050dc62ff61c814f70da18a4"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:8443970",
@@ -729,7 +731,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8443970/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8443970/harcon.json?units=metric",
         "checksum_sha256": "3a96109c469298b491f744d47a71ff780abcc10786054c6837ac4fd1188a7e42"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:8724580",
@@ -972,7 +975,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8724580/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8724580/harcon.json?units=metric",
         "checksum_sha256": "e91a9e0c989e8c3c36ae46b9ad608743f6145dade89a3a1ebe38e7b79849b5b6"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:8729840",
@@ -1215,7 +1219,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8729840/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8729840/harcon.json?units=metric",
         "checksum_sha256": "b928ed4b8fc0ac771c8e4feb985f84dd384c5b475448eaf19f3ce1d7af480bb6"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:8771450",
@@ -1458,7 +1463,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8771450/harcon.json?units=metric",
         "checksum_sha256": "1931ecb3560a6f6c70558921b802d34ae31de1187a5d9773baa541e4a99f6636"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:9414290",
@@ -1701,7 +1707,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9414290/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9414290/harcon.json?units=metric",
         "checksum_sha256": "7129032615c5638aced9f798596e1805809ea6cb0fec29d9b99c7c034d1667eb"
-      }
+      },
+      "data_version": "2026-07-06"
     },
     {
       "station_id": "noaa:9447130",
@@ -1944,7 +1951,8 @@
         "datums_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9447130/datums.json?units=metric",
         "harcon_url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9447130/harcon.json?units=metric",
         "checksum_sha256": "6ade2b0c7e73ecfe86c06ff7c888322c63102ad2e7193da46cf6cbafd65b096a"
-      }
+      },
+      "data_version": "2026-07-06"
     }
   ]
 }
