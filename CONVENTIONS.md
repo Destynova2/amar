@@ -99,6 +99,28 @@ Le calibrateur ne fait aucune selection automatique, aucun critere de Rayleigh
 dynamique et aucune ponderation robuste : c'est volontairement un compilateur
 borne pour Brest, pas un clone UTide.
 
+### Investigation Manche v0.9
+
+Le jeu `m22-rayleigh37` est un jeu fixe de production, hérité du périmètre
+NOAA/Brest/Atlantique supporté par `amar-core`. Il ne doit pas être interprété
+comme la règle universelle "prendre 37 constituants partout".
+
+Pour les ports de Manche ou d'estuaire où les petits-fonds déforment la marée,
+la règle de méthode est une sélection par port :
+
+- départ du catalogue harmonique complet disponible dans l'outil d'analyse ;
+- conservation des constituants séparables par le critère de Rayleigh sur la
+  longueur de calibration du port ;
+- conservation finale des seuls constituants statistiquement significatifs
+  (`SNR >= 2` dans l'investigation v0.9) ;
+- jugement uniquement sur une fenêtre de validation réservée, jamais sur le
+  RMS de calibration.
+
+Cette sélection est additive et diagnostique tant que le catalogue étendu
+n'est pas porté dans `amar-core`. Si elle devient un modèle publié pour un port
+déjà packagé, ou si elle qualifie un nouveau port, le résultat doit être une
+nouvelle `data_version`, avec constituants, fenêtre et benchmark documentés.
+
 Les stations REFMAR calibrées publient
 `valid_until = fin de calibration + 5 ans` : la validation historique v0.8
 mesure une dérive du biais de niveau moyen qui justifie une recalibration

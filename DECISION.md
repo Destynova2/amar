@@ -1082,3 +1082,152 @@ prédiction astronomique et ajoute le warning `outside_validity_period` avec
 la courbe astronomique reste utile hors horizon, c'est surtout le niveau
 absolu qui dérive. Le mode strict `--strict-validity` transforme ce warning
 en refus `outside_validity_period` pour les usages qui veulent une borne dure.
+
+## v0.9 -- Investigation Manche harmonique vs surcote
+
+Date : 2026-07-08.
+
+Objectif : trancher Cherbourg et Calais sans passe-droit, et vérifier Le Havre
+et Concarneau comme respectivement port estuarien/double-marée et témoin propre.
+Les packs NOAA, Brest et France v0.7 restent inchangés dans cette investigation.
+Les seuils de gates restent inchangés.
+
+Artefacts temporaires :
+
+| Artefact | Rôle |
+|---|---|
+| `target/refmar-cache/manche_investigation_v0_9/report.json` | rapport complet de diagnostic |
+| `target/refmar-cache/manche_investigation_v0_9/validation_summary.csv` | 37 courant vs sélection UTide |
+| `target/refmar-cache/manche_investigation_v0_9/calm_summary.csv` | p95 Cherbourg/Calais en saison calme |
+| `target/refmar-cache/manche_investigation_v0_9/skew_surge_2024.csv` | skew surge horaire 2024 |
+| `target/refmar-cache/manche_investigation_v0_9/inverse_barometer.csv` | diagnostic baromètre inverse |
+
+### Méthode
+
+Sélection harmonique : UTide `0.3.1`, catalogue de 146 noms incluant `Z0`,
+moindres carrés ordinaires, corrections nodales actives, tendance désactivée,
+intervalles de confiance linéaires, `Rayleigh_min = 1`, puis reconstruction
+avec `SNR >= 2`. UTide ne contient pas `M1` ni `2MK3`; la baseline 37 de
+référence reste donc la mesure AMAR v0.7 exacte, et le jeu UTide commun à
+35 constituants ne sert que de repère interne.
+
+Le calcul Rayleigh par port est :
+
+| Port | Calibration | T jours | 1/T cpd | Rayleigh | SNR >= 2 | min écart SNR cpd |
+|---|---|---:|---:|---:|---:|---:|
+| Cherbourg | 2021-01-01/2026-01-01 | 1826 | 0,000548 | 68 | 65 | 0,002119 |
+| Calais | 2021-01-01/2025-08-01 | 1673 | 0,000598 | 68 | 62 | 0,002119 |
+| Le Havre | 2021-01-01/2026-04-01 | 1916 | 0,000522 | 68 | 63 | 0,002119 |
+| Concarneau | 2021-01-01/2026-04-01 | 1916 | 0,000522 | 68 | 66 | 0,002119 |
+
+Lecture : tous les constituants significatifs retenus restent séparés par un
+écart minimal supérieur à la résolution Rayleigh de leur fenêtre. Le juge reste
+la validation réservée.
+
+Le skew surge est calculé sur 2024 complète par cycle basse-mer -> basse-mer :
+`max(niveau observé) - max(marée astronomique prédite)` dans le cycle. C'est un
+diagnostic horaire, pas un produit officiel d'extrêmes interpolés.
+
+Le baromètre inverse utilise la formule Brest M2.2 :
+`IB = -0,9933 cm/hPa × (P - 1013,25)`, avec pression horaire Open-Meteo
+`surface_pressure`, `timezone=GMT`, `cell_selection=nearest`. Cette donnée
+n'entre pas dans la prédiction.
+
+### Validation harmonique
+
+| Port | Validation | RMS 37 cm | p95 37 cm | RMS sélection cm | p95 sélection cm | ΔRMS cm | Δp95 cm | Lecture |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| Cherbourg | 2026-01/2026-04 | 20,3 | 41,3 | 20,0 | 39,2 | -0,4 | -2,1 | gain harmonique faible |
+| Calais | 2025-08/2025-11 | 23,2 | 44,5 | 22,0 | 44,0 | -1,2 | -0,5 | météo domine |
+| Le Havre | 2026-04/2026-07 | 19,5 | 37,4 | 13,7 | 27,6 | -5,8 | -9,8 | manque harmonique réel |
+| Concarneau | 2026-04/2026-07 | 7,3 | 14,5 | 7,3 | 14,2 | 0,0 | -0,3 | garde-fou propre |
+
+Le Havre montre le cas attendu d'un port d'estuaire/double-marée : les termes
+étendus récupèrent un signal harmonique réel. Concarneau valide le garde-fou :
+la sélection peut retenir plus de termes statistiquement visibles, mais elle ne
+gagne rien en validation. Cherbourg ne gagne que 2,1 cm de p95 sur sa fenêtre
+hivernale ; Calais ne revient pas sous 40 cm. Le dépassement historique de
+Cherbourg/Calais n'est donc pas un simple manque du jeu 37.
+
+### Saison calme
+
+Pour comparer à la saison des 21 ports inclus, Cherbourg et Calais ont été
+rejoués sur une validation réservée de printemps-été antérieure
+`2025-04-01T00:00:00Z/2025-07-01T00:00:00Z`, calibration arrêtée au
+`2025-04-01T00:00:00Z`.
+
+Commande AMAR 37 :
+
+```bash
+cargo run -p amar-calibrate -- calibrate-france \
+  --station 13 --station 55 \
+  --validation-start 2025-04-01T00:00:00Z \
+  --end 2025-07-01T00:00:00Z \
+  --pack-out /private/tmp/amar-manche-calm-pack.json \
+  --benchmarks-dir /private/tmp/amar-manche-calm-benchmarks \
+  --manifests-dir /private/tmp/amar-manche-calm-manifests \
+  --generated-at 2026-07-08-v0.9-manche-calm-diagnostic
+```
+
+| Port | Couverture | RMS 37 cm | p95 37 cm | Facteur | RMS sélection cm | p95 sélection cm |
+|---|---:|---:|---:|---:|---:|---:|
+| Cherbourg | 100,0 % | 10,1 | 20,0 | 14,03 | 9,7 | 18,9 |
+| Calais | 100,0 % | 16,8 | 33,0 | 11,33 | 15,1 | 29,6 |
+
+Lecture : sur base saisonnière comparable, Cherbourg et Calais passent tous
+deux le critère France `p95 <= 40 cm` et le facteur RMS `>= 2`, même avec le
+jeu 37 courant. La fenêtre hiver/automne utilisée en v0.7 était donc
+saison-sensible.
+
+### Skew surge 2024
+
+| Port | Couverture | Cycles | médiane cm | p95 signé cm | p95 abs cm | max cm | min cm |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Cherbourg | 100,0 % | 706 | 2,3 | 31,6 | 32,5 | 53,0 | -51,4 |
+| Calais | 99,5 % | 703 | 3,1 | 35,3 | 43,7 | 81,9 | -74,9 |
+| Le Havre | 99,6 % | 706 | 0,4 | 34,4 | 40,0 | 89,6 | -69,6 |
+| Concarneau | 100,0 % | 707 | 2,5 | 33,9 | 34,3 | 63,7 | -40,4 |
+| Dunkerque | 99,2 % | 701 | 3,1 | 37,1 | 44,4 | 79,8 | -73,5 |
+
+Lecture : le skew surge confirme que la métrique résidu p95 dépend fortement
+de la saison et de l'exposition météo. Calais et Dunkerque ont les queues
+absolues les plus fortes dans ce lot ; Le Havre et Cherbourg montrent aussi des
+pics météo très au-dessus du bruit harmonique.
+
+### Baromètre inverse
+
+| Port | Fenêtre | N | Corr(residu, IB) | r² | Variance retirée | RMS avant cm | RMS après IB cm |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Cherbourg | 2026-01/2026-04 | 2159 | 0,837 | 70,1 % | 69,4 % | 19,9 | 10,8 |
+| Calais | 2025-08/2025-11 | 2175 | 0,608 | 36,9 % | 34,7 % | 22,0 | 18,2 |
+
+Lecture : Cherbourg hiver 2026 est majoritairement un cas de surcote
+barométrique dans ce diagnostic simple. Calais conserve une part météo nette
+mais moins réductible par la seule pression, ce qui laisse probablement une
+part vent/détroit.
+
+### Décision
+
+- Le gate France `p95 <= 40 cm` ne change pas.
+- Le p95 sur fenêtre courte est saison-sensible. Les décisions France doivent
+  désormais être prises soit sur une saison homogène pour tous les ports, soit
+  sur une année complète, avec le skew surge comme caractérisation météo.
+- Cherbourg : le dépassement v0.7 est surtout météo/saison. En saison calme
+  comparable, le port passe le critère ; il devient candidat pour une nouvelle
+  `data_version` France, pas pour une réécriture silencieuse du pack v0.7.
+- Calais : le dépassement automne 2025 reste au-dessus même avec extension
+  harmonique, mais la saison calme passe. Verdict identique : candidat seulement
+  dans une nouvelle `data_version` fondée sur une base saisonnière homogène.
+- Le Havre : déjà inclus, mais l'extension révèle un vrai manque harmonique du
+  jeu 37. Une future `data_version` avec catalogue étendu doit recalibrer Le
+  Havre, sans changer le benchmark v0.7 en place.
+- Concarneau : aucun gain matériel ; le garde-fou contre le surajustement est
+  satisfait.
+- Douvres/BODC n'a pas été consommé : les diagnostics obligatoires suffisent à
+  trancher harmonique vs météo pour cette itération.
+
+Conclusion : Cherbourg/Calais ne sont pas des échecs harmoniques purs. Leur
+exclusion v0.7 était une conséquence d'une fenêtre hiver/automne plus exposée
+que la fenêtre printemps-été des 21 inclus. La bonne correction n'est pas un
+relâchement du seuil, mais une méthode de comparaison homogène et, pour les
+ports déformés comme Le Havre, une future sélection de constituants par port.
