@@ -100,7 +100,8 @@ fn tide_returns_brest_experimental_confidence() {
 
     assert!(output.status.success());
     let body = must(serde_json::from_slice::<Value>(&output.stdout));
-    assert_eq!(body["datum"], "zero_hydrographique_brest");
+    assert_eq!(body["datum"], "zero_hydrographique_brest_officiel");
+    assert_eq!(body["height_m"], 0.958);
     assert_eq!(body["source"]["id"], "refmar:3");
     assert_eq!(
         body["confidence"]["method"],
@@ -122,6 +123,68 @@ fn tide_returns_brest_experimental_confidence() {
             .to_string()
             .contains("coefficient_experimental")
     );
+}
+
+#[test]
+fn tide_returns_brest_ign69_when_requested() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("tide")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--at")
+            .arg("2026-08-15T12:00:00Z")
+            .arg("--datum")
+            .arg("ign69")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["datum"], "IGN69");
+    assert_eq!(body["height_m"], -2.554);
+    assert_eq!(body["next_high"]["height_m"], 3.712);
+}
+
+#[test]
+fn tide_series_keeps_instant_height_and_extrema() {
+    let root = workspace_root();
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("tide")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--at")
+            .arg("2026-08-15T12:00:00Z")
+            .arg("--datum")
+            .arg("recent")
+            .arg("--duration-h")
+            .arg("2")
+            .arg("--step-min")
+            .arg("60")
+            .arg("--pack")
+            .arg(root.join("data/packs/noaa_m0.json"))
+            .arg("--pack")
+            .arg(root.join("data/packs/amar-data-brest-experimental.json"))
+            .output(),
+    );
+
+    assert!(output.status.success());
+    let body = must(serde_json::from_slice::<Value>(&output.stdout));
+    assert_eq!(body["datum"], "zero_hydrographique_brest_recent");
+    assert_eq!(body["height_m"], 1.081);
+    assert_eq!(body["next_high"]["height_m"], 7.347);
+    assert_eq!(body["series"].as_array().map(Vec::len), Some(3));
+    assert_eq!(body["series"][0]["height_m"], body["height_m"]);
 }
 
 #[test]

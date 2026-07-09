@@ -116,9 +116,30 @@ async fn tide_series_returns_bounded_points_with_metadata() {
     assert_eq!(actual.status, StatusCode::OK);
     assert_eq!(actual.body["datum"], "MLLW");
     assert_eq!(actual.body["source"]["id"], "noaa:9414290");
+    assert_eq!(actual.body["height_m"], 0.737);
+    assert!(actual.body["next_high"]["height_m"].is_number());
+    assert!(actual.body["next_low"]["height_m"].is_number());
     assert_eq!(actual.body["series"].as_array().map(Vec::len), Some(3));
     assert_eq!(actual.body["series"][0]["t"], "2026-08-15T12:00:00Z");
+    assert_eq!(
+        actual.body["series"][0]["height_m"],
+        actual.body["height_m"]
+    );
     assert_eq!(actual.body["series"][2]["t"], "2026-08-15T14:00:00Z");
+}
+
+#[tokio::test]
+async fn tide_accepts_ign69_datum_for_brest() {
+    let actual = post_tide(
+        r#"{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z","datum":"ign69"}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    assert_eq!(actual.body["datum"], "IGN69");
+    assert_eq!(actual.body["height_m"], -2.554);
+    assert_eq!(actual.body["next_high"]["height_m"], 3.712);
 }
 
 #[tokio::test]

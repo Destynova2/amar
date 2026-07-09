@@ -11,7 +11,9 @@ quand elles sont observables dans les constantes `harcon.json`.
 - Temps : entrees RFC 3339 avec offset, converties en UTC. `Z` reste la
   forme canonique des exemples.
 - Hauteur : positive vers le haut.
-- Datum : celui du pack. Le pack NOAA M0 publie des hauteurs en MLLW.
+- Datum moteur : celui du pack. Le pack NOAA M0 publie des hauteurs en MLLW.
+  Les datums de sortie éventuels sont des transformations appliquées après le
+  calcul de `h(t)`.
 
 ## Formule
 
@@ -135,6 +137,35 @@ périodique plutôt qu'un horizon ouvert.
 Pour Brest, le vocabulaire impose est : résidu = niveau d'eau observé − marée
 astronomique prédite (météo incluse). Ce résidu n'est pas une validation
 officielle.
+
+### Datums de sortie v0.11
+
+Le rattachement à un datum de sortie n'est pas une recalibration. Le moteur
+harmonique, les constituants, `z0_m`, les observations et les benchmarks figés
+restent dans le datum interne du pack.
+
+Pour les stations REFMAR, le pack peut porter un bloc `datum_reference` issu
+des RAM publiques SHOM/REFMAR :
+
+- `offset_vertical_ref_m` : conversion géodésique du zéro hydrographique vers
+  la référence terrestre publiée dans la RAM ;
+- `offset_ign69_m` : même conversion quand la référence RAM est `IGN69` ;
+- `offset_zh_officiel_m` : offset additif appliqué seulement à la sortie
+  `zero_hydrographique` quand le niveau moyen officiel RAM est connu ;
+- `recent_minus_official_mean_m` : écart positif documenté entre le niveau
+  moyen interne récent et le niveau moyen RAM officiel.
+
+Pour Brest v0.11, la RAM publique expose `ZH = -3,635 m / IGN69` et
+`niveau_moyen = 4,14 m`. Le `z0_m` interne publié reste
+`4,262301561773819 m`. Le défaut de sortie applique donc
+`offset_zh_officiel_m = -0,12230156177381968 m` pour exposer le zéro
+hydrographique officiel sans modifier le modèle. `--datum recent` expose le
+calage interne inchangé ; `--datum ign69` expose le niveau réel récent dans la
+référence terrestre `IGN69` via le seul tie géodésique `-3,635 m`.
+
+Quand une station n'a qu'un tie RAM et pas d'offset de niveau moyen officiel,
+la sortie par défaut reste dans le datum interne et porte le warning
+`datum_reference_incomplete`. Aucun offset n'est inventé.
 
 ## France v0.4 -- coefficient de maree
 

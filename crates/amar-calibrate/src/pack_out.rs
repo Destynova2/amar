@@ -5,8 +5,8 @@ use crate::common::{
 use crate::solve::CalibrationResult;
 use amar_core::PredictionMethod;
 use amar_pack::{
-    LatitudeDegValue, LongitudeDegValue, MetersValue, PeriodInfo, SCHEMA_VERSION, SourceInfo,
-    StationPack, TideBenchmark, TideBenchmarkSample, TidePack,
+    DatumReference, LatitudeDegValue, LongitudeDegValue, MetersValue, PeriodInfo, SCHEMA_VERSION,
+    SourceInfo, StationPack, TideBenchmark, TideBenchmarkSample, TidePack,
 };
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,7 @@ pub(crate) struct TideGauge {
     pub(crate) longitude: f64,
     pub(crate) latitude: f64,
     pub(crate) id_ram: Option<String>,
+    pub(crate) niveau_moyen: Option<String>,
     #[serde(rename = "verticalRef")]
     pub(crate) vertical_ref: Option<VerticalRef>,
 }
@@ -263,6 +264,12 @@ pub(crate) fn build_station_pack(
                 .to_string(),
         ),
         datum_note: Some(datum_note),
+        datum_reference: Some(datum_reference(
+            tidegauge,
+            input.calibration.z0_m,
+            input.calibration_start,
+            input.validation_start,
+        )),
         residual_benchmark_cm: Some(input.residual_p95_cm),
     };
     TidePack {
@@ -289,6 +296,64 @@ fn valid_until(calibration_end: DateTime<Utc>) -> DateTime<Utc> {
         Some(value) => value,
         None => unreachable!("calibration boundary must remain a valid UTC timestamp"),
     }
+}
+
+fn datum_reference(
+    tidegauge: &TideGauge,
+    internal_mean_level_m: f64,
+    calibration_start: DateTime<Utc>,
+    calibration_end: DateTime<Utc>,
+) -> DatumReference {
+    let vertical_ref = tidegauge.vertical_ref.as_ref();
+    let vertical_ref_name = vertical_ref.map(|reference| reference.nom_ref.clone());
+    let offset_vertical_ref_m =
+        vertical_ref.and_then(|reference| parse_optional_f64(&reference.zh_ref));
+    let offset_ign69_m = match (vertical_ref_name.as_deref(), offset_vertical_ref_m) {
+        (Some("IGN69"), Some(offset)) => Some(MetersValue::new(offset)),
+        _ => None,
+    };
+    let mean_level_official_m = tidegauge
+        .niveau_moyen
+        .as_deref()
+        .and_then(parse_optional_f64);
+    let offset_zh_officiel_m =
+        mean_level_official_m.map(|official| MetersValue::new(official - internal_mean_level_m));
+    let recent_minus_official_mean_m =
+        mean_level_official_m.map(|official| MetersValue::new(internal_mean_level_m - official));
+    let status = if offset_vertical_ref_m.is_some() && mean_level_official_m.is_some() {
+        "complete"
+    } else if offset_vertical_ref_m.is_some() {
+        "ram_only"
+    } else {
+        "incomplete"
+    };
+
+    DatumReference {
+        source: "Shom / REFMAR completetidegauge RAM".to_string(),
+        status: status.to_string(),
+        vertical_ref: vertical_ref_name,
+        offset_vertical_ref_m: offset_vertical_ref_m.map(MetersValue::new),
+        offset_ign69_m,
+        offset_zh_officiel_m,
+        mean_level_official_m: mean_level_official_m.map(MetersValue::new),
+        mean_level_official_epoch: mean_level_official_m.map(|_| {
+            "RAM public Shom / REFMAR; epoch not exposed by completetidegauge API".to_string()
+        }),
+        mean_level_recent_m: Some(MetersValue::new(internal_mean_level_m)),
+        mean_level_recent_period: Some(PeriodInfo {
+            start: format_rfc3339(calibration_start),
+            end: format_rfc3339(calibration_end),
+        }),
+        recent_minus_official_mean_m,
+        note: Some(
+            "datum offsets are output transforms only; harmonic constants and z0_m stay internal"
+                .to_string(),
+        ),
+    }
+}
+
+fn parse_optional_f64(value: &str) -> Option<f64> {
+    value.trim().parse::<f64>().ok()
 }
 
 pub(crate) fn build_benchmark(

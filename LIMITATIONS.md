@@ -1,4 +1,4 @@
-# Limitations v0.10
+# Limitations v0.11
 
 - Marée astronomique seule.
 - Les fenêtres de seuil sont des fenêtres de marée astronomique seule :
@@ -11,6 +11,13 @@
 - Les stations françaises expérimentales n'utilisent pas de constantes SHOM :
   les constantes sont dérivées des observations REFMAR et ne leur sont pas
   équivalentes.
+- Le rattachement de datum est une transformation de sortie. Il ne modifie ni
+  les constantes harmoniques, ni `z0_m`, ni les benchmarks figés.
+- Brest expose par défaut le zéro hydrographique officiel via la RAM publique
+  SHOM/REFMAR. Le calage interne récent reste disponible avec `datum=recent`.
+- Pour les autres stations REFMAR, le pack porte le tie RAM quand il est connu.
+  Si l'offset de niveau moyen officiel manque, la réponse conserve le datum
+  interne et ajoute `datum_reference_incomplete`.
 - La validation REFMAR mesure un résidu = niveau d'eau observé − marée
   astronomique prédite (météo incluse), pas une validation officielle SHOM.
 - Les stations REFMAR n'ont pas de grade A/B/C. La réponse expose le p95 du
@@ -49,3 +56,10 @@
   plus lointaines sont refusées.
 - Méthode de calcul : `station_harmonics_v0`, avec corrections nodales
   Schureman.
+
+## Quel datum pour quel risque
+
+| Question | Datum | Pourquoi |
+|---|---|---|
+| Profondeur / échouage (« assez d'eau ? ») | zéro hydrographique | conservateur, lit bas = marge de sécurité |
+| Tirant d'air / submersion / inondation (« l'eau monte trop ? ») | niveau réel (`ign69` ou `recent`) | le ZH sous-estime, ce qui est dangereux dans ce sens |

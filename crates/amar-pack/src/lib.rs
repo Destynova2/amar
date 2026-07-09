@@ -32,6 +32,11 @@ pub enum PackError {
         station_id: String,
         field: &'static str,
     },
+    #[error("station {station_id} datum reference {field} must be finite")]
+    NonFiniteDatumReference {
+        station_id: String,
+        field: &'static str,
+    },
     #[error("{field} must be finite")]
     NonFinite { field: &'static str },
     #[error("{field} must be between {min} and {max}, got {value}")]
@@ -105,6 +110,8 @@ pub struct StationPack {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub datum_note: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub datum_reference: Option<DatumReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub residual_benchmark_cm: Option<f64>,
 }
 
@@ -148,6 +155,9 @@ impl StationPack {
         if let Some(value) = self.residual_benchmark_cm {
             ensure_finite("residual_benchmark_cm", value)?;
         }
+        if let Some(reference) = &self.datum_reference {
+            reference.validate(&self.station_id)?;
+        }
         if self.experimental == Some(true) {
             if self.residual_benchmark_cm.is_none() {
                 return Err(PackError::MissingExperimentalResidual {
@@ -177,6 +187,58 @@ impl StationPack {
                 return Err(PackError::MissingExperimentalValidity {
                     station_id: self.station_id.clone(),
                     field: "valid_until",
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DatumReference {
+    pub source: String,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offset_vertical_ref_m: Option<MetersValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offset_ign69_m: Option<MetersValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offset_zh_officiel_m: Option<MetersValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mean_level_official_m: Option<MetersValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mean_level_official_epoch: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mean_level_recent_m: Option<MetersValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mean_level_recent_period: Option<PeriodInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recent_minus_official_mean_m: Option<MetersValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+impl DatumReference {
+    fn validate(&self, station_id: &str) -> Result<(), PackError> {
+        for (field, value) in [
+            ("offset_vertical_ref_m", self.offset_vertical_ref_m),
+            ("offset_ign69_m", self.offset_ign69_m),
+            ("offset_zh_officiel_m", self.offset_zh_officiel_m),
+            ("mean_level_official_m", self.mean_level_official_m),
+            ("mean_level_recent_m", self.mean_level_recent_m),
+            (
+                "recent_minus_official_mean_m",
+                self.recent_minus_official_mean_m,
+            ),
+        ] {
+            if let Some(value) = value
+                && !value.get().is_finite()
+            {
+                return Err(PackError::NonFiniteDatumReference {
+                    station_id: station_id.to_string(),
+                    field,
                 });
             }
         }
@@ -422,6 +484,7 @@ mod tests {
             validation_period: None,
             disclaimer: None,
             datum_note: None,
+            datum_reference: None,
             residual_benchmark_cm: None,
         }
     }

@@ -3,12 +3,13 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.10 publie des binaires téléchargeables en plus de l'image GHCR. Le
+amar v0.11 publie des binaires téléchargeables en plus de l'image GHCR. Le
 socle couvre NOAA, Brest expérimental et 23 ports REFMAR RONIM,
 avec prochains PM/BM, séries bornées, fenêtres de seuil et coefficient de marée
-français dérivé de notre Brest calibré. On lance un serveur local, on envoie
-`lat/lon/datetime`, et la réponse donne soit une hauteur traçable, soit un
-refus utile.
+français dérivé de notre Brest calibré. Brest expose par défaut le zéro
+hydrographique officiel, avec `ign69` et `recent` disponibles à la demande. On
+lance un serveur local, on envoie `lat/lon/datetime`, et la réponse donne soit
+une hauteur traçable, soit un refus utile.
 
 ## Installation
 
@@ -150,17 +151,17 @@ curl -i -H 'content-type: application/json' \
 
 ```json
 {
-  "height_m": 1.081,
+  "height_m": 0.958,
   "next_high": {
     "coefficient": 101,
-    "height_m": 7.347,
+    "height_m": 7.225,
     "t": "2026-08-15T17:47:37Z"
   },
   "next_low": {
-    "height_m": 1.079,
+    "height_m": 0.956,
     "t": "2026-08-16T00:14:58Z"
   },
-  "datum": "zero_hydrographique_brest",
+  "datum": "zero_hydrographique_brest_officiel",
   "source": {
     "kind": "station",
     "id": "refmar:3",
@@ -207,7 +208,7 @@ curl -i -H 'content-type: application/json' \
 | Endpoint | Rôle |
 |---|---|
 | `POST /tide` | Hauteur instantanée et prochains PM/BM près d'une station supportée |
-| `POST /tide/series` | Série `[{t,height_m}]`, `duration_h <= 72`, `step_min >= 6` |
+| `POST /tide/series` | Même contrat que `/tide`, plus `series:[{t,height_m}]`, `duration_h <= 72`, `step_min >= 6` |
 | `POST /tide/windows` | Fenêtres `[{start,end}]` au-dessus ou au-dessous d'un seuil, plage <= 31 jours |
 | `GET /health` | Version, nombre de stations, version du pack |
 | `GET /coverage` | Stations embarquées et rayon accepté |
@@ -231,6 +232,22 @@ Pour Brest, `confidence.method` vaut `calibrated_station_experimental` et
 `residual_benchmark_cm` mesure le p95 du benchmark hors calibration. Le résidu
 = niveau d'eau observé − marée astronomique prédite (météo incluse).
 
+Datums de sortie :
+
+| Valeur | Effet |
+|---|---|
+| absent ou `zero_hydrographique` | défaut ; Brest applique le rattachement RAM officiel et matche les prédictions SHOM/marée.info au niveau de référence |
+| `ign69` | hauteur dans la référence terrestre IGN69 quand le tie RAM existe |
+| `recent` | calage interne récent, sans offset officiel |
+
+Pour les stations REFMAR où seul le tie RAM est connu, amar n'invente pas
+d'offset de niveau moyen officiel et ajoute `datum_reference_incomplete`.
+
+| Question | Datum | Pourquoi |
+|---|---|---|
+| Profondeur / échouage (« assez d'eau ? ») | zéro hydrographique | conservateur, lit bas = marge de sécurité |
+| Tirant d'air / submersion / inondation (« l'eau monte trop ? ») | niveau réel (`ign69` ou `recent`) | le ZH sous-estime, ce qui est dangereux dans ce sens |
+
 Pour les stations françaises, `next_high.coefficient` est un entier 20–120
 calculé depuis notre Brest calibré (`U = 3,05 m`) et porte le warning
 `coefficient_experimental`. Ce coefficient n'est pas l'annuaire officiel SHOM.
@@ -239,8 +256,10 @@ Les stations REFMAR calibrées publient un horizon de recalibration
 `outside_validity_period`, et `--strict-validity` transforme ce warning en
 refus.
 
-Les réponses `/tide/series` et `/tide/windows` gardent la même forme de
-`datum`, `source`, `confidence` et `warnings` que `/tide`.
+Les réponses `/tide/series` gardent `height_m`, `next_high` et `next_low` en
+plus de `series`, pour qu'un client puisse toujours lire `height_m`. Les
+réponses `/tide/windows` gardent la même forme de `datum`, `source`,
+`confidence` et `warnings` que `/tide`.
 
 ## CLI
 
@@ -249,6 +268,7 @@ Le même binaire garde l'usage CLI M0 :
 ```bash
 amar tide --lat 37.806 --lon -122.465 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json
 amar tide --lat 48.383 --lon -4.495 --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
+amar tide --lat 48.383 --lon -4.495 --at 2026-08-15T12:00:00Z --datum ign69 --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
 amar coef --at 2026-08-15T12:00:00Z --pack ~/.local/share/amar/packs/noaa_m0.json --pack ~/.local/share/amar/packs/amar-data-brest-experimental.json
 ```
 

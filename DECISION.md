@@ -1296,3 +1296,78 @@ Garde-fous :
 - Concarneau rejoué avec la sélection par port donne RMS 7,3 cm et p95
   14,4 cm contre RMS 7,3 cm et p95 14,5 cm dans le pack courant : pas de
   publication, pas de gain artificiel.
+
+## v0.11 -- double datum de sortie et contrat `tide`
+
+Date : 2026-07-09.
+
+### Datum de sortie
+
+Décision : le datum est une transformation de sortie, jamais une
+recalibration. Le modèle harmonique interne, les constituants, `z0_m`, les
+observations et les benchmarks figés restent inchangés.
+
+Pour Brest, la fiche publique SHOM/REFMAR `completetidegauge/3` expose :
+
+- RAM id `Brest` ;
+- `ZH = -3,635 m` par rapport à `IGN69` ;
+- `niveau_moyen = 4,14 m`.
+
+Le niveau moyen interne du pack Brest reste
+`z0_m = 4,262301561773819 m`, sur la calibration
+`2021-01-01T00:00:00Z/2026-04-01T00:00:00Z`. L'offset additif de sortie vers
+le zéro hydrographique officiel est donc :
+
+```text
+offset_zh_officiel_m = 4,14 - 4,262301561773819
+                      = -0,12230156177381968 m
+```
+
+Le pack stocke aussi `recent_minus_official_mean_m = 0,12230156177381968 m`
+pour documenter l'écart de niveau moyen récent. L'API SHOM/REFMAR ne publie
+pas de champ d'époque séparé pour `niveau_moyen`; le champ est donc pinne comme
+valeur RAM publique SHOM/REFMAR et cette limite est documentée dans le pack.
+
+Les stations France v0.10 portent un bloc `datum_reference` par station. Les
+23 stations ont un tie RAM ; 21 sont en `IGN69`, Pointe des Galets est en
+`IGN89`, Nouméa Numbo en `NGNC`. Aucun offset de niveau moyen officiel n'est
+inventé pour ces stations : statut `ram_only`, warning
+`datum_reference_incomplete` si le défaut devrait nécessiter cet offset.
+
+### Validation marée.info Brest
+
+Source de comparaison : page Brest marée.info `/82`, prédictions officielles
+SHOM affichées le 2026-07-09 pour le mercredi 2026-07-15, fuseau UTC+2. Cette
+comparaison vérifie la correction de niveau de sortie ; elle ne sert pas à
+modifier les constituants.
+
+| Événement marée.info | Heure locale | Hauteur marée.info | amar `recent` | Biais avant | amar défaut v0.11 | Biais après |
+|---|---:|---:|---:|---:|---:|---:|
+| PM | 06:26 | 6,90 m | 6,948 m | +4,8 cm | 6,826 m | -7,4 cm |
+| BM | 12:41 | 1,17 m | 1,263 m | +9,3 cm | 1,141 m | -2,9 cm |
+| PM | 18:46 | 7,22 m | 7,294 m | +7,4 cm | 7,172 m | -4,8 cm |
+
+Lecture : le décalage vertical de `12,23 cm` est retiré de la sortie par
+défaut. Le résidu restant combine l'erreur harmonique expérimentale et les
+arrondis/horaires de l'oracle public ; il ne déclenche aucune recalibration.
+
+### Contrat `tide`
+
+Le contrat de réponse est normalisé :
+
+- `height_m` est toujours présent pour l'instant demandé ;
+- `next_high` et `next_low` sont présents en mode instant et en mode série ;
+- `series` n'est ajouté que lorsqu'une durée est demandée ;
+- CLI et serveur partagent le même ajustement de datum.
+
+`/tide/series` garde son endpoint dédié mais renvoie désormais la même base de
+réponse que `/tide`, plus `series`.
+
+### Garde-fous v0.11
+
+- `fixtures/refmar/benchmark_brest_v1.json` reste byte-identique :
+  `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f`.
+- Le pack Brest change de SHA uniquement par ajout du bloc `datum_reference` :
+  `a53b833324780937e57cf43a8d51cef7c28175c280ef239e9b0257663b125435`.
+- Le pack France change de SHA uniquement par ajout des blocs RAM :
+  `b357bb33d67999e1a21aaf96d5168f77c26b58231c05e182897f052cf279971d`.

@@ -265,6 +265,23 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.635 m relative to IGN69; RAM id Brest in REFMAR tide-gauge metadata",
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "complete",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.635,
+        "offset_ign69_m": -3.635,
+        "offset_zh_officiel_m": -0.12230156177381968,
+        "mean_level_official_m": 4.14,
+        "mean_level_official_epoch": "RAM public Shom / REFMAR; epoch not exposed by completetidegauge API",
+        "mean_level_recent_m": 4.262301561773819,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "recent_minus_official_mean_m": 0.12230156177381968,
+        "note": "datum offsets are output transforms only; harmonic constants and z0_m stay internal"
+      },
       "residual_benchmark_cm": 15.801191897278866
     }
   ]

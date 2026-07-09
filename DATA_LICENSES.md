@@ -113,7 +113,8 @@ verticale `zero_hydrographique`.
 Station : `shom_id=3`, `BREST`, réseau `RONIM`.
 
 Référence verticale issue de la fiche `completetidegauge/3` : RAM id `Brest`,
-ZH = -3.635 m par rapport à `IGN69`.
+ZH = -3.635 m par rapport à `IGN69`, niveau moyen RAM public
+`niveau_moyen = 4.14 m`.
 
 | Fichier | Origine | SHA-256 |
 |---|---|---|
@@ -122,7 +123,7 @@ ZH = -3.635 m par rapport à `IGN69`.
 | `fixtures/refmar/brest_validated_hourly_2021-01-01_2026-07-01.csv` | `https://services.data.shom.fr/maregraphie/observation/json/3?sources=4`, fenêtres de 31 jours | `17951bab11dc99220b8462da118df6ba4412a2492eb36a8c01b5935b6cd5a8e2` |
 | `fixtures/refmar/benchmark_brest_v1.json` | Fenêtre hors calibration `2026-04-01T00:00:00Z/2026-07-01T00:00:00Z` | `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f` |
 | `fixtures/refmar/benchmark_brest_decennial_v1.json` | Fenêtre historique `2016-01-01T00:00:00Z/2026-07-01T00:00:00Z`, générée par `cargo run -p amar-calibrate -- validate-history` | `d371be7da00d4324ce92fd016d3601c5669c3d452dd4373a5b3347f5ed80b5e5` |
-| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` | `613e9b6374431256f003e54865930a87b7d9f148ce90437c96272854df2568c3` |
+| `data/packs/amar-data-brest-experimental.json` | `cargo run -p amar-calibrate -- build-brest-pack` avec bloc `datum_reference` RAM | `a53b833324780937e57cf43a8d51cef7c28175c280ef239e9b0257663b125435` |
 
 Le checksum interne `benchmark_brest_v1.checksum_sha256` couvre le masque
 horaire et les observations de la fenêtre de validation :
@@ -146,7 +147,7 @@ fenêtres de validation figées des stations incluses.
 
 | Fichier | Origine | SHA-256 |
 |---|---|---|
-| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france` | `fdb747b29a4aca7a25d54fa71f71d85c7bf2b539ba5f4b2599d5a8cf508b63ef` |
+| `data/packs/amar-data-france-experimental.json` | `cargo run -p amar-calibrate -- calibrate-france`, puis ajout mécanique des blocs `datum_reference` RAM depuis les fiches station | `b357bb33d67999e1a21aaf96d5168f77c26b58231c05e182897f052cf279971d` |
 
 Benchmarks ajoutés ou remplacés en v0.10 :
 

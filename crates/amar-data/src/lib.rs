@@ -376,6 +376,7 @@ fn build_noaa_station(
         validation_period: None,
         disclaimer: None,
         datum_note: None,
+        datum_reference: None,
         residual_benchmark_cm: None,
     })
 }

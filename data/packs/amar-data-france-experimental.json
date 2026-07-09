@@ -265,7 +265,19 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -0.552 m relative to IGN89; RAM id Pointe des Galets in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 11.320020610491788
+      "residual_benchmark_cm": 11.320020610491788,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN89",
+        "offset_vertical_ref_m": -0.552,
+        "mean_level_recent_m": 0.572603067151675,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station"
+      }
     },
     {
       "station_id": "refmar:111",
@@ -530,7 +542,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -4.382 m relative to IGN69; RAM id Boulogne-sur-Mer in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 35.91735679652115
+      "residual_benchmark_cm": 35.91735679652115,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -4.382,
+        "mean_level_recent_m": 5.080083187595416,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -4.382
+      }
     },
     {
       "station_id": "refmar:13",
@@ -945,7 +970,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.285 m relative to IGN69; RAM id Cherbourg in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 18.988487939435927
+      "residual_benchmark_cm": 18.988487939435927,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.285,
+        "mean_level_recent_m": 3.922376675446708,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2025-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -3.285
+      }
     },
     {
       "station_id": "refmar:152",
@@ -1210,7 +1248,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.503 m relative to IGN69; RAM id Le Conquet in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 15.051033413561221
+      "residual_benchmark_cm": 15.051033413561221,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.503,
+        "mean_level_recent_m": 4.072935993358991,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -3.503
+      }
     },
     {
       "station_id": "refmar:160",
@@ -1475,7 +1526,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.534 m relative to IGN69; RAM id Concarneau in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 14.516849547296706
+      "residual_benchmark_cm": 14.516849547296706,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.534,
+        "mean_level_recent_m": 3.1146279458828547,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.534
+      }
     },
     {
       "station_id": "refmar:185",
@@ -1740,7 +1804,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.85 m relative to IGN69; RAM id Port du Crouesty in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 16.268144729888334
+      "residual_benchmark_cm": 16.268144729888334,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.85,
+        "mean_level_recent_m": 3.3955920674904556,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.85
+      }
     },
     {
       "station_id": "refmar:190",
@@ -2005,7 +2082,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -1.98 m relative to IGN69; RAM id Arcachon in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 18.304579889037463
+      "residual_benchmark_cm": 18.304579889037463,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -1.98,
+        "mean_level_recent_m": 2.5384289570852423,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -1.98
+      }
     },
     {
       "station_id": "refmar:198",
@@ -2270,7 +2360,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.105 m relative to IGN69; RAM id L'Herbaudière (Île de Noirmoutier) in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 16.5669556502521
+      "residual_benchmark_cm": 16.5669556502521,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.105,
+        "mean_level_recent_m": 3.62357672921007,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -3.105
+      }
     },
     {
       "station_id": "refmar:2",
@@ -2535,7 +2638,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.693 m relative to IGN69; RAM id Dunkerque in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 32.865567158942596
+      "residual_benchmark_cm": 32.865567158942596,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.693,
+        "mean_level_recent_m": 3.356875200854174,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.693
+      }
     },
     {
       "station_id": "refmar:24",
@@ -2800,7 +2916,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -4.454 m relative to IGN69; RAM id Dieppe in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 31.477300896067195
+      "residual_benchmark_cm": 31.477300896067195,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -4.454,
+        "mean_level_recent_m": 5.117438830082952,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -4.454
+      }
     },
     {
       "station_id": "refmar:311",
@@ -3065,7 +3194,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -4.08 m relative to IGN69; RAM id Ouistreham in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 35.01164781860293
+      "residual_benchmark_cm": 35.01164781860293,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -4.08,
+        "mean_level_recent_m": 4.769029069193855,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -4.08
+      }
     },
     {
       "station_id": "refmar:34",
@@ -3330,7 +3472,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.503 m relative to IGN69; RAM id La Rochelle - La Pallice in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 18.76476358946393
+      "residual_benchmark_cm": 18.76476358946393,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.503,
+        "mean_level_recent_m": 3.9947769673899582,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -3.503
+      }
     },
     {
       "station_id": "refmar:37",
@@ -3595,7 +3750,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.16 m relative to IGN69; RAM id Saint-Nazaire in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 18.37940425868718
+      "residual_benchmark_cm": 18.37940425868718,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.16,
+        "mean_level_recent_m": 3.6887457163608395,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -3.16
+      }
     },
     {
       "station_id": "refmar:4",
@@ -4004,7 +4172,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -4.375 m relative to IGN69; RAM id Le Havre in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 27.921928179111323
+      "residual_benchmark_cm": 27.921928179111323,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -4.375,
+        "mean_level_recent_m": 5.026074541491635,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -4.375
+      }
     },
     {
       "station_id": "refmar:410",
@@ -4269,7 +4450,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -6.289 m relative to IGN69; RAM id Saint-Malo in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 28.460336185894874
+      "residual_benchmark_cm": 28.460336185894874,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -6.289,
+        "mean_level_recent_m": 6.860853087830112,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -6.289
+      }
     },
     {
       "station_id": "refmar:54",
@@ -4534,7 +4728,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -4.764 m relative to IGN69; RAM id Roscoff in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 17.635249135074726
+      "residual_benchmark_cm": 17.635249135074726,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -4.764,
+        "mean_level_recent_m": 5.370715369134706,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -4.764
+      }
     },
     {
       "station_id": "refmar:55",
@@ -4943,7 +5150,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -3.459 m relative to IGN69; RAM id Calais in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 29.044197656384174
+      "residual_benchmark_cm": 29.044197656384174,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -3.459,
+        "mean_level_recent_m": 4.126194201660308,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2025-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -3.459
+      }
     },
     {
       "station_id": "refmar:6144",
@@ -5208,7 +5428,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.16 m relative to IGN69; RAM id Mimizan in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 33.95075306168833
+      "residual_benchmark_cm": 33.95075306168833,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.16,
+        "mean_level_recent_m": 2.866494652052887,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.16
+      }
     },
     {
       "station_id": "refmar:62",
@@ -5473,7 +5706,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.828 m relative to IGN69; RAM id Les Sables d'Olonne in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 14.86227690002444
+      "residual_benchmark_cm": 14.86227690002444,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.828,
+        "mean_level_recent_m": 3.3664666403774963,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.828
+      }
     },
     {
       "station_id": "refmar:628",
@@ -5738,7 +5984,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -4.912 m relative to IGN69; RAM id Diélette in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 24.058300572629232
+      "residual_benchmark_cm": 24.058300572629232,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -4.912,
+        "mean_level_recent_m": 5.565220081033918,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -4.912
+      }
     },
     {
       "station_id": "refmar:659",
@@ -6003,7 +6262,19 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -0.838 m relative to NGNC; RAM id Nouméa - Numbo in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 14.264969602382838
+      "residual_benchmark_cm": 14.264969602382838,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "NGNC",
+        "offset_vertical_ref_m": -0.838,
+        "mean_level_recent_m": 1.0871552732512533,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station"
+      }
     },
     {
       "station_id": "refmar:71",
@@ -6268,7 +6539,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.742 m relative to IGN69; RAM id Port-Tudy in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 14.337339130340876
+      "residual_benchmark_cm": 14.337339130340876,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.742,
+        "mean_level_recent_m": 3.2372217736275646,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.742
+      }
     },
     {
       "station_id": "refmar:94",
@@ -6533,7 +6817,20 @@
       },
       "disclaimer": "constantes dérivées des observations REFMAR, non équivalentes aux constantes SHOM",
       "datum_note": "zero_hydrographique; ZH = -2.143 m relative to IGN69; RAM id Boucau-Bayonne in REFMAR tide-gauge metadata",
-      "residual_benchmark_cm": 13.128431368087012
+      "residual_benchmark_cm": 13.128431368087012,
+      "datum_reference": {
+        "source": "Shom / REFMAR completetidegauge RAM",
+        "status": "ram_only",
+        "vertical_ref": "IGN69",
+        "offset_vertical_ref_m": -2.143,
+        "mean_level_recent_m": 2.6289873619737305,
+        "mean_level_recent_period": {
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2026-04-01T00:00:00Z"
+        },
+        "note": "RAM tie known; official mean-level epoch offset not stored for this station",
+        "offset_ign69_m": -2.143
+      }
     }
   ]
 }

@@ -23,6 +23,7 @@ pub const DEFAULT_WARNINGS: [&str; 3] = [
 ];
 
 pub const OUTSIDE_VALIDITY_PERIOD_WARNING: &str = "outside_validity_period";
+pub const DATUM_REFERENCE_INCOMPLETE_WARNING: &str = "datum_reference_incomplete";
 
 /// Distance confidence scale shared by the CLI and HTTP API.
 pub const CONFIDENCE_GRADES: [ConfidenceGrade; 3] = [
@@ -140,6 +141,98 @@ pub fn format_utc(at: UtcDateTime) -> String {
     at.as_chrono().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OutputDatum {
+    Default,
+    Ign69,
+    Recent,
+}
+
+#[derive(Clone, Debug)]
+pub struct DatumAdjustment {
+    pub datum: String,
+    pub height_offset_m: f64,
+    pub reference_incomplete: bool,
+}
+
+impl OutputDatum {
+    pub fn parse(value: &str) -> Result<Self, ContractViolation> {
+        match value {
+            "zero_hydrographique" | "zero-hydrographique" | "zh" | "default" => Ok(Self::Default),
+            "ign69" | "IGN69" => Ok(Self::Ign69),
+            "recent" | "internal" | "zero_hydrographique_recent" | "zero-hydrographique-recent" => {
+                Ok(Self::Recent)
+            }
+            _ => Err(ContractViolation::new(
+                "datum must be one of zero_hydrographique, ign69, recent",
+            )),
+        }
+    }
+}
+
+pub fn datum_adjustment(
+    station: &StationPack,
+    requested: OutputDatum,
+) -> Result<DatumAdjustment, ContractViolation> {
+    match requested {
+        OutputDatum::Default => default_datum_adjustment(station),
+        OutputDatum::Ign69 => ign69_datum_adjustment(station),
+        OutputDatum::Recent => Ok(DatumAdjustment {
+            datum: recent_datum_name(station),
+            height_offset_m: 0.0,
+            reference_incomplete: false,
+        }),
+    }
+}
+
+fn default_datum_adjustment(station: &StationPack) -> Result<DatumAdjustment, ContractViolation> {
+    let Some(reference) = station.datum_reference.as_ref() else {
+        return Ok(DatumAdjustment {
+            datum: station.datum.clone(),
+            height_offset_m: 0.0,
+            reference_incomplete: station.experimental == Some(true),
+        });
+    };
+    let Some(offset) = reference.offset_zh_officiel_m else {
+        return Ok(DatumAdjustment {
+            datum: station.datum.clone(),
+            height_offset_m: 0.0,
+            reference_incomplete: station.experimental == Some(true),
+        });
+    };
+    Ok(DatumAdjustment {
+        datum: format!("{}_officiel", station.datum),
+        height_offset_m: offset.get(),
+        reference_incomplete: false,
+    })
+}
+
+fn ign69_datum_adjustment(station: &StationPack) -> Result<DatumAdjustment, ContractViolation> {
+    let offset = station
+        .datum_reference
+        .as_ref()
+        .and_then(|reference| reference.offset_ign69_m)
+        .ok_or_else(|| {
+            ContractViolation::new(format!(
+                "datum ign69 is unavailable for {}",
+                station.station_id
+            ))
+        })?;
+    Ok(DatumAdjustment {
+        datum: "IGN69".to_string(),
+        height_offset_m: offset.get(),
+        reference_incomplete: false,
+    })
+}
+
+fn recent_datum_name(station: &StationPack) -> String {
+    if station.experimental == Some(true) && station.datum.starts_with("zero_hydrographique") {
+        format!("{}_recent", station.datum)
+    } else {
+        station.datum.clone()
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct TideExtremumResponse {
     t: String,
@@ -156,9 +249,17 @@ impl From<TideExtremum> for TideExtremumResponse {
 
 impl TideExtremumResponse {
     pub fn from_extremum(extremum: TideExtremum, coefficient: Option<u8>) -> Self {
+        Self::from_extremum_with_offset(extremum, 0.0, coefficient)
+    }
+
+    pub fn from_extremum_with_offset(
+        extremum: TideExtremum,
+        height_offset_m: f64,
+        coefficient: Option<u8>,
+    ) -> Self {
         Self {
             t: format_utc(extremum.at()),
-            height_m: round3(extremum.height().as_meters()),
+            height_m: round3(extremum.height().as_meters() + height_offset_m),
             coefficient,
         }
     }
@@ -172,9 +273,15 @@ pub struct TidePointResponse {
 
 impl From<TidePoint> for TidePointResponse {
     fn from(point: TidePoint) -> Self {
+        Self::from_point_with_offset(point, 0.0)
+    }
+}
+
+impl TidePointResponse {
+    pub fn from_point_with_offset(point: TidePoint, height_offset_m: f64) -> Self {
         Self {
             t: format_utc(point.at()),
-            height_m: round3(point.height().as_meters()),
+            height_m: round3(point.height().as_meters() + height_offset_m),
         }
     }
 }
@@ -314,6 +421,15 @@ pub fn warnings_for_station_at_with_coefficient(
     at: Option<UtcDateTime>,
     has_coefficient: bool,
 ) -> Vec<&'static str> {
+    warnings_for_station_at_with_options(station, at, has_coefficient, false)
+}
+
+pub fn warnings_for_station_at_with_options(
+    station: &StationPack,
+    at: Option<UtcDateTime>,
+    has_coefficient: bool,
+    datum_reference_incomplete: bool,
+) -> Vec<&'static str> {
     let mut warnings = DEFAULT_WARNINGS.to_vec();
     if station.experimental == Some(true) {
         warnings.push("experimental");
@@ -326,6 +442,9 @@ pub fn warnings_for_station_at_with_coefficient(
     }
     if has_coefficient {
         warnings.push(crate::coefficient::COEFFICIENT_EXPERIMENTAL_WARNING);
+    }
+    if datum_reference_incomplete {
+        warnings.push(DATUM_REFERENCE_INCOMPLETE_WARNING);
     }
     warnings
 }

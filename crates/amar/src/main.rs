@@ -121,6 +121,8 @@ struct TideArgs {
     duration_h: Option<u32>,
     #[arg(long = "step-min")]
     step_min: Option<u32>,
+    #[arg(long, default_value = "zero_hydrographique", value_parser = parse_output_datum)]
+    datum: contract::OutputDatum,
     #[arg(long = "strict-validity")]
     strict_validity: bool,
 }
@@ -249,6 +251,8 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
     )?;
     let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
+    let datum_adjustment = contract::datum_adjustment(station, args.datum)
+        .map_err(|violation| CliError::InvalidArgument(violation.into_message()))?;
     if args.strict_validity
         && let Some(violation) = contract::validity_period_violation(station, at)
     {
@@ -264,20 +268,53 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             station_id: station.station_id.clone(),
         }
     })?;
+    let (next_high, next_low) = next_extrema_after(
+        station_match.station.model(),
+        at,
+        contract::NEXT_EXTREMA_HORIZON_H,
+    );
+    let next_high_coefficient = next_high.and_then(|high| {
+        coefficient::coefficient_for_station_high(&data, station, high.at())
+            .map(|coefficient| coefficient.coefficient)
+    });
     let output = if let Some(duration_h) = args.duration_h {
         let step_min = args.step_min.unwrap_or(contract::DEFAULT_SERIES_STEP_MIN);
         contract::validate_series_bounds(duration_h, step_min)
             .map_err(|violation| CliError::InvalidArgument(violation.into_message()))?;
         let series = predict_series(station_match.station.model(), at, duration_h, step_min)
             .into_iter()
-            .map(TidePointResponse::from)
+            .map(|point| {
+                TidePointResponse::from_point_with_offset(point, datum_adjustment.height_offset_m)
+            })
             .collect::<Vec<_>>();
         json!({
+            "height_m": contract::round3(
+                prediction.height().as_meters() + datum_adjustment.height_offset_m
+            ),
+            "next_high": next_high.map(|high| {
+                TideExtremumResponse::from_extremum_with_offset(
+                    high,
+                    datum_adjustment.height_offset_m,
+                    next_high_coefficient
+                )
+            }),
+            "next_low": next_low.map(|low| {
+                TideExtremumResponse::from_extremum_with_offset(
+                    low,
+                    datum_adjustment.height_offset_m,
+                    None
+                )
+            }),
             "series": series,
-            "datum": station.datum,
+            "datum": datum_adjustment.datum.clone(),
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": contract::warnings_for_station_at(station, at),
+            "warnings": contract::warnings_for_station_at_with_options(
+                station,
+                Some(at),
+                next_high_coefficient.is_some(),
+                datum_adjustment.reference_incomplete
+            ),
         })
     } else {
         if args.step_min.is_some() {
@@ -285,26 +322,32 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
                 "--step-min requires --duration-h".to_string(),
             ));
         }
-        let (next_high, next_low) = next_extrema_after(
-            station_match.station.model(),
-            at,
-            contract::NEXT_EXTREMA_HORIZON_H,
-        );
-        let next_high_coefficient = next_high.and_then(|high| {
-            coefficient::coefficient_for_station_high(&data, station, high.at())
-                .map(|coefficient| coefficient.coefficient)
-        });
         json!({
-            "height_m": contract::round3(prediction.height().as_meters()),
-            "next_high": next_high.map(|high| TideExtremumResponse::from_extremum(high, next_high_coefficient)),
-            "next_low": next_low.map(TideExtremumResponse::from),
-            "datum": station.datum,
+            "height_m": contract::round3(
+                prediction.height().as_meters() + datum_adjustment.height_offset_m
+            ),
+            "next_high": next_high.map(|high| {
+                TideExtremumResponse::from_extremum_with_offset(
+                    high,
+                    datum_adjustment.height_offset_m,
+                    next_high_coefficient
+                )
+            }),
+            "next_low": next_low.map(|low| {
+                TideExtremumResponse::from_extremum_with_offset(
+                    low,
+                    datum_adjustment.height_offset_m,
+                    None
+                )
+            }),
+            "datum": datum_adjustment.datum.clone(),
             "source": SourceResponse::from(&station_match),
             "confidence": confidence,
-            "warnings": contract::warnings_for_station_at_with_coefficient(
+            "warnings": contract::warnings_for_station_at_with_options(
                 station,
                 Some(at),
-                next_high_coefficient.is_some()
+                next_high_coefficient.is_some(),
+                datum_adjustment.reference_incomplete
             ),
         })
     };
@@ -996,6 +1039,10 @@ fn parse_non_negative_f64(value: &str) -> Result<f64, String> {
     } else {
         Err("value must be a finite non-negative number".to_string())
     }
+}
+
+fn parse_output_datum(value: &str) -> Result<contract::OutputDatum, String> {
+    contract::OutputDatum::parse(value).map_err(|violation| violation.into_message())
 }
 
 fn parse_finite_f64(value: &str) -> Result<f64, String> {
