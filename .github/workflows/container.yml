@@ -89,7 +89,7 @@ jobs:
             sleep 1
           done
           test "$ready" = "1" || fail
-          grep -q '"station_count":30' "$health" || fail
+          grep -q '"station_count":32' "$health" || fail
 
           code="$(curl -sS -o "$tide" -w '%{http_code}' \
             -H 'content-type: application/json' \
