@@ -11,7 +11,7 @@ Le projet est mené par orchestration : un modèle pilote (Claude Code) qui dél
 
 | Phase | Prompts | Rôle | Modèle(s) |
 |---|---|---|---|
-| Origine | P1–P8 | idéation, faisabilité | Claude (claude.ai) |
+| Origine | P1–P8 | idéation, faisabilité | **Claude Fable 5** (claude.ai, fr) |
 | Planification | P9–P15 | orchestration + relecture croisée | Claude Code (Opus 4.8, contexte 1M) ; relectures **ChatGPT Pro** (raisonnement étendu) via dunst/Firefox |
 | Développement | P16–P66 | codage des jalons | **codex exec** en tmux = **gpt-5.5** (reasoning `xhigh`) ; orchestration + revue *correctness* : Claude Code (Opus 4.8, 1M) ; relectures ponctuelles ChatGPT Pro |
 
