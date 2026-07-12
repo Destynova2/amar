@@ -247,7 +247,7 @@ pub(crate) fn build_station_pack(
         },
         data_version: Some(input.generated_at.to_string()),
         valid_from: Some(format_rfc3339(input.calibration_start)),
-        valid_until: Some(format_rfc3339(valid_until(input.validation_start))),
+        valid_until: Some(format_rfc3339(valid_until(input.validation_start)?)),
         experimental: Some(true),
         not_official: Some(true),
         not_shom: Some(true),
@@ -281,21 +281,29 @@ pub(crate) fn build_station_pack(
     Ok(station)
 }
 
-fn valid_until(calibration_end: DateTime<Utc>) -> DateTime<Utc> {
-    match Utc
-        .with_ymd_and_hms(
-            calibration_end.year() + 5,
-            calibration_end.month(),
-            calibration_end.day(),
-            calibration_end.hour(),
-            calibration_end.minute(),
-            calibration_end.second(),
-        )
-        .single()
-    {
-        Some(value) => value,
-        None => unreachable!("calibration boundary must remain a valid UTC timestamp"),
+fn valid_until(calibration_end: DateTime<Utc>) -> Result<DateTime<Utc>, CalError> {
+    let target_year = calibration_end.year() + 5;
+    let mut day = calibration_end.day();
+    while day >= 1 {
+        if let Some(value) = Utc
+            .with_ymd_and_hms(
+                target_year,
+                calibration_end.month(),
+                day,
+                calibration_end.hour(),
+                calibration_end.minute(),
+                calibration_end.second(),
+            )
+            .single()
+        {
+            return Ok(value);
+        }
+        day -= 1;
     }
+    Err(CalError::InvalidTimestamp(format!(
+        "invalid validity boundary for {}",
+        format_rfc3339(calibration_end)
+    )))
 }
 
 fn datum_reference(
@@ -538,5 +546,15 @@ mod tests {
         assert_eq!(actual[0].value_m, 4.123);
         assert_eq!(actual[1].at, observations[1].at);
         assert_eq!(actual[1].value_m, 4.568);
+    }
+
+    #[test]
+    fn valid_until_clamps_leap_day_to_february_28() {
+        let actual = match valid_until(at("2024-02-29T00:00:00Z")) {
+            Ok(value) => value,
+            Err(error) => panic!("{error:?}"),
+        };
+
+        assert_eq!(format_rfc3339(actual), "2029-02-28T00:00:00Z");
     }
 }

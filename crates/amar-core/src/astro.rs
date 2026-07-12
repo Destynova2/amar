@@ -1,5 +1,4 @@
 use crate::UtcDateTime;
-use crate::constituents::ConstituentDefinition;
 
 #[derive(Clone, Copy)]
 pub(crate) struct AstronomicalTerms {
@@ -9,18 +8,6 @@ pub(crate) struct AstronomicalTerms {
     pub(crate) p: f64,
     pub(crate) p1: f64,
     pub(crate) node_degrees: f64,
-}
-
-pub(crate) fn astronomical_argument_degrees(
-    definition: ConstituentDefinition,
-    astro: &AstronomicalTerms,
-) -> f64 {
-    let values = [astro.tau, astro.s, astro.h, astro.p, astro.p1];
-    let mut cycles = definition.semi_cycles;
-    for (coefficient, value) in definition.coefficients.iter().zip(values) {
-        cycles += f64::from(*coefficient) * value;
-    }
-    cycles.rem_euclid(1.0) * 360.0
 }
 
 pub(crate) fn astronomical_terms(at: UtcDateTime) -> AstronomicalTerms {

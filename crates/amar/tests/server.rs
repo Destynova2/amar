@@ -26,8 +26,16 @@ fn brest_pack_path() -> PathBuf {
     workspace_root().join("data/packs/amar-data-brest-experimental.json")
 }
 
+fn france_pack_path() -> PathBuf {
+    workspace_root().join("data/packs/amar-data-france-experimental.json")
+}
+
 fn pack_paths() -> Vec<PathBuf> {
     vec![noaa_pack_path(), brest_pack_path()]
+}
+
+fn all_pack_paths() -> Vec<PathBuf> {
+    vec![noaa_pack_path(), brest_pack_path(), france_pack_path()]
 }
 
 #[tokio::test]
@@ -94,6 +102,29 @@ async fn tide_strict_validity_rejects_after_validity_period() {
 }
 
 #[tokio::test]
+async fn tide_series_strict_validity_rejects_after_validity_period() {
+    let service = app_with_options(must(load_packs_from_paths(&pack_paths())), 20.0, true);
+    let actual = request_json(
+        service,
+        must(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/tide/series")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"lat":48.383,"lon":-4.495,"from":"2032-04-02T00:00:00Z","duration_h":2,"step_min":60}"#,
+                )),
+        ),
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(actual.body["error"], "outside_validity_period");
+    assert_eq!(actual.body["valid_until"], "2031-04-01T00:00:00Z");
+    assert_eq!(actual.body["nearest_source"]["id"], "refmar:3");
+}
+
+#[tokio::test]
 async fn tide_invalid_input_matches_snapshot() {
     let body = r#"{"lat":91,"lon":0,"datetime":"2026-08-15T12:00:00Z"}"#;
     assert_post_snapshot(
@@ -140,6 +171,121 @@ async fn tide_accepts_ign69_datum_for_brest() {
     assert_eq!(actual.body["datum"], "IGN69");
     assert_eq!(actual.body["height_m"], -2.554);
     assert_eq!(actual.body["next_high"]["height_m"], 3.712);
+}
+
+#[tokio::test]
+async fn tide_series_ign69_shifts_every_point() {
+    let actual = post_json(
+        "/tide/series",
+        r#"{"lat":48.383,"lon":-4.495,"from":"2026-08-15T12:00:00Z","duration_h":2,"step_min":60,"datum":"ign69"}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::OK);
+    assert_eq!(actual.body["datum"], "IGN69");
+    assert_eq!(actual.body["height_m"], -2.554);
+    assert_eq!(
+        actual.body["series"][0]["height_m"],
+        actual.body["height_m"]
+    );
+    assert_eq!(actual.body["series"][1]["height_m"], -1.948);
+}
+
+#[tokio::test]
+async fn tide_ign69_unavailable_for_noaa_station() {
+    let actual = post_tide(
+        r#"{"lat":37.806,"lon":-122.465,"datetime":"2026-08-15T12:00:00Z","datum":"ign69"}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "datum ign69 is unavailable for noaa:9414290"
+    );
+}
+
+#[tokio::test]
+async fn tide_rejects_unknown_datum() {
+    let actual = post_tide(
+        r#"{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z","datum":"wgs84"}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(actual.status, StatusCode::BAD_REQUEST);
+    assert_eq!(actual.body["error"], "invalid_request");
+    assert_eq!(
+        actual.body["message"],
+        "datum must be one of zero_hydrographique, ign69, recent"
+    );
+}
+
+#[tokio::test]
+async fn tide_confidence_and_source_are_invariant_across_datums() {
+    let default = post_tide(
+        r#"{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z"}"#,
+        20.0,
+    )
+    .await;
+    let ign69 = post_tide(
+        r#"{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z","datum":"ign69"}"#,
+        20.0,
+    )
+    .await;
+
+    assert_eq!(default.status, StatusCode::OK);
+    assert_eq!(ign69.status, StatusCode::OK);
+    assert_eq!(
+        default.body["confidence"]["residual_benchmark_cm"],
+        ign69.body["confidence"]["residual_benchmark_cm"]
+    );
+    assert_eq!(
+        default.body["source"]["data_version"],
+        ign69.body["source"]["data_version"]
+    );
+    assert_ne!(default.body["datum"], ign69.body["datum"]);
+    assert_ne!(default.body["height_m"], ign69.body["height_m"]);
+    assert_ne!(
+        default.body["next_high"]["height_m"],
+        ign69.body["next_high"]["height_m"]
+    );
+}
+
+#[tokio::test]
+async fn datum_reference_incomplete_warns_for_ram_only_station_not_brest() {
+    let le_havre = post_json_with_paths(
+        "/tide",
+        r#"{"lat":49.481892,"lon":0.10598,"datetime":"2026-08-15T12:00:00Z"}"#,
+        20.0,
+        all_pack_paths(),
+    )
+    .await;
+    let brest = post_json_with_paths(
+        "/tide",
+        r#"{"lat":48.383,"lon":-4.495,"datetime":"2026-08-15T12:00:00Z"}"#,
+        20.0,
+        all_pack_paths(),
+    )
+    .await;
+
+    assert_eq!(le_havre.status, StatusCode::OK);
+    assert_eq!(le_havre.body["source"]["id"], "refmar:4");
+    assert!(
+        le_havre.body["warnings"]
+            .to_string()
+            .contains("datum_reference_incomplete")
+    );
+    assert_eq!(brest.status, StatusCode::OK);
+    assert_eq!(brest.body["source"]["id"], "refmar:3");
+    assert!(
+        !brest.body["warnings"]
+            .to_string()
+            .contains("datum_reference_incomplete")
+    );
 }
 
 #[tokio::test]
@@ -436,7 +582,16 @@ async fn post_tide(body: &str, max_distance_km: f64) -> JsonResponse {
 }
 
 async fn post_json(uri: &str, body: &str, max_distance_km: f64) -> JsonResponse {
-    let service = app(must(load_packs_from_paths(&pack_paths())), max_distance_km);
+    post_json_with_paths(uri, body, max_distance_km, pack_paths()).await
+}
+
+async fn post_json_with_paths(
+    uri: &str,
+    body: &str,
+    max_distance_km: f64,
+    paths: Vec<PathBuf>,
+) -> JsonResponse {
+    let service = app(must(load_packs_from_paths(&paths)), max_distance_km);
     request_json(
         service,
         must(

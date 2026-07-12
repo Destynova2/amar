@@ -322,3 +322,8 @@ Consignes extraites :
 > tu a commit et push y comprit les prompet et la ci cd passe toute seul ?
 
 → Code v0.11 commité/poussé (tag v0.11.0, tout vert) ; **prompt.md remis à jour** (P16→P66, ce rattrapage) ; CI/CD automatique sur push/tag, verte — 2 patchs infra en route (v0.8.1 timeout container, v0.10.1 station_count smoke).
+
+### P67 — v0.12 durcissement post-audit
+> Lis AGENTS.md et CONVENTIONS.md, puis execute integralement le plan .claude/brief-v12-audit-hardening.md. Respecte le GARDE-FOU byte-identite en tete du brief: capture les SHA-256 des artefacts figes AVANT, verifie-les identiques APRES; si un SHA fige change ou un gate bouge dun chiffre, ARRETE-toi et signale sans commit. Un commit conventionnel par lot, SANS aucune mention IA. Bump version 0.12.0, tag v0.12.0, workflows verts (smoke = 32 stations). Ajoute lentree P67 dans prompt.md pour le prompt utilisateur de cette iteration.
+
+→ v0.12 : correctifs strict-validity série + `valid_until` bissextile, gate `check-frozen-shas`, contrat `tide` partagé, perf X1/X2/X3 prouvée, X4 différé avec contrat/test, trous de tests comblés, refactors structure, CI/container durcis, version 0.12.0.

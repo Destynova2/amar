@@ -8,7 +8,7 @@ mod extrema;
 mod nodal;
 mod types;
 
-use astro::{astronomical_argument_degrees, astronomical_terms};
+use astro::astronomical_terms;
 use chrono::{Datelike, TimeZone, Utc};
 use constituents::constituent_definition;
 use nodal::{NodalTerms, nodal_terms};
@@ -52,6 +52,7 @@ fn predict_height_direct(model: &TideModel, at: UtcDateTime) -> TidePrediction {
 pub struct CompiledTideModel {
     z0: Meters,
     year_start: UtcDateTime,
+    year_start_ordinal_days: f64,
     constituents: Vec<CompiledConstituent>,
 }
 
@@ -82,7 +83,7 @@ impl CompiledTideModel {
             let Some(definition) = constituent_definition(constituent.id().as_str()) else {
                 unreachable!("constituents are validated by TideModel::new");
             };
-            let argument0 = astronomical_argument_degrees(definition, &start_astro);
+            let argument0 = definition.astronomical_argument_degrees(&start_astro);
             let nodal_phase = definition.nodal_phase_degrees(&mid_year_nodal);
             let nodal_factor = definition.nodal_factor(&mid_year_nodal);
             constituents.push(CompiledConstituent {
@@ -95,6 +96,7 @@ impl CompiledTideModel {
         Ok(Self {
             z0: model.z0,
             year_start,
+            year_start_ordinal_days: year_start.ordinal_days(),
             constituents,
         })
     }
@@ -113,7 +115,7 @@ impl CompiledTideModel {
     }
 
     fn predict_height_unchecked(&self, at: UtcDateTime) -> TidePrediction {
-        let hours = at.hours_since(self.year_start);
+        let hours = (at.ordinal_days() - self.year_start_ordinal_days) * 24.0;
         let mut height = self.z0.as_meters();
         for constituent in &self.constituents {
             let phase = constituent.phase0_degrees + constituent.speed_degrees_per_hour * hours;
@@ -146,8 +148,7 @@ impl<'a> HeightEvaluator<'a> {
     pub(crate) fn new(model: &'a TideModel, at: UtcDateTime) -> Self {
         let mode = match model.method {
             PredictionMethod::StationHarmonicsV0 => {
-                let compiled = CompiledTideModel::for_year(model, at.as_chrono().year())
-                    .expect("valid UTC year from timestamp");
+                let compiled = compiled_model_for_timestamp(model, at);
                 HeightEvaluatorMode::Compiled(compiled)
             }
             PredictionMethod::HarmonicBasicNoNodal => HeightEvaluatorMode::Direct,
@@ -160,13 +161,20 @@ impl<'a> HeightEvaluator<'a> {
             HeightEvaluatorMode::Direct => predict_height_direct(self.model, at),
             HeightEvaluatorMode::Compiled(compiled) => {
                 if !compiled.contains(at) {
-                    *compiled = CompiledTideModel::for_year(self.model, at.as_chrono().year())
-                        .expect("valid UTC year from timestamp");
+                    *compiled = compiled_model_for_timestamp(self.model, at);
                 }
                 compiled.predict_height_unchecked(at)
             }
         }
     }
+}
+
+fn compiled_model_for_timestamp(model: &TideModel, at: UtcDateTime) -> CompiledTideModel {
+    CompiledTideModel::for_year(model, utc_year(at)).expect("valid UTC year from timestamp")
+}
+
+fn utc_year(at: UtcDateTime) -> i32 {
+    at.as_chrono().year()
 }
 
 pub fn predict_series(
@@ -177,11 +185,11 @@ pub fn predict_series(
 ) -> Vec<TidePoint> {
     let duration_seconds = i64::from(duration_h) * 60 * 60;
     let step_seconds = i64::from(step_min) * 60;
-    let mut points = Vec::new();
     if step_seconds <= 0 {
-        return points;
+        return Vec::new();
     }
 
+    let mut points = Vec::with_capacity(point_capacity(duration_seconds, step_seconds));
     let mut evaluator = HeightEvaluator::new(model, from);
     let mut offset_seconds = 0_i64;
     while offset_seconds <= duration_seconds {
@@ -193,6 +201,13 @@ pub fn predict_series(
         offset_seconds += step_seconds;
     }
     points
+}
+
+fn point_capacity(duration_seconds: i64, step_seconds: i64) -> usize {
+    if duration_seconds < 0 || step_seconds <= 0 {
+        return 0;
+    }
+    (duration_seconds / step_seconds + 1) as usize
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -232,10 +247,6 @@ impl HarmonicYearContext {
         at.civil_year_start() == self.year_start
     }
 
-    pub fn year_start(self) -> UtcDateTime {
-        self.year_start
-    }
-
     pub fn hours_since_year_start(self, at: UtcDateTime) -> Result<f64, CoreError> {
         if !self.contains(at) {
             return Err(CoreError::InvalidTimestamp(
@@ -245,26 +256,6 @@ impl HarmonicYearContext {
         Ok(at.hours_since(self.year_start))
     }
 
-    pub fn basis(
-        self,
-        constituent_id: &ConstituentId,
-        speed: DegreesPerHour,
-        at: UtcDateTime,
-    ) -> Result<HarmonicBasis, CoreError> {
-        if !self.contains(at) {
-            return Err(CoreError::InvalidTimestamp(
-                "harmonic year context does not match timestamp".to_string(),
-            ));
-        }
-        let annual = self.annual_basis(constituent_id)?;
-        Ok(HarmonicBasis {
-            argument_degrees: annual.argument0_degrees
-                + speed.as_degrees_per_hour() * at.hours_since(self.year_start)
-                + annual.nodal_phase_degrees,
-            nodal_factor: annual.nodal_factor,
-        })
-    }
-
     pub fn annual_basis(
         self,
         constituent_id: &ConstituentId,
@@ -272,7 +263,7 @@ impl HarmonicYearContext {
         let definition = constituent_definition(constituent_id.as_str())
             .ok_or_else(|| CoreError::UnknownConstituent(constituent_id.to_string()))?;
         Ok(HarmonicYearBasis {
-            argument0_degrees: astronomical_argument_degrees(definition, &self.start_astro),
+            argument0_degrees: definition.astronomical_argument_degrees(&self.start_astro),
             nodal_phase_degrees: definition.nodal_phase_degrees(&self.mid_year_nodal),
             nodal_factor: definition.nodal_factor(&self.mid_year_nodal),
         })
@@ -326,11 +317,11 @@ impl PredictionConvention {
                 hours_since_year_start,
                 ..
             } => {
-                astronomical_argument_degrees(definition, start_astro)
+                definition.astronomical_argument_degrees(start_astro)
                     + constituent.speed().as_degrees_per_hour() * hours_since_year_start
             }
             PredictionConventionMode::InstantNoNodal { astro } => {
-                astronomical_argument_degrees(definition, astro)
+                definition.astronomical_argument_degrees(astro)
             }
         }
     }
@@ -369,7 +360,7 @@ impl PredictionConvention {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::astro::{astronomical_argument_degrees, astronomical_terms};
+    use crate::astro::astronomical_terms;
     use crate::constituents::constituent_definition;
     use crate::nodal::nodal_terms;
     use chrono::{Datelike, TimeZone, Utc};
@@ -390,17 +381,69 @@ mod tests {
     }
 
     fn single_m2_model() -> TideModel {
+        single_constituent_model("M2", 28.984_104, 0.5, 0.0)
+    }
+
+    fn single_constituent_model(
+        name: &str,
+        speed_degrees_per_hour: f64,
+        amplitude_m: f64,
+        phase_degrees: f64,
+    ) -> TideModel {
         must(TideModel::new(
             must(DatumId::new("MLLW")),
             must(Meters::new(1.0)),
             vec![HarmonicConstituent::new(
-                must(ConstituentId::new("M2")),
-                must(Meters::new(0.5)),
-                must(Degrees::new(0.0)),
-                must(DegreesPerHour::new(28.984_104)),
+                must(ConstituentId::new(name)),
+                must(Meters::new(amplitude_m)),
+                must(Degrees::new(phase_degrees)),
+                must(DegreesPerHour::new(speed_degrees_per_hour)),
             )],
             PredictionMethod::HarmonicBasicNoNodal,
         ))
+    }
+
+    fn mixed_tide_model() -> TideModel {
+        must(TideModel::new(
+            must(DatumId::new("MLLW")),
+            must(Meters::new(1.0)),
+            vec![
+                HarmonicConstituent::new(
+                    must(ConstituentId::new("M2")),
+                    must(Meters::new(0.45)),
+                    must(Degrees::new(12.0)),
+                    must(DegreesPerHour::new(28.984_104)),
+                ),
+                HarmonicConstituent::new(
+                    must(ConstituentId::new("K1")),
+                    must(Meters::new(0.20)),
+                    must(Degrees::new(80.0)),
+                    must(DegreesPerHour::new(15.041_069)),
+                ),
+            ],
+            PredictionMethod::HarmonicBasicNoNodal,
+        ))
+    }
+
+    fn next_extrema_after_full_scan(
+        model: &TideModel,
+        after: UtcDateTime,
+        horizon_h: u32,
+    ) -> (Option<TideExtremum>, Option<TideExtremum>) {
+        let search_from = after.add_seconds(-6 * 60);
+        let search_to = after.add_seconds(i64::from(horizon_h) * 60 * 60);
+        let extrema = extrema_between(model, search_from, search_to);
+        let next_high = extrema
+            .iter()
+            .copied()
+            .filter(|extremum| extremum.kind == TideExtremumKind::High && extremum.at > after)
+            .min_by_key(|extremum| extremum.at);
+        let next_low = extrema
+            .iter()
+            .copied()
+            .filter(|extremum| extremum.kind == TideExtremumKind::Low && extremum.at > after)
+            .min_by_key(|extremum| extremum.at);
+        (next_high, next_low)
     }
 
     fn extended_catalog_model() -> TideModel {
@@ -452,7 +495,7 @@ mod tests {
 
         for (name, expected_argument, expected_factor) in cases {
             let definition = must_some(constituent_definition(name));
-            let argument = (astronomical_argument_degrees(definition, &start_astro)
+            let argument = (definition.astronomical_argument_degrees(&start_astro)
                 + definition.nodal_phase_degrees(&mid_year_nodal))
             .rem_euclid(360.0);
             let factor = definition.nodal_factor(&mid_year_nodal);
@@ -594,6 +637,25 @@ mod tests {
         assert!(next_low.is_some());
         assert!(next_high.unwrap_or_else(|| unreachable!()).at() > at);
         assert!(next_low.unwrap_or_else(|| unreachable!()).at() > at);
+    }
+
+    #[test]
+    fn next_extrema_after_matches_full_scan_for_tidal_regimes() {
+        let models = [
+            single_m2_model(),
+            single_constituent_model("K1", 15.041_069, 0.4, 30.0),
+            mixed_tide_model(),
+        ];
+        let start = must(UtcDateTime::parse_rfc3339("2026-08-15T00:00:00Z"));
+
+        for model in models {
+            for offset_hours in 0..72 {
+                let at = start.add_seconds(i64::from(offset_hours) * 60 * 60);
+                let expected = next_extrema_after_full_scan(&model, at, 72);
+                let actual = next_extrema_after(&model, at, 72);
+                assert_eq!(actual, expected, "offset_hours={offset_hours}");
+            }
+        }
     }
 
     #[test]

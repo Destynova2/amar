@@ -3,7 +3,7 @@
 > Calcule une marée astronomique hors ligne près d'une station connue, avec
 > datum, source, confiance et refus explicite hors couverture.
 
-amar v0.11 publie des binaires téléchargeables en plus de l'image GHCR. Le
+amar v0.12 publie des binaires téléchargeables en plus de l'image GHCR. Le
 socle couvre NOAA, Brest expérimental et 23 ports REFMAR RONIM,
 avec prochains PM/BM, séries bornées, fenêtres de seuil et coefficient de marée
 français dérivé de notre Brest calibré. Brest expose par défaut le zéro
@@ -242,6 +242,10 @@ Datums de sortie :
 
 Pour les stations REFMAR où seul le tie RAM est connu, amar n'invente pas
 d'offset de niveau moyen officiel et ajoute `datum_reference_incomplete`.
+Le défaut `zero_hydrographique` et `ign69` ne sont pas deux sorties composables
+par simple addition : à Brest, le défaut retire aussi l'écart documenté entre
+le niveau moyen récent interne et le niveau moyen RAM officiel
+(`recent_minus_official_mean_m`, environ 12,23 cm). Cet écart est attendu.
 
 | Question | Datum | Pourquoi |
 |---|---|---|

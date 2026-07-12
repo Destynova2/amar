@@ -1,6 +1,6 @@
 use amar_core::{
-    Meters, TideModel, TideThresholdDirection, UtcDateTime, predict_height, predict_series,
-    tide_windows,
+    Meters, TideModel, TideThresholdDirection, UtcDateTime, next_extrema_after, predict_height,
+    predict_series, tide_windows,
 };
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
@@ -36,6 +36,16 @@ fn bench_core(c: &mut Criterion) {
                 black_box(timestamp),
                 black_box(72),
                 black_box(6),
+            ))
+        })
+    });
+
+    c.bench_function("next_extrema_after_brest37", |b| {
+        b.iter(|| {
+            black_box(next_extrema_after(
+                black_box(&model),
+                black_box(timestamp),
+                black_box(72),
             ))
         })
     });

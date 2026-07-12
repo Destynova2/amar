@@ -1,5 +1,8 @@
-use amar_core::{Meters, TideExtremum, TidePoint, TideThresholdDirection, TideWindow, UtcDateTime};
-use amar_data::StationMatch;
+use amar_core::{
+    Meters, TideExtremum, TidePoint, TideThresholdDirection, TideWindow, UtcDateTime,
+    next_extrema_after, predict_height,
+};
+use amar_data::{DataSet, StationMatch};
 use amar_pack::StationPack;
 use serde::Serialize;
 
@@ -287,6 +290,77 @@ impl TidePointResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct TidePayload {
+    height_m: f64,
+    next_high: Option<TideExtremumResponse>,
+    next_low: Option<TideExtremumResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    series: Option<Vec<TidePointResponse>>,
+    datum: String,
+    source: SourceResponse,
+    confidence: ConfidenceResponse,
+    warnings: Vec<&'static str>,
+}
+
+pub type TideResponse = TidePayload;
+pub type SeriesResponse = TidePayload;
+
+pub fn build_tide_payload(
+    station_match: &StationMatch<'_>,
+    at: UtcDateTime,
+    datum_adjustment: &DatumAdjustment,
+    data: &DataSet,
+    series: Option<Vec<TidePoint>>,
+) -> Option<TidePayload> {
+    let station = station_match.station.pack();
+    let prediction = predict_height(station_match.station.model(), at);
+    let confidence = confidence_for_station(station_match)?;
+    let (next_high, next_low) =
+        next_extrema_after(station_match.station.model(), at, NEXT_EXTREMA_HORIZON_H);
+    let next_high_coefficient = next_high.and_then(|high| {
+        crate::coefficient::coefficient_for_station_high(data, station, high.at())
+            .map(|coefficient| coefficient.coefficient)
+    });
+    Some(TidePayload {
+        height_m: round3(prediction.height().as_meters() + datum_adjustment.height_offset_m),
+        next_high: next_high.map(|high| {
+            TideExtremumResponse::from_extremum_with_offset(
+                high,
+                datum_adjustment.height_offset_m,
+                next_high_coefficient,
+            )
+        }),
+        next_low: next_low.map(|low| {
+            TideExtremumResponse::from_extremum_with_offset(
+                low,
+                datum_adjustment.height_offset_m,
+                None,
+            )
+        }),
+        series: series.map(|series| {
+            series
+                .into_iter()
+                .map(|point| {
+                    TidePointResponse::from_point_with_offset(
+                        point,
+                        datum_adjustment.height_offset_m,
+                    )
+                })
+                .collect()
+        }),
+        datum: datum_adjustment.datum.clone(),
+        source: SourceResponse::from(station_match),
+        confidence,
+        warnings: warnings_for_station_at_with_options(
+            station,
+            Some(at),
+            next_high_coefficient.is_some(),
+            datum_adjustment.reference_incomplete,
+        ),
+    })
+}
+
+#[derive(Debug, Serialize)]
 pub struct TideWindowResponse {
     start: String,
     end: String,
@@ -354,6 +428,18 @@ pub fn validity_period_violation(
     }
 }
 
+pub fn strict_validity_period_violation(
+    station: &StationPack,
+    at: UtcDateTime,
+    strict_validity: bool,
+) -> Option<ValidityPeriodViolation> {
+    if strict_validity {
+        validity_period_violation(station, at)
+    } else {
+        None
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ConfidenceResponse {
@@ -402,26 +488,7 @@ pub fn confidence_for_distance_km(distance_km: f64) -> Option<ConfidenceResponse
 
 /// Warning set shared by CLI and HTTP responses.
 pub fn warnings_for_station(station: &StationPack) -> Vec<&'static str> {
-    warnings_for_station_with_coefficient(station, false)
-}
-
-pub fn warnings_for_station_with_coefficient(
-    station: &StationPack,
-    has_coefficient: bool,
-) -> Vec<&'static str> {
-    warnings_for_station_at_with_coefficient(station, None, has_coefficient)
-}
-
-pub fn warnings_for_station_at(station: &StationPack, at: UtcDateTime) -> Vec<&'static str> {
-    warnings_for_station_at_with_coefficient(station, Some(at), false)
-}
-
-pub fn warnings_for_station_at_with_coefficient(
-    station: &StationPack,
-    at: Option<UtcDateTime>,
-    has_coefficient: bool,
-) -> Vec<&'static str> {
-    warnings_for_station_at_with_options(station, at, has_coefficient, false)
+    warnings_for_station_at_with_options(station, None, false, false)
 }
 
 pub fn warnings_for_station_at_with_options(

@@ -226,6 +226,33 @@ struct StationPeriod {
     end: DateTime<Utc>,
 }
 
+struct StationInput {
+    tidegauge: TideGauge,
+    tidegauge_sha256: String,
+    observations: Vec<Observation>,
+    observations_sha256: String,
+    display_name: String,
+    slug: String,
+    station_id: String,
+    datum: String,
+}
+
+struct SplitSamples {
+    all_qc: QcReport,
+    calibration_samples: Vec<Observation>,
+    validation_samples: Vec<Observation>,
+    validation_qc: QcReport,
+}
+
+struct DecisionComputation {
+    calibration: solve::CalibrationResult,
+    selection: Option<ConstituentSelection>,
+    calibrated_stats: ResidualStats,
+    baseline_stats: ResidualStats,
+    rms_factor: f64,
+    metrics: DecisionMetrics,
+}
+
 impl PoliteClient {
     fn new(throttle_ms: u64) -> Result<Self, CalError> {
         if throttle_ms < MIN_THROTTLE_MS {
@@ -314,14 +341,7 @@ pub(crate) fn calibrate_france(args: CalibrateFranceArgs) -> Result<(), CalError
             title_case_station(&station.name)
         );
         let period = station_period(&args, &default_period, &station.shom_id)?;
-        match calibrate_station(
-            &client,
-            &args,
-            &station,
-            period.start,
-            period.validation_start,
-            period.end,
-        ) {
+        match calibrate_station(&client, &args, &station, &period) {
             Ok(artifact) => {
                 write_station_artifacts(&args, &artifact)?;
                 eprintln!(
@@ -449,11 +469,9 @@ fn calibrate_station(
     client: &PoliteClient,
     args: &CalibrateFranceArgs,
     catalog_station: &CatalogStation,
-    start: DateTime<Utc>,
-    validation_start: DateTime<Utc>,
-    end: DateTime<Utc>,
+    period: &StationPeriod,
 ) -> Result<StationArtifacts, Box<StationExclusion>> {
-    match calibrate_station_inner(client, args, catalog_station, start, validation_start, end) {
+    match calibrate_station_inner(client, args, catalog_station, period) {
         Ok(artifacts) => Ok(artifacts),
         Err(StationRunError::Excluded(exclusion)) => Err(exclusion),
         Err(StationRunError::Error(error)) => Err(Box::new(StationExclusion {
@@ -470,109 +488,40 @@ fn calibrate_station_inner(
     client: &PoliteClient,
     args: &CalibrateFranceArgs,
     catalog_station: &CatalogStation,
-    start: DateTime<Utc>,
-    validation_start: DateTime<Utc>,
-    end: DateTime<Utc>,
+    period: &StationPeriod,
 ) -> Result<StationArtifacts, StationRunError> {
-    let tidegauge = fetch_tidegauge(client, &args.cache_dir, &catalog_station.shom_id)?;
-    let tidegauge_path = tidegauge_cache_path(&args.cache_dir, &catalog_station.shom_id);
-    let tidegauge_sha256 = pack_out::sha256_file(&tidegauge_path)?;
-    let observations = fetch_observations(
-        client,
-        &args.cache_dir,
-        &catalog_station.shom_id,
-        args.source,
-        start,
-        end,
-    )?;
-    let display_name = title_case_station(&tidegauge.name);
-    let slug = station_slug(&display_name);
-    let station_id = format!("refmar:{}", tidegauge.shom_id);
-    let datum = format!("zero_hydrographique_{slug}");
-    let observations_csv = args
-        .cache_dir
-        .join("stations")
-        .join(&tidegauge.shom_id)
-        .join(format!(
-            "{}_validated_hourly_{}_{}.csv",
-            slug,
-            date_label(start),
-            date_label(end)
-        ));
-    pack_out::write_station_observations_csv(
-        &observations_csv,
-        ObservationCsvMetadata {
-            station_name: &tidegauge.name,
-            shom_id: &tidegauge.shom_id,
-            source: args.source,
-            datum: "zero_hydrographique",
-        },
-        observations.iter().copied(),
-    )?;
-    let observations_sha256 = pack_out::sha256_file(&observations_csv)?;
-
-    let all_qc = qc::qc_report(&observations, start, end);
-    let calibration_samples = observations
-        .iter()
-        .copied()
-        .filter(|obs| obs.at >= start && obs.at < validation_start)
-        .collect::<Vec<_>>();
-    let validation_samples = observations
-        .iter()
-        .copied()
-        .filter(|obs| obs.at >= validation_start && obs.at < end)
-        .collect::<Vec<_>>();
-    let calibration_qc = qc::qc_report(&calibration_samples, start, validation_start);
-    let validation_qc = qc::qc_report(&validation_samples, validation_start, end);
-    qc::enforce_qc("calibration", &calibration_qc)?;
-    qc::enforce_qc("validation", &validation_qc)?;
-
-    let use_port_selection = args.select_by_port || published_port_selection(&tidegauge.shom_id);
-    let (calibration, selection) = if use_port_selection {
-        let (calibration, selection) =
-            solve::calibrate_with_port_selection(&calibration_samples, start, validation_start)?;
-        (calibration, Some(selection))
-    } else {
-        (
-            solve::calibrate(
-                &calibration_samples,
-                start,
-                validation_start,
-                ConstituentSet::M22Rayleigh37,
-            )?,
-            None,
-        )
-    };
-    let residuals = validation_samples
-        .iter()
-        .map(|observation| {
-            let predicted =
-                predict_height(&calibration.model, UtcDateTime::from_utc(observation.at))
-                    .height()
-                    .as_meters();
-            observation.value_m - predicted
-        })
-        .collect::<Vec<_>>();
-    let z0_residuals = validation_samples
-        .iter()
-        .map(|observation| observation.value_m - calibration.z0_m)
-        .collect::<Vec<_>>();
-    let calibrated_stats = qc::residual_stats(&residuals)
-        .ok_or_else(|| CalError::EmptyObservations("validation".to_string()))?;
-    let baseline_stats = qc::residual_stats(&z0_residuals)
-        .ok_or_else(|| CalError::EmptyObservations("validation baseline".to_string()))?;
-    let rms_factor = if calibrated_stats.rms_cm > 0.0 {
-        baseline_stats.rms_cm / calibrated_stats.rms_cm
-    } else {
-        f64::INFINITY
-    };
-    let metrics = DecisionMetrics {
-        coverage: validation_qc.coverage,
-        rms_cm: calibrated_stats.rms_cm,
-        p95_cm: calibrated_stats.p95_cm,
-        baseline_rms_cm: baseline_stats.rms_cm,
+    let fetched = fetch_and_persist_observations(client, args, catalog_station, period)?;
+    let split = split_calibration_validation(&fetched.observations, period)?;
+    let use_port_selection =
+        args.select_by_port || published_port_selection(&fetched.tidegauge.shom_id);
+    let decision = compute_decision_metrics(&split, period, use_port_selection)?;
+    let StationInput {
+        tidegauge,
+        tidegauge_sha256,
+        observations_sha256,
+        display_name,
+        slug,
+        station_id,
+        datum,
+        observations: _,
+    } = fetched;
+    let SplitSamples {
+        all_qc,
+        validation_samples,
+        validation_qc: _,
+        calibration_samples: _,
+    } = split;
+    let DecisionComputation {
+        calibration,
+        selection,
+        calibrated_stats,
+        baseline_stats,
         rms_factor,
-    };
+        metrics,
+    } = decision;
+    let start = period.start;
+    let validation_start = period.validation_start;
+    let end = period.end;
 
     let benchmark_id = benchmark_id_for_station(&slug, &tidegauge.shom_id, use_port_selection);
     let benchmark = pack_out::build_station_benchmark(BenchmarkBuildInput {
@@ -675,6 +624,154 @@ fn calibrate_station_inner(
         benchmark,
         manifest,
         decision,
+    })
+}
+
+fn fetch_and_persist_observations(
+    client: &PoliteClient,
+    args: &CalibrateFranceArgs,
+    catalog_station: &CatalogStation,
+    period: &StationPeriod,
+) -> Result<StationInput, CalError> {
+    let tidegauge = fetch_tidegauge(client, &args.cache_dir, &catalog_station.shom_id)?;
+    let tidegauge_path = tidegauge_cache_path(&args.cache_dir, &catalog_station.shom_id);
+    let tidegauge_sha256 = pack_out::sha256_file(&tidegauge_path)?;
+    let observations = fetch_observations(
+        client,
+        &args.cache_dir,
+        &catalog_station.shom_id,
+        args.source,
+        period.start,
+        period.end,
+    )?;
+    let display_name = title_case_station(&tidegauge.name);
+    let slug = station_slug(&display_name);
+    let station_id = format!("refmar:{}", tidegauge.shom_id);
+    let datum = format!("zero_hydrographique_{slug}");
+    let observations_csv = args
+        .cache_dir
+        .join("stations")
+        .join(&tidegauge.shom_id)
+        .join(format!(
+            "{}_validated_hourly_{}_{}.csv",
+            slug,
+            date_label(period.start),
+            date_label(period.end)
+        ));
+    pack_out::write_station_observations_csv(
+        &observations_csv,
+        ObservationCsvMetadata {
+            station_name: &tidegauge.name,
+            shom_id: &tidegauge.shom_id,
+            source: args.source,
+            datum: "zero_hydrographique",
+        },
+        observations.iter().copied(),
+    )?;
+    let observations_sha256 = pack_out::sha256_file(&observations_csv)?;
+
+    Ok(StationInput {
+        tidegauge,
+        tidegauge_sha256,
+        observations,
+        observations_sha256,
+        display_name,
+        slug,
+        station_id,
+        datum,
+    })
+}
+
+fn split_calibration_validation(
+    observations: &[Observation],
+    period: &StationPeriod,
+) -> Result<SplitSamples, CalError> {
+    let all_qc = qc::qc_report(observations, period.start, period.end);
+    let calibration_samples = observations
+        .iter()
+        .copied()
+        .filter(|obs| obs.at >= period.start && obs.at < period.validation_start)
+        .collect::<Vec<_>>();
+    let validation_samples = observations
+        .iter()
+        .copied()
+        .filter(|obs| obs.at >= period.validation_start && obs.at < period.end)
+        .collect::<Vec<_>>();
+    let calibration_qc = qc::qc_report(&calibration_samples, period.start, period.validation_start);
+    let validation_qc = qc::qc_report(&validation_samples, period.validation_start, period.end);
+    qc::enforce_qc("calibration", &calibration_qc)?;
+    qc::enforce_qc("validation", &validation_qc)?;
+
+    Ok(SplitSamples {
+        all_qc,
+        calibration_samples,
+        validation_samples,
+        validation_qc,
+    })
+}
+
+fn compute_decision_metrics(
+    split: &SplitSamples,
+    period: &StationPeriod,
+    use_port_selection: bool,
+) -> Result<DecisionComputation, CalError> {
+    let (calibration, selection) = if use_port_selection {
+        let (calibration, selection) = solve::calibrate_with_port_selection(
+            &split.calibration_samples,
+            period.start,
+            period.validation_start,
+        )?;
+        (calibration, Some(selection))
+    } else {
+        (
+            solve::calibrate(
+                &split.calibration_samples,
+                period.start,
+                period.validation_start,
+                ConstituentSet::M22Rayleigh37,
+            )?,
+            None,
+        )
+    };
+    let residuals = split
+        .validation_samples
+        .iter()
+        .map(|observation| {
+            let predicted =
+                predict_height(&calibration.model, UtcDateTime::from_utc(observation.at))
+                    .height()
+                    .as_meters();
+            observation.value_m - predicted
+        })
+        .collect::<Vec<_>>();
+    let z0_residuals = split
+        .validation_samples
+        .iter()
+        .map(|observation| observation.value_m - calibration.z0_m)
+        .collect::<Vec<_>>();
+    let calibrated_stats = qc::residual_stats(&residuals)
+        .ok_or_else(|| CalError::EmptyObservations("validation".to_string()))?;
+    let baseline_stats = qc::residual_stats(&z0_residuals)
+        .ok_or_else(|| CalError::EmptyObservations("validation baseline".to_string()))?;
+    let rms_factor = if calibrated_stats.rms_cm > 0.0 {
+        baseline_stats.rms_cm / calibrated_stats.rms_cm
+    } else {
+        f64::INFINITY
+    };
+    let metrics = DecisionMetrics {
+        coverage: split.validation_qc.coverage,
+        rms_cm: calibrated_stats.rms_cm,
+        p95_cm: calibrated_stats.p95_cm,
+        baseline_rms_cm: baseline_stats.rms_cm,
+        rms_factor,
+    };
+    Ok(DecisionComputation {
+        calibration,
+        selection,
+        calibrated_stats,
+        baseline_stats,
+        rms_factor,
+        metrics,
     })
 }
 

@@ -1371,3 +1371,94 @@ réponse que `/tide`, plus `series`.
   `a53b833324780937e57cf43a8d51cef7c28175c280ef239e9b0257663b125435`.
 - Le pack France change de SHA uniquement par ajout des blocs RAM :
   `b357bb33d67999e1a21aaf96d5168f77c26b58231c05e182897f052cf279971d`.
+
+## v0.12 -- durcissement post-audit
+
+Date : 2026-07-12.
+
+Objectif : transformer les garde-fous tenus en prose en invariants exécutables
+et fermer les régressions livrées par v0.11, sans modifier les artefacts figés
+ni les seuils publiés.
+
+### Corrections
+
+- `/tide/series` applique désormais `--strict-validity` comme `/tide` et le
+  CLI : hors période, le serveur renvoie `422 outside_validity_period`.
+- `valid_until` dans le calibrateur ne panique plus sur une fin de calibration
+  au 29 février ; la date est repliée au 28 février quand l'année cible n'est
+  pas bissextile.
+
+### Gates promus
+
+Le nouveau gate `make check-frozen-shas` épingle les SHA-256 de tous les
+benchmarks REFMAR figés et des trois packs publiés. Il vérifie aussi la
+cohérence interne des benchmarks (`checksum_sha256` recalculé depuis les
+samples, `observations_sha256` raccordé au CSV Brest court ou aux manifestes
+France quand la source est committée).
+
+Les SHA figés restent inchangés :
+
+- `fixtures/refmar/benchmark_brest_v1.json` :
+  `d36f445c320c17ba323fbe572e0cb93d45eba846aeff0260ee9d1b3631a6bf6f` ;
+- `fixtures/refmar/benchmark_brest_decennial_v1.json` :
+  `d371be7da00d4324ce92fd016d3601c5669c3d452dd4373a5b3347f5ed80b5e5` ;
+- `data/packs/noaa_m0.json` :
+  `4ceb3f4a0b7a343ca46abf007f8ef69521be4d5ec517967e5b3b853bba99a2a8` ;
+- `data/packs/amar-data-brest-experimental.json` :
+  `a53b833324780937e57cf43a8d51cef7c28175c280ef239e9b0257663b125435` ;
+- `data/packs/amar-data-france-experimental.json` :
+  `b357bb33d67999e1a21aaf96d5168f77c26b58231c05e182897f052cf279971d`.
+
+### Contrat et structure
+
+L'enveloppe `tide` est construite dans `contract.rs` pour le CLI et le serveur.
+`height_m`, `next_high`, `next_low`, `datum`, `source`, `confidence` et
+`warnings` ont une source unique ; `series` reste optionnel et n'est sérialisé
+que pour les réponses série.
+
+`CONTRACTS.md` publie les invariants exécutables : convention annuelle NOS,
+pureté de `predict_height`, complétude des traversées de seuil et
+byte-identité des artefacts figés.
+
+Le calibrateur France a été découpé en phases lisibles :
+`fetch_and_persist_observations`, `split_calibration_validation` et
+`compute_decision_metrics`. Le triplet `(start, validation_start, end)` passe
+par `StationPeriod`. Le cycle `astro -> constituents -> nodal -> astro` est
+retiré en déplaçant le calcul d'argument astronomique dans `constituents.rs`.
+Les éléments partagés entre `main` et `hilo` vivent dans `cli_common`.
+
+### Performance
+
+X1 et X2 sont conservés : le modèle annuel compilé mémorise l'ordinal du
+1er janvier, et les vecteurs de séries, samples et racines sont préalloués.
+La propriété `compiled == direct` reste verte à `1e-9`.
+
+X3 est conservé : `next_extrema_after` scanne par tranches avec chevauchement
+de deux pas et s'arrête seulement après avoir trouvé une pleine mer et une
+basse mer après l'instant demandé. Le test old-vs-new couvre les régimes
+semi-diurne, diurne et mixte ; `make m3-check` reste vert.
+
+X4 est différé : le contrat et le test de complétude de `threshold_crossings`
+sont ajoutés, mais la marge ±48 h de `tide_windows` reste inchangée faute de
+nécessité de livraison. La byte-identité prime sur la vitesse.
+
+### Couverture ajoutée
+
+La suite couvre maintenant :
+
+- série Brest `datum=ign69` avec offset appliqué à chaque point ;
+- `ign69` indisponible sur station NOAA ;
+- datum inconnu côté serveur et CLI ;
+- invariance de `confidence` et `source.data_version` entre datums ;
+- warning `datum_reference_incomplete` sur station France `ram_only`, absent à
+  Brest ;
+- sélection par port sur signal synthétique avec exclusion Rayleigh ;
+- refus QC sur couverture basse et saut aberrant.
+
+### CI et build
+
+La CI appelle `make check-frozen-shas` et `make m3-check` au lieu de répliquer
+le gate hilo. Le smoke container reste sur `station_count:32`. Le cache
+container exporte maintenant `mode=max`, les deux stages Rust sont épinglés sur
+la même version `rust:1.88-alpine`, et `.dockerignore` exclut les fichiers
+Markdown sans exclure `benches/`.

@@ -162,6 +162,11 @@ Pour Brest v0.11, la RAM publique expose `ZH = -3,635 m / IGN69` et
 hydrographique officiel sans modifier le modèle. `--datum recent` expose le
 calage interne inchangé ; `--datum ign69` expose le niveau réel récent dans la
 référence terrestre `IGN69` via le seul tie géodésique `-3,635 m`.
+Ces deux sorties ne se composent pas linéairement : le défaut
+`zero_hydrographique` applique l'offset de niveau moyen officiel, alors que
+`ign69` applique seulement le tie géodésique au niveau réel récent. L'écart
+`recent_minus_official_mean_m` d'environ 12,23 cm à Brest est donc attendu et
+ne signale pas une erreur de datum.
 
 Quand une station n'a qu'un tie RAM et pas d'offset de niveau moyen officiel,
 la sortie par défaut reste dans le datum interne et porte le warning

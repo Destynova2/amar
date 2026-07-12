@@ -28,7 +28,7 @@ HILO_YEARS = 2026
 HILO_DRIFT_YEARS = 2031
 HILO_DRIFT_STATIONS = 9447130 8410140
 
-.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures pack-noaa fetch-refmar build-brest-pack calibrate-france validate-history m0-validate m2-benchmark m3-check release dist-tarball m1-smoke container container-smoke
+.PHONY: fmt clippy test fetch-noaa fetch-noaa-hilo check-noaa-fixtures check-frozen-shas pack-noaa fetch-refmar build-brest-pack calibrate-france validate-history m0-validate m2-benchmark m3-check release dist-tarball m1-smoke container container-smoke
 
 fmt:
 	cargo fmt --all --check
@@ -86,6 +86,9 @@ check-noaa-fixtures:
 		echo "NOAA fixtures are missing; run make fetch-noaa"; \
 		exit 1; \
 	fi
+
+check-frozen-shas:
+	cargo test -p amar --test frozen_shas
 
 pack-noaa: check-noaa-fixtures
 	@test -n "$(EXTRACTED_AT)" || { echo "EXTRACTED_AT is required: make pack-noaa EXTRACTED_AT=YYYY-MM-DD"; exit 1; }

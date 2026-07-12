@@ -1,89 +1,43 @@
+mod cli_common;
 mod hilo;
 
 use amar::coefficient;
 use amar::contract::{
-    self, SourceResponse, ThresholdOptionsError, TideExtremumResponse, TidePointResponse,
-    TideWindowResponse,
+    self, SourceResponse, ThresholdOptionsError, TideExtremumResponse, TideWindowResponse,
 };
-use amar::server::{self, ServerError};
+use amar::server;
 use amar_core::{
     ConstituentId, CoreError, DatumId, Degrees, DegreesPerHour, HarmonicConstituent, Meters,
-    PredictionMethod, TideModel, UtcDateTime, next_extrema_after, predict_height, predict_series,
-    tide_windows,
+    PredictionMethod, TideModel, UtcDateTime, predict_height, predict_series, tide_windows,
 };
 use amar_data::{
-    DataError, LoadedStation, build_noaa_pack, load_official_predictions, load_pack_from_path,
+    LoadedStation, build_noaa_pack, load_official_predictions, load_pack_from_path,
     load_packs_from_paths, percentile, prediction_signed_error_meters,
 };
 use amar_pack::BrestBenchmark;
 use clap::{Args, Parser, Subcommand};
+use cli_common::{
+    CliError, DEFAULT_FIXTURES, DEFAULT_NOAA_PACK, ValidateArgs, prediction_files,
+    prediction_window_label,
+};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use thiserror::Error;
 
-const DEFAULT_NOAA_PACK: &str = "data/packs/noaa_m0.json";
 const DEFAULT_NOAA_PACK_FILE: &str = "noaa_m0.json";
 const DEFAULT_BREST_PACK_FILE: &str = "amar-data-brest-experimental.json";
 const DEFAULT_FRANCE_PACK_FILE: &str = "amar-data-france-experimental.json";
 const DEFAULT_ARCHIVE_PACK_DIR: &str = "packs";
 const DEFAULT_BREST_BENCHMARK: &str = "fixtures/refmar/benchmark_brest_v1.json";
 const DEFAULT_REFMAR_BENCHMARKS_DIR: &str = "fixtures/refmar/benchmarks";
-const DEFAULT_FIXTURES: &str = "fixtures/noaa";
 const BREST_STATION_ID: &str = "refmar:3";
 const LE_HAVRE_STATION_ID: &str = "refmar:4";
 const LE_HAVRE_EXTENDED_P95_LIMIT_CM: f64 = 31.0;
 const DEFAULT_MAX_DISTANCE_KM: f64 = 20.0;
 const M0_P95_LIMIT_M: f64 = 0.02;
-const HILO_P95_TIME_LIMIT_MIN: f64 = 10.0;
-const HILO_P95_HEIGHT_LIMIT_M: f64 = 0.03;
 const DEFAULT_NOAA_STATIONS: &str = include_str!("../../../data/stations.txt");
-
-#[derive(Debug, Error)]
-enum CliError {
-    #[error("{0}")]
-    Data(#[from] DataError),
-    #[error("{0}")]
-    Core(#[from] CoreError),
-    #[error("I/O error on {path}: {source}")]
-    Io {
-        path: PathBuf,
-        source: std::io::Error,
-    },
-    #[error("json error: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("{0}")]
-    Server(#[from] ServerError),
-    #[error("validation p95 exceeded {limit_cm:.1} cm:\n{failures}")]
-    ValidationThreshold { limit_cm: f64, failures: String },
-    #[error("validation missing samples:\n{failures}")]
-    ValidationSamples { failures: String },
-    #[error("station {0} not found in loaded packs")]
-    MissingStation(String),
-    #[error("benchmark has no usable samples")]
-    EmptyBenchmark,
-    #[error("station {station_id} has no supported confidence metadata")]
-    UnsupportedStationConfidence { station_id: String },
-    #[error("station {station_id} has no M2 constituent")]
-    MissingM2Constituent { station_id: String },
-    #[error("benchmark gate failed:\n{failures}")]
-    BenchmarkThreshold { failures: String },
-    #[error("hilo validation p95 exceeded:\n{failures}")]
-    HiloThreshold { failures: String },
-    #[error(
-        "outside_validity_period station={station_id} at={at} valid_from={valid_from} valid_until={valid_until}"
-    )]
-    OutsideValidityPeriod {
-        station_id: String,
-        at: String,
-        valid_from: String,
-        valid_until: String,
-    },
-    #[error("{0}")]
-    InvalidArgument(String),
-}
 
 #[derive(Debug, Parser)]
 #[command(name = "amar")]
@@ -157,14 +111,6 @@ struct ServeArgs {
     max_distance_km: f64,
     #[arg(long = "strict-validity")]
     strict_validity: bool,
-}
-
-#[derive(Debug, Args)]
-struct ValidateArgs {
-    #[arg(long, default_value = DEFAULT_NOAA_PACK)]
-    pack: PathBuf,
-    #[arg(long, default_value = DEFAULT_FIXTURES)]
-    fixtures: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -249,12 +195,11 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
         args.lon,
         effective_max_distance_km(args.max_distance_km),
     )?;
-    let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
     let datum_adjustment = contract::datum_adjustment(station, args.datum)
         .map_err(|violation| CliError::InvalidArgument(violation.into_message()))?;
-    if args.strict_validity
-        && let Some(violation) = contract::validity_period_violation(station, at)
+    if let Some(violation) =
+        contract::strict_validity_period_violation(station, at, args.strict_validity)
     {
         return Err(CliError::OutsideValidityPeriod {
             station_id: station.station_id.clone(),
@@ -263,94 +208,28 @@ fn tide(args: TideArgs) -> Result<(), CliError> {
             valid_until: violation.valid_until,
         });
     }
-    let confidence = contract::confidence_for_station(&station_match).ok_or_else(|| {
-        CliError::UnsupportedStationConfidence {
-            station_id: station.station_id.clone(),
-        }
-    })?;
-    let (next_high, next_low) = next_extrema_after(
-        station_match.station.model(),
-        at,
-        contract::NEXT_EXTREMA_HORIZON_H,
-    );
-    let next_high_coefficient = next_high.and_then(|high| {
-        coefficient::coefficient_for_station_high(&data, station, high.at())
-            .map(|coefficient| coefficient.coefficient)
-    });
-    let output = if let Some(duration_h) = args.duration_h {
+    let series = if let Some(duration_h) = args.duration_h {
         let step_min = args.step_min.unwrap_or(contract::DEFAULT_SERIES_STEP_MIN);
         contract::validate_series_bounds(duration_h, step_min)
             .map_err(|violation| CliError::InvalidArgument(violation.into_message()))?;
-        let series = predict_series(station_match.station.model(), at, duration_h, step_min)
-            .into_iter()
-            .map(|point| {
-                TidePointResponse::from_point_with_offset(point, datum_adjustment.height_offset_m)
-            })
-            .collect::<Vec<_>>();
-        json!({
-            "height_m": contract::round3(
-                prediction.height().as_meters() + datum_adjustment.height_offset_m
-            ),
-            "next_high": next_high.map(|high| {
-                TideExtremumResponse::from_extremum_with_offset(
-                    high,
-                    datum_adjustment.height_offset_m,
-                    next_high_coefficient
-                )
-            }),
-            "next_low": next_low.map(|low| {
-                TideExtremumResponse::from_extremum_with_offset(
-                    low,
-                    datum_adjustment.height_offset_m,
-                    None
-                )
-            }),
-            "series": series,
-            "datum": datum_adjustment.datum.clone(),
-            "source": SourceResponse::from(&station_match),
-            "confidence": confidence,
-            "warnings": contract::warnings_for_station_at_with_options(
-                station,
-                Some(at),
-                next_high_coefficient.is_some(),
-                datum_adjustment.reference_incomplete
-            ),
-        })
+        Some(predict_series(
+            station_match.station.model(),
+            at,
+            duration_h,
+            step_min,
+        ))
     } else {
         if args.step_min.is_some() {
             return Err(CliError::InvalidArgument(
                 "--step-min requires --duration-h".to_string(),
             ));
         }
-        json!({
-            "height_m": contract::round3(
-                prediction.height().as_meters() + datum_adjustment.height_offset_m
-            ),
-            "next_high": next_high.map(|high| {
-                TideExtremumResponse::from_extremum_with_offset(
-                    high,
-                    datum_adjustment.height_offset_m,
-                    next_high_coefficient
-                )
-            }),
-            "next_low": next_low.map(|low| {
-                TideExtremumResponse::from_extremum_with_offset(
-                    low,
-                    datum_adjustment.height_offset_m,
-                    None
-                )
-            }),
-            "datum": datum_adjustment.datum.clone(),
-            "source": SourceResponse::from(&station_match),
-            "confidence": confidence,
-            "warnings": contract::warnings_for_station_at_with_options(
-                station,
-                Some(at),
-                next_high_coefficient.is_some(),
-                datum_adjustment.reference_incomplete
-            ),
-        })
+        None
     };
+    let output = contract::build_tide_payload(&station_match, at, &datum_adjustment, &data, series)
+        .ok_or_else(|| CliError::UnsupportedStationConfidence {
+            station_id: station.station_id.clone(),
+        })?;
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
 }
@@ -816,52 +695,6 @@ fn default_noaa_stations() -> impl Iterator<Item = &'static str> {
 
 fn effective_max_distance_km(max_distance_km: f64) -> f64 {
     max_distance_km.min(contract::MAX_CONFIDENCE_DISTANCE_KM)
-}
-
-fn prediction_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
-    fixture_files(station_dir, "predictions_")
-}
-
-pub(crate) fn hilo_files(station_dir: &Path) -> Result<Vec<PathBuf>, CliError> {
-    fixture_files(station_dir, "hilo_")
-}
-
-fn fixture_files(station_dir: &Path, prefix: &str) -> Result<Vec<PathBuf>, CliError> {
-    let mut files = Vec::new();
-    for entry in fs::read_dir(station_dir).map_err(|source| CliError::Io {
-        path: station_dir.to_path_buf(),
-        source,
-    })? {
-        let entry = entry.map_err(|source| CliError::Io {
-            path: station_dir.to_path_buf(),
-            source,
-        })?;
-        let path = entry.path();
-        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-            continue;
-        };
-        if name.starts_with(prefix) && name.ends_with(".json") {
-            files.push(path);
-        }
-    }
-    files.sort();
-    Ok(files)
-}
-
-fn prediction_window_label(path: &Path) -> String {
-    fixture_window_label(path, "predictions_")
-}
-
-pub(crate) fn hilo_window_label(path: &Path) -> String {
-    fixture_window_label(path, "hilo_")
-}
-
-fn fixture_window_label(path: &Path, prefix: &str) -> String {
-    path.file_stem()
-        .and_then(|name| name.to_str())
-        .and_then(|name| name.strip_prefix(prefix))
-        .unwrap_or("unknown")
-        .to_string()
 }
 
 #[derive(Clone, Copy)]

@@ -1,4 +1,4 @@
-# Limitations v0.11
+# Limitations v0.12
 
 - Marée astronomique seule.
 - Les fenêtres de seuil sont des fenêtres de marée astronomique seule :
@@ -15,6 +15,9 @@
   les constantes harmoniques, ni `z0_m`, ni les benchmarks figés.
 - Brest expose par défaut le zéro hydrographique officiel via la RAM publique
   SHOM/REFMAR. Le calage interne récent reste disponible avec `datum=recent`.
+- Le défaut Brest et `datum=ign69` ne se composent pas linéairement : l'écart
+  `recent_minus_official_mean_m` entre niveau moyen récent et niveau moyen RAM
+  officiel est volontairement visible entre les deux sorties.
 - Pour les autres stations REFMAR, le pack porte le tie RAM quand il est connu.
   Si l'offset de niveau moyen officiel manque, la réponse conserve le datum
   interne et ajoute `datum_reference_incomplete`.

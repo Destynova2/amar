@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 
-FROM rust:alpine AS chef
+FROM rust:1.88-alpine AS chef
 WORKDIR /app
 RUN apk add --no-cache musl-dev
 RUN cargo install cargo-chef --locked
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM rust:alpine AS builder
+FROM rust:1.88-alpine AS builder
 ARG TARGETARCH
 WORKDIR /app
 ENV RUSTFLAGS="-C target-feature=+crt-static"

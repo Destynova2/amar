@@ -222,4 +222,39 @@ mod tests {
         assert_eq!(report.expected, 0);
         assert_eq!(report.coverage, 0.0);
     }
+
+    #[test]
+    fn enforce_qc_rejects_low_coverage() {
+        let start = at("2026-01-01T00:00:00Z");
+        let report = qc_report(
+            &[observation(start, 0.0)],
+            start,
+            start + Duration::hours(10),
+        );
+
+        let error = match enforce_qc("calibration", &report) {
+            Ok(()) => panic!("expected low coverage rejection"),
+            Err(error) => error,
+        };
+
+        assert!(format!("{error}").contains("coverage 0.100 below 0.900"));
+    }
+
+    #[test]
+    fn enforce_qc_rejects_aberrant_jump() {
+        let start = at("2026-01-01T00:00:00Z");
+        let observations = [
+            observation(start, 0.0),
+            observation(start + Duration::hours(1), 4.5),
+            observation(start + Duration::hours(2), 4.6),
+        ];
+        let report = qc_report(&observations, start, start + Duration::hours(3));
+
+        let error = match enforce_qc("validation", &report) {
+            Ok(()) => panic!("expected jump rejection"),
+            Err(error) => error,
+        };
+
+        assert!(format!("{error}").contains("aberrant jump 4.500 m"));
+    }
 }

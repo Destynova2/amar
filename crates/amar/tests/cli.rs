@@ -80,6 +80,27 @@ fn tide_rejects_latitude_out_of_range() {
 }
 
 #[test]
+fn tide_rejects_unknown_datum() {
+    let output = must(
+        Command::new(env!("CARGO_BIN_EXE_amar"))
+            .arg("tide")
+            .arg("--lat")
+            .arg("48.383")
+            .arg("--lon")
+            .arg("-4.495")
+            .arg("--at")
+            .arg("2026-08-15T12:00:00Z")
+            .arg("--datum")
+            .arg("wgs84")
+            .output(),
+    );
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("datum must be one of zero_hydrographique, ign69, recent"));
+}
+
+#[test]
 fn tide_returns_brest_experimental_confidence() {
     let root = workspace_root();
     let output = must(

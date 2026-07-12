@@ -1,3 +1,4 @@
+use crate::astro::AstronomicalTerms;
 use crate::nodal::{FactorTerm, NodalFactorFormula, NodalTerms};
 
 const CANONICAL_CONSTITUENTS: &[&str] = &[
@@ -64,6 +65,15 @@ impl ConstituentDefinition {
             .filter(|term| term.power != 0)
             .map(|term| term.formula.value(nodal).powi(i32::from(term.power)))
             .product()
+    }
+
+    pub(crate) fn astronomical_argument_degrees(self, astro: &AstronomicalTerms) -> f64 {
+        let values = [astro.tau, astro.s, astro.h, astro.p, astro.p1];
+        let mut cycles = self.semi_cycles;
+        for (coefficient, value) in self.coefficients.iter().zip(values) {
+            cycles += f64::from(*coefficient) * value;
+        }
+        cycles.rem_euclid(1.0) * 360.0
     }
 }
 

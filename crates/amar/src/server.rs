@@ -1,9 +1,8 @@
-use crate::coefficient;
 use crate::contract::{
-    self, ConfidenceResponse, SourceResponse, ThresholdField, ThresholdOptionsError,
-    TideExtremumResponse, TidePointResponse, TideWindowResponse,
+    self, ConfidenceResponse, SeriesResponse, SourceResponse, ThresholdField,
+    ThresholdOptionsError, TideResponse, TideWindowResponse,
 };
-use amar_core::{UtcDateTime, next_extrema_after, predict_height, predict_series, tide_windows};
+use amar_core::{UtcDateTime, predict_series, tide_windows};
 use amar_data::{DataError, DataSet, StationMatch, load_packs_from_paths};
 use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
@@ -105,12 +104,11 @@ async fn post_tide(
     let at = UtcDateTime::parse_rfc3339(&request.datetime)
         .map_err(|_| ApiError::invalid_request("datetime must be a readable RFC 3339 timestamp"))?;
     let station_match = supported_station(&state, request.lat, request.lon)?;
-    let prediction = predict_height(station_match.station.model(), at);
     let station = station_match.station.pack();
     let datum_adjustment = requested_datum(request.datum.as_deref())
         .and_then(|datum| contract::datum_adjustment(station, datum).map_err(ApiError::from))?;
-    if state.strict_validity
-        && let Some(violation) = contract::validity_period_violation(station, at)
+    if let Some(violation) =
+        contract::strict_validity_period_violation(station, at, state.strict_validity)
     {
         return Err(ApiError::outside_validity_period(
             &station_match,
@@ -118,47 +116,16 @@ async fn post_tide(
             violation,
         ));
     }
-    let Some(confidence) = contract::confidence_for_station(&station_match) else {
+    let Some(payload) = contract::build_tide_payload(
+        &station_match,
+        at,
+        &datum_adjustment,
+        state.data.as_ref(),
+        None,
+    ) else {
         return Err(ApiError::unsupported_station_confidence(station));
     };
-    let (next_high, next_low) = next_extrema_after(
-        station_match.station.model(),
-        at,
-        contract::NEXT_EXTREMA_HORIZON_H,
-    );
-    let next_high_coefficient = next_high.and_then(|high| {
-        coefficient::coefficient_for_station_high(&state.data, station, high.at())
-            .map(|coefficient| coefficient.coefficient)
-    });
-
-    Ok(Json(TideResponse {
-        height_m: contract::round3(
-            prediction.height().as_meters() + datum_adjustment.height_offset_m,
-        ),
-        next_high: next_high.map(|high| {
-            TideExtremumResponse::from_extremum_with_offset(
-                high,
-                datum_adjustment.height_offset_m,
-                next_high_coefficient,
-            )
-        }),
-        next_low: next_low.map(|low| {
-            TideExtremumResponse::from_extremum_with_offset(
-                low,
-                datum_adjustment.height_offset_m,
-                None,
-            )
-        }),
-        datum: datum_adjustment.datum.clone(),
-        source: SourceResponse::from(&station_match),
-        confidence,
-        warnings: contract::warnings_for_station_at_with_options(
-            station,
-            Some(at),
-            next_high_coefficient.is_some(),
-            datum_adjustment.reference_incomplete,
-        ),
-    }))
+    Ok(Json(payload))
 }
 
 async fn post_tide_series(
@@ -180,58 +147,31 @@ async fn post_tide_series(
     let station = station_match.station.pack();
     let datum_adjustment = requested_datum(request.datum.as_deref())
         .and_then(|datum| contract::datum_adjustment(station, datum).map_err(ApiError::from))?;
-    let Some(confidence) = contract::confidence_for_station(&station_match) else {
-        return Err(ApiError::unsupported_station_confidence(station));
-    };
-    let prediction = predict_height(station_match.station.model(), from);
-    let (next_high, next_low) = next_extrema_after(
-        station_match.station.model(),
-        from,
-        contract::NEXT_EXTREMA_HORIZON_H,
-    );
-    let next_high_coefficient = next_high.and_then(|high| {
-        coefficient::coefficient_for_station_high(&state.data, station, high.at())
-            .map(|coefficient| coefficient.coefficient)
-    });
+    if let Some(violation) =
+        contract::strict_validity_period_violation(station, from, state.strict_validity)
+    {
+        return Err(ApiError::outside_validity_period(
+            &station_match,
+            from,
+            violation,
+        ));
+    }
     let series = predict_series(
         station_match.station.model(),
         from,
         request.duration_h,
         request.step_min,
-    )
-    .into_iter()
-    .map(|point| TidePointResponse::from_point_with_offset(point, datum_adjustment.height_offset_m))
-    .collect();
-
-    Ok(Json(SeriesResponse {
-        height_m: contract::round3(
-            prediction.height().as_meters() + datum_adjustment.height_offset_m,
-        ),
-        next_high: next_high.map(|high| {
-            TideExtremumResponse::from_extremum_with_offset(
-                high,
-                datum_adjustment.height_offset_m,
-                next_high_coefficient,
-            )
-        }),
-        next_low: next_low.map(|low| {
-            TideExtremumResponse::from_extremum_with_offset(
-                low,
-                datum_adjustment.height_offset_m,
-                None,
-            )
-        }),
-        series,
-        datum: datum_adjustment.datum.clone(),
-        source: SourceResponse::from(&station_match),
-        confidence,
-        warnings: contract::warnings_for_station_at_with_options(
-            station,
-            Some(from),
-            next_high_coefficient.is_some(),
-            datum_adjustment.reference_incomplete,
-        ),
-    }))
+    );
+    let Some(payload) = contract::build_tide_payload(
+        &station_match,
+        from,
+        &datum_adjustment,
+        state.data.as_ref(),
+        Some(series),
+    ) else {
+        return Err(ApiError::unsupported_station_confidence(station));
+    };
+    Ok(Json(payload))
 }
 
 async fn post_tide_windows(
@@ -376,17 +316,6 @@ struct TideRequest {
     datum: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-struct TideResponse {
-    height_m: f64,
-    next_high: Option<TideExtremumResponse>,
-    next_low: Option<TideExtremumResponse>,
-    datum: String,
-    source: SourceResponse,
-    confidence: ConfidenceResponse,
-    warnings: Vec<&'static str>,
-}
-
 #[derive(Debug, Deserialize)]
 struct SeriesRequest {
     lat: f64,
@@ -395,18 +324,6 @@ struct SeriesRequest {
     duration_h: u32,
     step_min: u32,
     datum: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct SeriesResponse {
-    height_m: f64,
-    next_high: Option<TideExtremumResponse>,
-    next_low: Option<TideExtremumResponse>,
-    series: Vec<TidePointResponse>,
-    datum: String,
-    source: SourceResponse,
-    confidence: ConfidenceResponse,
-    warnings: Vec<&'static str>,
 }
 
 #[derive(Debug, Deserialize)]

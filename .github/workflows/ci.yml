@@ -18,8 +18,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
-      - run: make m0-validate
+      - run: make check-frozen-shas
       - run: make m1-smoke
-      - run: make m2-benchmark
-      - run: cargo run -p amar -- validate-hilo --pack data/packs/noaa_m0.json --fixtures fixtures/noaa
+      - run: make m3-check

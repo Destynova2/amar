@@ -485,4 +485,96 @@ mod tests {
             }
         ));
     }
+
+    #[test]
+    fn port_selection_picks_expected_constituents_on_synthetic_signal() {
+        let calibration_start = at("2026-01-01T00:00:00Z");
+        let calibration_end = at("2026-07-20T00:00:00Z");
+        let catalog = [
+            ConstituentSpec::new("M2", 28.984_104),
+            ConstituentSpec::new("S2", 30.0),
+            ConstituentSpec::new("T2", 29.958_933),
+        ];
+        let rayleigh = match rayleigh_select(calibration_start, calibration_end, &catalog) {
+            Ok(value) => value,
+            Err(error) => panic!("{error:?}"),
+        };
+        let rayleigh_names = rayleigh.iter().map(|spec| spec.name).collect::<Vec<_>>();
+
+        assert_eq!(rayleigh_names, ["M2", "S2"]);
+
+        let model = match TideModel::new(
+            match DatumId::new("zero_hydrographique_synthetic") {
+                Ok(value) => value,
+                Err(error) => panic!("{error:?}"),
+            },
+            match Meters::new(2.0) {
+                Ok(value) => value,
+                Err(error) => panic!("{error:?}"),
+            },
+            vec![
+                HarmonicConstituent::new(
+                    match ConstituentId::new("M2") {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                    match Meters::new(0.8) {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                    match Degrees::new(40.0) {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                    match DegreesPerHour::new(28.984_104) {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                ),
+                HarmonicConstituent::new(
+                    match ConstituentId::new("S2") {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                    match Meters::new(0.4) {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                    match Degrees::new(120.0) {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                    match DegreesPerHour::new(30.0) {
+                        Ok(value) => value,
+                        Err(error) => panic!("{error:?}"),
+                    },
+                ),
+            ],
+            PredictionMethod::StationHarmonicsV0,
+        ) {
+            Ok(value) => value,
+            Err(error) => panic!("{error:?}"),
+        };
+        let mut samples = Vec::new();
+        let mut cursor = calibration_start;
+        while cursor < calibration_end {
+            let at = UtcDateTime::from_utc(cursor);
+            samples.push(Observation {
+                at: cursor,
+                value_m: amar_core::predict_height(&model, at).height().as_meters(),
+                source: 4,
+            });
+            cursor += chrono::Duration::hours(6);
+        }
+
+        let first_pass =
+            match fit_coefficients(&samples, calibration_start, calibration_end, &rayleigh) {
+                Ok(value) => value,
+                Err(error) => panic!("{error:?}"),
+            };
+        let significant = significant_select(&rayleigh, &first_pass, SNR_MIN);
+        let significant_names = significant.iter().map(|spec| spec.name).collect::<Vec<_>>();
+
+        assert_eq!(significant_names, ["M2", "S2"]);
+    }
 }
