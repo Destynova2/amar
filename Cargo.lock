@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "amar"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "amar-core",
  "amar-data",
@@ -24,6 +24,7 @@ dependencies = [
  "http-body-util",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "tokio",
  "tower",
@@ -31,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "amar-calibrate"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "amar-core",
  "amar-data",
@@ -49,7 +50,7 @@ dependencies = [
 
 [[package]]
 name = "amar-core"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "chrono",
  "proptest",
@@ -58,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "amar-data"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "amar-core",
  "amar-pack",
@@ -71,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "amar-pack"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "serde",
  "thiserror",
