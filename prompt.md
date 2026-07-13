@@ -323,7 +323,48 @@ Consignes extraites :
 
 → Code v0.11 commité/poussé (tag v0.11.0, tout vert) ; **prompt.md remis à jour** (P16→P66, ce rattrapage) ; CI/CD automatique sur push/tag, verte — 2 patchs infra en route (v0.8.1 timeout container, v0.10.1 station_count smoke).
 
-### P67 — v0.12 durcissement post-audit
-> Lis AGENTS.md et CONVENTIONS.md, puis execute integralement le plan .claude/brief-v12-audit-hardening.md. Respecte le GARDE-FOU byte-identite en tete du brief: capture les SHA-256 des artefacts figes AVANT, verifie-les identiques APRES; si un SHA fige change ou un gate bouge dun chiffre, ARRETE-toi et signale sans commit. Un commit conventionnel par lot, SANS aucune mention IA. Bump version 0.12.0, tag v0.12.0, workflows verts (smoke = 32 stations). Ajoute lentree P67 dans prompt.md pour le prompt utilisateur de cette iteration.
+---
 
-→ v0.12 : correctifs strict-validity série + `valid_until` bissextile, gate `check-frozen-shas`, contrat `tide` partagé, perf X1/X2/X3 prouvée, X4 différé avec contrat/test, trous de tests comblés, refactors structure, CI/container durcis, version 0.12.0.
+## 5. Modèles, bathymétrie, comparaison terrain & durcissement v0.12 — 2026-07-12/13
+
+*(P67 avait été écrit par codex avec l'instruction qu'il recevait, pas le prompt utilisateur ; corrigé ici, et la session journalisée.)*
+
+### P67 — ajouter les modèles dans prompt.md
+> est est ce que dans prompt md tu peut ajouter les model utiliser ?
+
+→ Section « 0. Modèles utilisés » ajoutée (par phase). codex lu depuis `~/.codex/config.toml` = gpt-5.5 (xhigh).
+
+### P68 — modèle d'origine = Fable
+> Origine (P1–P8) │ Claude (claude.ai), et c'est fable fr
+
+→ Table corrigée : origine = **Claude Fable 5** (claude.ai, fr). (Suivi d'un « et tu a commit et push » — confirmé poussé.)
+
+### P69 — bathymétrie
+> on estime bien la bathymétrie ? on la predi ou elle peut influer fortement ?
+
+→ On ne la modélise pas ; inutile au marégraphe (déjà encodée dans les constantes observées). Elle influe fortement (amplification, overtides/asymétrie) mais l'effet n'échappe qu'en interpolation hors station.
+
+### P70 — historique des niveaux par point
+> et ducoup tu a acces a l'historique ds niveau de la mere pour chaque point ?
+
+→ Non : l'historique n'existe qu'aux marégraphes (NOAA/REFMAR/PSMSL, Brest depuis 1807). « Pour chaque point » n'existe nulle part = le mur du dernier kilomètre.
+
+### P71 — comparer amar à la vraie marée
+> tu a pas comrit est ce que tu a a comparer les resultat de amar par rapport a l'historique des vrais marée
+
+→ Oui, c'est la validation : résidu = prédit − observé, fenêtre réservée (hors-échantillon), benchmark figé, gates. Proposé de lancer la comparaison en direct.
+
+### P72 — lancer la comparaison Brest + audit complet
+> oui lance la comparaison sur brest et lancer le ponytail en full sur tout le code aussi
+
+→ Brest : RMS 7,9 cm (3 mois) / ~15 cm décennal (météo), astro stable 10 ans, dérive biais = montée mer. Audit `cli-cycle` full = 6 dimensions (hanoi/tangle/xray/test/correctness/code) ; « ponytail » = cli-cycle.
+
+### P73 — corriger tout (100/100) + dev codex/tmux
+> ok corrige tout 100/100, fait un plan et dev avec tmux/codex
+
+→ Plan `.claude/brief-v12-audit-hardening.md` (8 lots), codex gpt-5.5 autonome en tmux. v0.12 : fix strict-validity série + `valid_until` bissextile, gate `check-frozen-shas`, contrat `tide` partagé, perf X1/X2/X3 prouvée, X4 différé, tests comblés, refactors, CI durcie. Frozen SHA `d36f445…` intact, CI/CD verte, tag v0.12.0. (Le prompt exécuté par codex était le brief dérivé de celui-ci.)
+
+### P74 — hygiène commit/push/prompts (ce prompt)
+> ok et tu a bien tout commit et push y comprit les prompt
+
+→ Code : oui, propre et poussé (`85e655b`, tag v0.12.0, CI/CD verte). Prompts : P67 loguait l'instruction codex → corrigé, session 2026-07-12/13 journalisée (P67→P74) et poussée.
